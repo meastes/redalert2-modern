@@ -751,3 +751,38 @@ Not reproduced: the played app's 976x720 on the Duo; the same code gives 1024x72
 **Shell frames check** (`ra2/tests/rb_shell_frames.py`, ctest rb-shell-frames-mac and -iphone, with RB_IDENTITY_SRC): both
 ports through main menu, Options, Enhancements, Keyboard, Network, Single Player, Load and the skirmish setup, compared in
 8x8 tiles outside the listed allowed areas. It found the two list box faults above.
+
+## Yuri's Revenge, the combined app, Windows (lane P13, 2026-11-24, same PIN, in redalert2-modern)
+
+**Vendored**: `vendor/ra2-decomp` (gibbo101/ra2-decomp 8719494727, whole) and `vendor/tibsun` (TibSun dbfbfbfaac, the headers
+ra2-decomp falls back on), copied unchanged from redalert2-decomp's `yr/` at 887b1a2e11 by `tools/update_yr_vendor.sh`, each
+with a PIN of digests; `check_tree.py` now checks every vendor folder's PIN. **Imported**: native/yr (yr.cmake, combined.cmake,
+combined/, fixups.json, glue, data, tools, tests) and native/cmake (the Windows toolchain file and windows.cmake), re-pathed.
+Yuri's Revenge uses none of Red Alert 2's game code; its build is the old port's.
+
+**The combined app's Red Alert 2 engine is the rebuild-based game**: `ra2-engine` (Mac bundle, Windows DLL) and the iOS
+one-executable engine object link rb_units_objs, rb_data_objs, rb_glue_objs and the rebuild's closure, after rb-native-trial's
+PRE_LINK has weakened the duplicates and moved the units' initialisers to `__DATA,__rb_init_func` (Windows: `.rbini$m`, run
+between `rb_host_glue.cpp`'s `.rbini$a`/`.rbini$z` markers). On iOS the engine object's remaining initialisers move to
+`__ra2e_init` and the thin host resets the engine's `__data`/`__bss`/`__common` span before each later start, as for YR; the
+rebuild's `__rb_init_func` list then runs again after the game.exe load. SDL and the Apple host are linked once.
+
+Fixups (ra2/fixups.json):
+* the 0x7F5E toggle as a main-menu sidebar button in Assign_Button_Kind (main's port row 499, lanes C23/Y11);
+* Owner_Button_Proc's pressed state also from BST_PUSHED (main's Paint_Button): the port sends no WM_DRAWITEM, so no push
+  button of the rebuild port ever drew its pressed frame (found by one-game-toggle, "the toggle shows no press");
+* crc.h: a `long` overload on Windows (RA2_LONG is long there; every `crc((RA2_LONG)x)` was ambiguous).
+
+**Windows**: `rb_probe.py --target windows` gives the units the YR units' Windows form (yr_win_first.h and dialect_win.hpp
+first, the rewritten headers by -isystem); the generated data sources are compiled from COFF copies of their `__asm__`
+names; rb_data.py and rb_aliases.py read COFF objects in the Mach-O spelling, as link_closure.py does; the original-layout
+dumps' i686 side reads a second, Mac-style header tree (`gen/mingw-i686`: the Windows rewrite leaves out the C library's
+headers). Link closure: 63 undefined (the Mac's 65). `tools/rb_wine.sh` runs ra2-native.exe under Wine as a drop-in
+`--binary` for rb_routes.py (ctest label rb-wine on the Windows build folder).
+
+**Simulator tests**: iOS now starts with Zoom gestures on (lane P12), which makes Red Alert 2's whole screen render scale 2
+times larger, menus too; the YR Simulator tests' taps assume the unscaled screen, so they pass `zoomgestures=off`.
+
+**build.sh**: mac, mac-one, ios [simulator|device] (RA2YR.app by default; `--ra2` for RBTrial.app), windows, yr-windows,
+windows-one, all: the old native/build.sh list. The iOS combined app has the played app's bundle id (io.github.ra2native.RA2,
+as the old combined app had) unless `-DRA2_ONE_BUNDLE_ID` names another.

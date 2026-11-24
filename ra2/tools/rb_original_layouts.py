@@ -42,7 +42,12 @@ def i686_support(gen, cache):
         fake = cache / 'build'
         fake.mkdir(exist_ok=True)
         link = fake / 'gen-yr'
-        if not link.is_symlink():
+        if (gen / 'mingw-i686').is_dir():
+            # The Windows build (lane P13): the i686 side reads the Mac-style rewrite (rb_probe.py --target windows).
+            link.mkdir(exist_ok=True)
+            if not (link / 'mingw').is_symlink():
+                (link / 'mingw').symlink_to(gen / 'mingw-i686')
+        elif not link.is_symlink():
             link.symlink_to(gen)
         return ol.yr_i686_support(fake, cache)
 
@@ -55,7 +60,7 @@ def rb_args(unit, triple, cache):
         if skip:
             skip -= 1
             continue
-        if f in ('-include', '-idirafter'):
+        if f in ('-include', '-idirafter', '-isystem'):
             skip = 1
             continue
         out.append(f)
@@ -65,7 +70,8 @@ def rb_args(unit, triple, cache):
         return (['clang++', '-target', 'i686-pc-windows-msvc', '-ffreestanding', '-U_MSC_VER', '-D_X86_=1',
                  '-DRA2PORT_ALLOW_HOST', '-I', str(ol.YR_SDK / 'i686')] + out + dump +
                 ['-include', str(d / 'prelude_i686.hpp'), '-include', str(d / 'yr_prelude_i686.h'),
-                 '-idirafter', str(d / 'ov'), '-idirafter', str(GEN / 'mingw'), str(unit)])
+                 '-idirafter', str(d / 'ov'), '-idirafter', str(GEN / ('mingw-i686' if (GEN / 'mingw-i686').is_dir() else 'mingw')),
+                 str(unit)])
     if triple == 'win64':
         # The x86_64 Windows build (lane P13; ra2/ra2.cmake passes --target windows --cxx): as rb_probe.py --target
         # windows compiles the units.

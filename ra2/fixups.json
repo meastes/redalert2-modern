@@ -2113,6 +2113,12 @@
    "old": "\tint state = data->ItemState; // RA2: as above\n\tLONG style = GetWindowLongA(window, GWL_STYLE); // RA2: as above\n",
    "new": "\tint state = data->ItemState | ((CallWindowProcA(previous, window, BM_GETSTATE, 0, 0) & BST_PUSHED) ? 1 : 0); // RA2: as above (native: lane P13, the button's BST_PUSHED too)\n\tLONG style = GetWindowLongA(window, GWL_STYLE); // RA2: as above\n",
    "why": "Lane P13, main's port behaviour (redalert2-decomp native/link/behaviour_m14_ownerdraw.cpp, Paint_Button for 0x005F0320): Owner_Button_Proc draws a button pressed from the owner-draw state the dialog's WM_DRAWITEM stores in WinData +0xE8 (ItemState, ODS_SELECTED); the port's Win32 layer sends no WM_DRAWITEM, so no push button (main menu, dialogs, the combined app's toggle) ever drew its pressed frame. Main's port also takes the button's own BST_PUSHED (BM_GETSTATE, which port/src/user32.cpp answers from its press tracking); carried. Found by one-game-toggle (\"the toggle shows no press\")."
+  },
+  {
+   "file": "hdr/crc.h",
+   "old": "\t\tvoid operator() (int datum);\n",
+   "new": "\t\tvoid operator() (int datum);\n#ifdef __MINGW32__\n\t\tvoid operator() (long datum) { (*this)((int)datum); }   // native: lane P13, the Windows build's RA2_LONG (long, 32 bits as VC6's)\n#endif\n",
+   "why": "Lane P13 (the x86_64 Windows build): the port rewrites spell VC6's long as RA2_LONG, which yr_prelude.h makes long on Windows (LLP64: 32 bits, the C library's and the MS intrinsics' type) and int on the Mac. CRCEngine has no long overload, so every crc((RA2_LONG)x) of techtype, scenario, animtype and the rest was ambiguous there. The long datum is submitted as the dword it is (the int overload), as VC6 did with its 32-bit long. Mac and iOS: not compiled."
   }
  ]
 }

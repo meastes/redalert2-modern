@@ -128,7 +128,11 @@ add_custom_command(
   DEPENDS ${RB_NATIVE_UNITS} "${RB_DIR}/tools/rb_original_layouts.py" "${RB_DIR}/data/original_save_types.txt"
           "${RB_ROOT}/tools/original_layouts.py"
   WORKING_DIRECTORY "${RB_GEN}" VERBATIM)
-add_library(rb_data_objs OBJECT "${RB_GEN}/rb_bss_globals.cpp" "${RB_GEN}/rb_original_data.cpp" "${RB_GEN}/rb_original_layouts.cpp")
+set(rb_data_sources "${RB_GEN}/rb_bss_globals.cpp" "${RB_GEN}/rb_original_data.cpp" "${RB_GEN}/rb_original_layouts.cpp")
+if(WIN32)
+  ra2_windows_coff_sources(rb_data_sources ${rb_data_sources})   # their __asm__ names in the COFF spelling
+endif()
+add_library(rb_data_objs OBJECT ${rb_data_sources})
 set_target_properties(rb_data_objs PROPERTIES CXX_STANDARD 17)
 target_compile_options(rb_data_objs PRIVATE -O2 -fno-zero-initialized-in-bss)
 
@@ -170,7 +174,21 @@ if(WIN32)
   if(TARGET RA2Native)
     add_dependencies(RA2Native rb-native-trial)   # after rb-native-trial's PRE_LINK has moved the initialisers
   endif()
-  return()   # the played checks run the Mac build
+  # The played routes on ra2-native.exe under Wine (label rb-wine; tools/rb_wine.sh stands in for the binary, a fresh
+  # prefix per test under the build folder); skipped (77) without Wine (RA2_NATIVE_WINE) or the installed game.
+  set(RB_DATA_DIR "$ENV{RA2_DATA_DIR}" CACHE PATH "The user's installed game (read only, at run time; the played checks skip without it)")
+  set(RB_GAME_EXE "" CACHE FILEPATH "The game.exe whose stored data the game loads (default: the one in RB_DATA_DIR)")
+  if(NOT RB_GAME_EXE AND RB_DATA_DIR)
+    set(RB_GAME_EXE "${RB_DATA_DIR}/game.exe")
+  endif()
+  foreach(rb_route skirmish exit save combat production forcewin)
+    add_test(NAME rb-windows-${rb_route}-wine COMMAND "${RB_PYTHON3}" -B "${RB_DIR}/tests/rb_routes.py" --route ${rb_route}
+             --binary "${RB_DIR}/tools/rb_wine.sh" --data-dir "${RB_DATA_DIR}" --game-exe "${RB_GAME_EXE}"
+             --work "${CMAKE_CURRENT_BINARY_DIR}/tests/${rb_route}")
+    set_tests_properties(rb-windows-${rb_route}-wine PROPERTIES SKIP_RETURN_CODE 77 RUN_SERIAL TRUE TIMEOUT 900 LABELS rb-wine
+      ENVIRONMENT "RB_WINDOWS_EXE=$<TARGET_FILE:rb-native-trial>;RB_WINE_PREFIX=${CMAKE_CURRENT_BINARY_DIR}/wine/rb-${rb_route};RA2_NATIVE_WINE=${RA2_NATIVE_WINE}")
+  endforeach()
+  return()   # the other played checks run the Mac build
 elseif(RB_IOS)
   set(rb_link_frameworks "")
   foreach(f IN LISTS rb_frameworks rb_sdl_frameworks)

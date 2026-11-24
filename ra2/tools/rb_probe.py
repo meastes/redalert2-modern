@@ -79,6 +79,13 @@ def main():
         subprocess.run([sys.executable, '-B', str(ROOT / 'yr/tools/yr_sdk.py'), '--mingw', str(mingw[0]),
                         '--out', str(gen / 'mingw')] + (['--host-headers', a.host_headers] if a.host_headers else []),
                        check=True, stdout=sys.stderr)
+    if a.target == 'windows' and not (gen / 'mingw-i686/windows.h').exists():
+        # The original-layout dumps' i686 side (rb_original_layouts.py) reads the headers as the Mac build rewrites them
+        # (RA2_LONG, the C library's own headers kept): a second tree beside the Windows build's.
+        roots = [Path(MINGW)] if MINGW else sorted(ROOT.glob('toolchains/llvm-mingw-*'))
+        mingw = [inc for r in roots for inc in sorted(r.glob('**/generic-w64-mingw32/include'))[:1]]
+        subprocess.run([sys.executable, '-B', str(ROOT / 'yr/tools/yr_sdk.py'), '--mingw', str(mingw[0]),
+                        '--out', str(gen / 'mingw-i686')], check=True, stdout=sys.stderr)
     if a.print_flags:
         print(';'.join(flags(gen, a.target == 'windows')), end='')
         return
