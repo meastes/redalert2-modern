@@ -102,3 +102,10 @@ Neither library is copied into Git.
   DirectX headers are read at build time and rewritten into the build folder by `yr/tools/yr_sdk.py`; nothing of
   it is copied into Git or linked into the apps (mingw-w64 headers: ZPL and public domain).
 - CMake, Ninja, Python 3, Xcode.
+
+## App icon
+
+`packaging/icon/` (ra2-ios.png, ra2-mac.png and the ra2-ico-*.png sizes) holds the app icon, supplied by the
+repository owner on 2026-11-24 and made with an image generator. It contains no artwork taken from the game or
+from Electronic Arts. `packaging/make_icon.py` copies it into the Mac, iOS and Windows bundles; its drawn shapes
+remain only for the Yuri's Revenge stand-alone app (`--yr`).

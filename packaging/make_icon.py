@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-or-later
-# A placeholder app icon for RA2.app, drawn here from plain shapes (no game or
-# third-party art): a red rounded square with a white five-pointed star and a
+# The app icon. Default: the owner's artwork in packaging/icon/ (THIRD_PARTY.md). --yr: a
+# placeholder drawn from plain shapes (no game or third-party art): a rounded square with a five-pointed star and a
 # dark ring. Writes one 1024x1024 PNG; make_app.sh scales it into the iconset.
 # --full-bleed (the iOS app, native/CMakeLists.txt): the red square fills the
 # picture, opaque, since iOS draws its own rounded mask over an app icon.
@@ -98,9 +98,23 @@ def render(n=SIZE, full_bleed=False):
     return png
 
 
+# The app icon proper: the owner's artwork in packaging/icon/ (see THIRD_PARTY.md), copied as
+# is. ra2-ios.png is opaque and full-bleed (iOS draws its own mask); ra2-mac.png carries its
+# own rounded square with transparent corners. The drawn shapes above remain for --yr.
+ICON_DIR = __import__("os").path.join(__import__("os").path.dirname(__import__("os").path.abspath(__file__)), "icon")
+
+
+def master(name):
+    with open(__import__("os").path.join(ICON_DIR, name), "rb") as f:
+        return f.read()
+
+
 def main(out, full_bleed=False):
     with open(out, "wb") as f:
-        f.write(render(SIZE, full_bleed))
+        if PURPLE:
+            f.write(render(SIZE, full_bleed))
+        else:
+            f.write(master("ra2-ios.png" if full_bleed else "ra2-mac.png"))
 
 
 # The Windows exe's file icon (lane C15d, cmake/windows.cmake): an .ico of PNG pictures
@@ -109,7 +123,7 @@ ICO_SIZES = (16, 24, 32, 48, 64, 256)
 
 
 def write_ico(out):
-    pictures = [render(n) for n in ICO_SIZES]
+    pictures = [master("ra2-ico-%d.png" % n) for n in ICO_SIZES]
     head = struct.pack("<HHH", 0, 1, len(pictures))
     offset = len(head) + 16 * len(pictures)
     entries, data = b"", b""
