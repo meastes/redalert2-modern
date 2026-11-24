@@ -1,0 +1,17 @@
+# Build outputs and local toolchains (never tracked)
+/build/
+/toolchains/
+/private/
+__pycache__/
+*.pyc
+.DS_Store
+# Game files never belong here (the apps read the player's own installation at run time)
+*.mix
+*.mmx
+*.bik
+*.vqa
+*.tlb
+*.exe
+*.dll
+*.sav
+*.SAV

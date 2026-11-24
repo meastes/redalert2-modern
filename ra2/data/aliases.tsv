@@ -1,0 +1,4 @@
+alias	target	address	kind	evidence
+_Art_Popup_Back	_ArtPopupBack	0x00AC1218	data	globals.h and txtlabel2.cpp name one global (PUDLGBGN.SHP); lane P2
+_Art_Popup_Back_Allied	_ArtPopupBackAllied	0x00AC121C	data	the same, PUDLGBGA.SHP
+_Art_Popup_Back_Soviet	_ArtPopupBackSoviet	0x00AC1220	data	the same, PUDLGBGS.SHP

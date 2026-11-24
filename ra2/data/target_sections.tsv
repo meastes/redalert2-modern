@@ -1,0 +1,7 @@
+# Section layout of the target game.exe (4,485,392 bytes, SHA-256 e6418111...e70f): name, start, end and
+# end of the file-backed part, as virtual addresses. Layout only, as port/include/ra2port/game_builds.hpp keeps it;
+# no bytes of the executable. ra2/tools/rb_data.py reads it to tell .bss from initialised data.
+.text	0x00401000	0x0079A000	0x0079A000
+.rdata	0x0079A000	0x007C9000	0x007C9000
+.data	0x007C9000	0x00B2C9C4	0x00831000
+.rsrc	0x00B2D000	0x00B43000	0x00B43000

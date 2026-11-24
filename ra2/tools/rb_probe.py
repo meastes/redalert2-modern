@@ -1,0 +1,110 @@
+#!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+"""Compile the generated rebuild units (rb_units.py) with the native YR build's flags (lane P1).
+
+A probe outside CMake: each OUT/units/*.cpp with clang (-fsyntax-only, or -c into OUT/obj), the
+flags of yr_units_objs (the RA2 dialect, the port prelude and the YR prelude, the mingw-w64 headers
+rewritten by yr/tools/yr_sdk.py). Writes OUT/probe.json: per unit ok/failed, error counts and
+the first errors, and a tally of error sites (file:line) across units.
+
+    python3 ra2/tools/rb_probe.py --gen build/rb-native/gen [--obj] [-j 6] [--only a,b]
+"""
+import argparse
+import collections
+import json
+import os
+import re
+import subprocess
+import sys
+from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
+# The llvm-mingw toolchain whose Win32/DirectX headers the units read (rewritten by yr/tools/yr_sdk.py into the
+# build folder, never copied into the repository): RA2_LLVM_MINGW, else an extracted release under toolchains/.
+MINGW = os.environ.get('RA2_LLVM_MINGW', '')
+
+
+def flags(gen):
+    sdk = ROOT / 'yr/sdk'
+    return ['-DRA2_NATIVE_YR=1', '-DRA2_NATIVE_RB=1', '-DWIN32', '-D_WIN32', '-D__GNUC_MINOR__=2', '-D__GNUC__=4',
+            '-I' + str(ROOT / 'ra2/sdk'), '-I' + str(sdk), '-I' + str(gen / 'hdr'),
+            '-O2', '-DNDEBUG', '-std=c++17', '-arch', 'arm64',
+            '-fms-extensions', '-fms-compatibility', '-fdelayed-template-parsing', '-Xclang', '-fno-wchar',
+            '-fshort-wchar', '-fwrapv', '-fno-strict-aliasing', '-fno-delete-null-pointer-checks', '-mms-bitfields',
+            '-Wno-incompatible-ms-struct', '-fwritable-strings', '-fno-rounding-math', '-Wno-error=address-of-temporary',
+            '-Wno-register', '-Wno-c++11-narrowing', '-w', '-ferror-limit=50',
+            '-include', str(ROOT / 'port/include/ra2port/prelude.hpp'),
+            '-include', str(sdk / 'yr_prelude.h'),
+            '-idirafter', str(gen / 'mingw'), '-fno-zero-initialized-in-bss']
+
+
+ERR = re.compile(r'^(.*?):(\d+):\d+: (?:fatal )?error: (.*)$', re.M)
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument('--gen', required=True)
+    ap.add_argument('--asan', action='store_true', help='AddressSanitizer objects (OUT/obj[-nm]-asan), for diagnosing heap faults')
+    ap.add_argument('--print-flags', action='store_true',
+                    help="make the rewritten mingw headers if needed, print the units' compile flags (';'-separated, for CMake) and stop")
+    ap.add_argument('--obj', action='store_true', help='compile to OUT/obj/*.o instead of -fsyntax-only')
+    ap.add_argument('-j', type=int, default=6)
+    ap.add_argument('--only', default='')
+    ap.add_argument('--non-matching', action='store_true',
+                    help="compile the rebuild's parked drafts too (-DRA2_NON_MATCHING; objects in OUT/obj-nm, probe-nm.json)")
+    a = ap.parse_args()
+    gen = Path(a.gen).resolve()
+    if not (gen / 'mingw/windows.h').exists():
+        roots = [Path(MINGW)] if MINGW else sorted(ROOT.glob('toolchains/llvm-mingw-*'))
+        mingw = [inc for r in roots for inc in sorted(r.glob('**/generic-w64-mingw32/include'))[:1]]
+        if not mingw:
+            raise SystemExit('rb_probe: no llvm-mingw toolchain (set RA2_LLVM_MINGW to the extracted '
+                             'llvm-mingw-20261020-ucrt-macos-universal folder, or extract it under toolchains/)')
+        subprocess.run([sys.executable, '-B', str(ROOT / 'yr/tools/yr_sdk.py'), '--mingw', str(mingw[0]),
+                        '--out', str(gen / 'mingw')], check=True, stdout=sys.stderr)
+    if a.print_flags:
+        print(';'.join(flags(gen)), end='')
+        return
+    only = set(x for x in a.only.split(',') if x)
+    units = sorted(u for u in (gen / 'units').glob('*.cpp') if not only or u.stem in only or u.name in only)
+    base = ['clang++'] + flags(gen) + (['-DRA2_NON_MATCHING'] if a.non_matching else [])
+    objdir = gen / ('obj-nm' if a.non_matching else 'obj')
+    if a.asan:
+        base += ['-fsanitize=address', '-fsanitize-recover=address', '-fno-sanitize-address-use-after-scope', '-fno-omit-frame-pointer', '-g1']   # Westwood's straws unlink from destroyed neighbours (benign)
+        objdir = Path(str(objdir) + '-asan')
+    objdir.mkdir(exist_ok=True)
+
+    def one(u):
+        cmd = base + (['-c', '-o', str(objdir / (u.stem + '.o'))] if a.obj else ['-fsyntax-only']) + [str(u)]
+        p = subprocess.run(cmd, capture_output=True, text=True, errors='replace')
+        errs = ERR.findall(p.stderr)
+        return u.stem, p.returncode, errs, p.stderr
+
+    results = {}
+    with ThreadPoolExecutor(a.j) as ex:
+        for stem, rc, errs, stderr in ex.map(one, units):
+            results[stem] = {'ok': rc == 0, 'errors': len(errs),
+                             'first': ['%s:%s: %s' % (os.path.basename(f), l, m) for f, l, m in errs[:6]]}
+            if rc != 0 and not errs:
+                results[stem]['first'] = [stderr[-600:]]
+    sites = collections.Counter()
+    for stem, r in results.items():
+        for e in set(x.split(': ', 1)[0] for x in r['first']):
+            sites[e] += 1
+    ok = sum(r['ok'] for r in results.values())
+    prev = {}
+    pj = gen / ('probe-nm.json' if a.non_matching else 'probe.json')
+    if pj.exists() and only:
+        prev = json.loads(pj.read_text()).get('units', {})
+    prev.update(results)
+    okall = sum(r['ok'] for r in prev.values())
+    pj.write_text(json.dumps({'compiled': okall, 'units_probed': len(prev), 'sites': sites.most_common(60),
+                              'units': prev}, indent=1) + '\n')
+    print('rb_probe: %d of %d probed now compile (%d of %d overall)' % (ok, len(results), okall, len(prev)))
+    for s, n in sites.most_common(25):
+        print('  %4d  %s' % (n, s))
+
+
+if __name__ == '__main__':
+    main()
