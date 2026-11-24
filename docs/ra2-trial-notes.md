@@ -718,3 +718,36 @@ ones the played routes reached. The rebuild is unchanged by all of them (finding
 
 Still to sweep (not reached by any route yet): the rest of main's 246 width fixups by pattern against the rebuild's
 text, the multiplayer and Westwood Online paths (wonline left out), and the campaign missions past Allied 3.
+
+## The Enhancements page, list boxes, device parity (lane P12, 2026-11-24, same PIN, in redalert2-modern)
+
+From the user's iPhone Duo report and a code comparison with the played port (redalert2-decomp native/). The host and
+port layers (`platform/`, `port/`) are byte-identical to the played port's apart from SPDX lines, so every difference is
+in the game-side layer (`ra2/fixups.json`, `ra2/glue`) or a parked draft of the rebuild. Fixed (each a `fixups.json` row
+naming main's row):
+
+| Item | Cause | Fix |
+| --- | --- | --- |
+| Enhancements page: Cancel a grey push button in the page body | 0x005E72C0's bottom-slot list lacked 0x7F03 (main's C7 row) | Is_Default_Button lists 0x7F03 |
+| Dropdown lists: no frame, rows left on screen after closing, arrow never pressed | parked Combo_Proc: no parent repaint, Win32 dropped state not set | open/close repaint the parent and set the state (main's case 0x14F) |
+| Dropdown click sound | the draft played GenericClick | GUIComboOpenSound (Rules +0x19C, 0x005F5DF2) |
+| Fullscreen "Automatic" dark red on touch hosts | the draft (and the original) use Disabled_Text_Color | Light_Grey as main's port (owner ruling: the played look; not the original's) |
+| Internet button live | main's C20 row not carried | disabled at the main menu's creation |
+| Every list box empty (Load/Save/Delete, Keyboard commands, ...) | the parked List_Proc stops when GetUpdateRect reports no region; the port reports none | the client rectangle when none is reported |
+| Column lists (Load/Save/Delete) drew no text | the draft drew each cell in a 0x0 rectangle, which clips the font | the column's width by the row's height |
+| Game interface size could write outside a surface | main's C6 Prep_For_Blit window clip not carried | carried (xsurface.cpp row) |
+| LAN UniqueID could collide between devices | main's C20 install id not carried | carried (session.cpp row) |
+| Load error left nothing to click | main's R684 row not carried | the list is shown again |
+| 16 ms frame floor at every game speed | main applies it at speed 0 only | Options.GameSpeed > 0 skips it |
+| Pinch zoom off on iOS (so no 0.5x map zoom) | every setting defaults off on every platform, in both ports; the played app's On is the user's saved choice | iOS starts with Pinch zoom on (`platform/sdl/enhancements.cpp` default_value; the user's word via the owner) |
+| iOS home-screen name | "RA2 Rebuild Trial" | "RA2" (bundle id stays io.github.ra2native.RBTrial until parity) |
+
+Kept, following the original (each evidenced): dropdown and list row heights (Combo_Proc 0x005F6460, List_Proc
+0x005F6B4D), the list's filled selection bar (0x005F6DA6) and the Load list's date/time columns (Fill_List's OD_SETCELL).
+Not reproduced: the played app's 976x720 on the Duo; the same code gives 1024x720 for 944x634 usable points at interface
+1.25x (`main.cpp` game_resolution and the interface-size narrowing are identical in both ports); the played app's
+"app: usable ..." log line on the device would settle it.
+
+**Shell frames check** (`ra2/tests/rb_shell_frames.py`, ctest rb-shell-frames-mac and -iphone, with RB_IDENTITY_SRC): both
+ports through main menu, Options, Enhancements, Keyboard, Network, Single Player, Load and the skirmish setup, compared in
+8x8 tiles outside the listed allowed areas. It found the two list box faults above.

@@ -35,7 +35,7 @@ On a Mac with Apple silicon:
 | Command | Result |
 | --- | --- |
 | `./build.sh mac` | `build/mac/RA2.app`: Red Alert 2 for the Mac |
-| `./build.sh ios simulator` | `build/ios-simulator/RBTrial.app`: the iPhone/iPad app for the Simulator |
+| `./build.sh ios simulator` | `build/ios-simulator/RBTrial.app`: the iPhone/iPad app for the Simulator (home-screen name "RA2"; bundle id `io.github.ra2native.RBTrial`, kept apart from the played app's until parity) |
 | `RA2_IOS_TEAM=<team id> ./build.sh ios device` | `build/ios-device/RBTrial.app`, signed for your devices |
 
 Prerequisites (the script downloads and installs nothing):

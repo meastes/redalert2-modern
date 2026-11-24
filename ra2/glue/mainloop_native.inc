@@ -25,7 +25,10 @@ static void RB_Frame_Floor(void)
 	if (uncapped < 0) uncapped = getenv("RA2_NATIVE_UNCAPPED") ? 1 : 0;
 	static uint64_t deadline = 0;
 	uint64_t const period = 16000000u;
-	if (uncapped || (Session.Type != GAME_NORMAL && Session.Type != GAME_SKIRMISH)) {
+	// Only at game speed 0 (the fastest, where the original's frame timer gives no wait), as main's
+	// Native_Frame_Floor (native/link/harness_skirmish.cpp: Options.GameSpeed, 0x00A40B18, > 0 skips it);
+	// the slower speeds keep the original's own pacing alone (lane P12, the parity audit).
+	if (uncapped || Options.GameSpeed > 0 || (Session.Type != GAME_NORMAL && Session.Type != GAME_SKIRMISH)) {
 		deadline = 0;
 		return;
 	}

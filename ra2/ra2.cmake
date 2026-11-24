@@ -145,7 +145,9 @@ if(RB_IOS)
   execute_process(COMMAND xcrun --sdk ${RA2_IOS_PLATFORM_NAME} --show-sdk-version
                   OUTPUT_VARIABLE rb_ios_sdk_version OUTPUT_STRIP_TRAILING_WHITESPACE)
   set(RA2_IOS_SDK_NAME "${RA2_IOS_PLATFORM_NAME}${rb_ios_sdk_version}")
-  set(RA2_IOS_APP_NAME "RA2 Rebuild Trial")
+  # The home-screen name (the user, 2026-11-24): "RA2", as the Mac app is RA2.app. The bundle id stays
+  # io.github.ra2native.RBTrial, distinct from the played app's (io.github.ra2native.RA2), until parity.
+  set(RA2_IOS_APP_NAME "RA2")
   configure_file("${RB_ROOT}/packaging/ios/Info.plist.in" "${CMAKE_CURRENT_BINARY_DIR}/ios/Info.plist.in" @ONLY)
   set_target_properties(rb-native-trial PROPERTIES
     MACOSX_BUNDLE TRUE
@@ -343,6 +345,16 @@ foreach(rb_pair Arabs,6 Russians,0 Africans,7)
            --route skirmish --sides ${rb_pair} --frames 5000 --seconds 900)
   set_tests_properties(rb-identity-skirmish-${rb_pair_name} PROPERTIES SKIP_RETURN_CODE 77 RUN_SERIAL TRUE TIMEOUT 2400
                        LABELS rb-identity)
+endforeach()
+# Lane P12: the shell screens of the two ports picture by picture (label rb-shell-frames; tests/rb_shell_frames.py): the
+# main menu, Options, Enhancements, Keyboard, Network, Single Player, Load and the skirmish setup, at the Mac's default
+# window and at iPhone 17 Pro landscape points with the touch controls; the allowed differences are listed in the test.
+foreach(rb_size mac iphone)
+  add_test(NAME rb-shell-frames-${rb_size} COMMAND "${RB_PYTHON3}" -B "${RB_DIR}/tests/rb_shell_frames.py"
+           --src "${RB_IDENTITY_SRC}" --trial $<TARGET_FILE:rb-native-trial> --data-dir "${RB_DATA_DIR}"
+           --game-exe "${RB_GAME_EXE}" --work "${CMAKE_CURRENT_BINARY_DIR}/tests/shell-frames-${rb_size}" --size ${rb_size})
+  set_tests_properties(rb-shell-frames-${rb_size} PROPERTIES SKIP_RETURN_CODE 77 RUN_SERIAL TRUE TIMEOUT 600
+                       LABELS rb-shell-frames)
 endforeach()
 endif()
 # Lane P7: the iOS Simulator checks (label rb-ios, opt in: RB_IOS_UDID names a Simulator device). The routes of

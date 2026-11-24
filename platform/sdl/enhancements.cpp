@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Enhancements (native additions, not in the original; the Outpost 2 port's model,
 // docs/HANDOFF.md "ENHANCEMENTS MENU MODEL"). Every setting is off by default: with
-// the defaults (and with the ORIGINAL preset) the app looks and behaves as before
+// the defaults (and with the ORIGINAL preset) the app looks and behaves as before (iOS: Pinch zoom
+// starts on, default_value below)
 // (tests/enhancements_frames.py proves the frames identical). Settings live in the
 // native app's own settings file (main.cpp, key=value lines beside RA2.INI's folder),
 // never in RA2.INI; RA2_NATIVE_ENHANCEMENTS="key=value,..." sets them for one run
@@ -16,6 +17,9 @@
 #include <string>
 #include <map>
 #include <vector>
+#if defined(__APPLE__)
+#include <TargetConditionals.h>
+#endif
 
 void ra2_host_set_picture_scaling(int mode);
 void ra2_host_set_vsync(bool on);
@@ -122,6 +126,19 @@ const Row *find_row(const std::string &key)
     return nullptr;
 }
 
+// A setting's value before the player chooses one: the row's first value (the original look), except
+// Pinch zoom on the iPhone/iPad app, which starts on (the user, 2026-11-24, via the owner: the played
+// app is used with it on, and zooming the map out below 1x, to 0.5x, needs it: render scale 2,
+// ra2/glue/zoom_native.inc). The Original preset still turns it off; the Mac and Windows keep off.
+const std::string &default_value(const Row &r)
+{
+#if defined(TARGET_OS_IOS) && TARGET_OS_IOS
+    static const std::string on = "on";
+    if (std::string(r.key) == "zoomgestures") return on;
+#endif
+    return r.values[0];
+}
+
 bool valid(const Row &r, const std::string &v)
 {
     for (const std::string &x : r.values) if (x == v) return true;
@@ -151,7 +168,7 @@ void load()
 {
     if (loaded) return;
     loaded = true;
-    for (const Row &r : rows()) current[r.key] = r.values[0];
+    for (const Row &r : rows()) current[r.key] = default_value(r);
     if (store_get)
         for (const Row &r : rows())
             if (r.preset) set_value(current, r.key, store_get((std::string("enh_") + r.key).c_str()));
@@ -222,7 +239,7 @@ std::string value_of(const std::map<std::string, std::string> &s, const Row &r)
         return it == s.end() ? (ra2_host_is_fullscreen() ? "on" : "off") : it->second;
     }
     auto it = s.find(r.key);
-    return it == s.end() ? r.values[0] : it->second;
+    return it == s.end() ? default_value(r) : it->second;
 }
 
 std::string preset_of(const std::map<std::string, std::string> &s)

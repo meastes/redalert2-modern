@@ -780,6 +780,12 @@
    "why": "Lane P3: RB_Resume_Load (the hook above)."
   },
   {
+   "file": "src/loaddlg.cpp",
+   "old": "\t\t\t\t\t\t\t\t\t\tShowWindow(dialog, SW_HIDE); // RA2: the dialog is hidden again after the message",
+   "new": "\t\t\t\t\t\t\t\t\t\tShowWindow(dialog, SW_SHOW); // NATIVE (main's codex4 R684, C5): the list stays shown after the error",
+   "why": "Lane P12 (main's row at LoadOptionsClass's dialog loop, native/port/fixups.json row 437, codex4 R684; found by the parity audit): after TXT_ERROR_LOADING_GAME the original hides the load dialog again while its pending loop goes on, so after OK nothing of the dialog is left to click (Back hit no control). Natively the list is shown again, as in main's port. Not original behaviour."
+  },
+  {
    "file": "src/savever.cpp",
    "append": "savever_native.inc",
    "why": "Lane P3: SaveVersionInfo's constructor (the unit defines it under SavegameInformation, saveload.h's declaration of the same class); Save_Game and the load dialog make one."
@@ -946,6 +952,17 @@
    "why": "Lane P4: XSurface::Draw_Ellipse 0x007746C0 (the rebuild keeps TibSun's text under #if 0), main's behaviour body; reached by Draw_Radial_Indicator."
   },
   {
+   "file": "src/xsurface.cpp",
+   "after_includes": "extern \"C\" void ra2port_blit_window_clipped(int x, int y, int width, int height, int surface_width, int surface_height);   /* NATIVE (C6): port/src/run_progress.cpp */\n",
+   "why": "Lane P12: the report hook of the Prep_For_Blit clip below (port/src/run_progress.cpp)."
+  },
+  {
+   "file": "src/xsurface.cpp",
+   "old": "\tif (!drect.Is_Valid() || !dcliprect.Is_Valid() || !srect.Is_Valid() || !scliprect.Is_Valid()) return(false);\n\n\t/*\n\t**\tPerform the clipping of the desired blit rectangles against the surface clipping\n\t**\trectangles. If it happens that the blit is clipped into oblivion, then bail\n\t**\timmediately -- there is nothing left to do.\n\t*/\n\tif (!Blit_Clip(drect, dcliprect, srect, scliprect)) {\n\t\treturn(false);\n\t}\n\n\t/*\n\t**\tDetermine if the rectangles overlap such that a forward blit would\n\t**\tbe prohibited. This only occurs if the source and destination refer to the\n\t**\tsame surface and the rectangles overlap.\n\t*/\n\toverlapped = false;\n\tif (&source == &dest && srect.Is_Overlapping(drect)) {\n\t\tif (srect.Y < drect.Y || (srect.Y == drect.Y && srect.X < drect.X)) {\n\t\t\toverlapped = true;\n\t\t}\n\t}\n\n\t/*\n\t**\tFetch pointers to the source and dest upper left pixel. That is, the upper\n\t**\tleft pixel of the source and dest sub-rectangles within each surface\n\t**\trespectively.\n\t*/\n\tdbuffer = dest.Lock(dcliprect.Top_Left() + drect.Top_Left());\n\tif (dbuffer == NULL) return(false);\n\tsbuffer = source.Lock(scliprect.Top_Left() + srect.Top_Left());\n\tif (sbuffer == NULL) {\n\t\tdest.Unlock();\n\t\treturn(false);\n\t}\n\n\treturn(true);\n}\n",
+   "new": "\t// NATIVE (C6, main's port/fixups.json row at Prep_For_Blit 0x007753B0): the destination window clipped to the\n\t// destination surface. The original's windows always lie inside their surfaces; natively a layout the\n\t// enhancements change (Game interface size) can give a window larger than its surface, and a blit there wrote\n\t// outside the surface's memory (main's ASan run: a sidebar ShapeButtonClass::Draw_Me drew 15 KB before its\n\t// surface), corrupting other heap objects. drect stays relative to the caller's window.\n\tRect dwindow = dcliprect;\n\tint shift_x = 0, shift_y = 0;\n\t{\n\t\tRect s = dest.Get_Rect();\n\t\tint x0 = dwindow.X > s.X ? dwindow.X : s.X, y0 = dwindow.Y > s.Y ? dwindow.Y : s.Y;\n\t\tint x1 = dwindow.X + dwindow.Width < s.X + s.Width ? dwindow.X + dwindow.Width : s.X + s.Width;\n\t\tint y1 = dwindow.Y + dwindow.Height < s.Y + s.Height ? dwindow.Y + dwindow.Height : s.Y + s.Height;\n\t\tif (x0 != dwindow.X || y0 != dwindow.Y || x1 != dwindow.X + dwindow.Width || y1 != dwindow.Y + dwindow.Height) {\n\t\t\tint ax0 = dwindow.X + drect.X, ay0 = dwindow.Y + drect.Y;\n\t\t\tint ax1 = ax0 + drect.Width, ay1 = ay0 + drect.Height;\n\t\t\tif (ax0 < dwindow.X) ax0 = dwindow.X;\n\t\t\tif (ay0 < dwindow.Y) ay0 = dwindow.Y;\n\t\t\tif (ax1 > dwindow.X + dwindow.Width) ax1 = dwindow.X + dwindow.Width;\n\t\t\tif (ay1 > dwindow.Y + dwindow.Height) ay1 = dwindow.Y + dwindow.Height;\n\t\t\tif (ax0 < ax1 && ay0 < ay1 && (ax0 < x0 || ay0 < y0 || ax1 > x1 || ay1 > y1)) {\n\t\t\t\tra2port_blit_window_clipped(ax0, ay0, ax1 - ax0, ay1 - ay0, s.Width, s.Height);\n\t\t\t}\n\t\t\tshift_x = x0 - dwindow.X;\n\t\t\tshift_y = y0 - dwindow.Y;\n\t\t\tdrect.X -= shift_x;\n\t\t\tdrect.Y -= shift_y;\n\t\t\tdwindow = Rect(x0, y0, x1 - x0, y1 - y0);\n\t\t}\n\t}\n\tbool prepared = false;\n\tif (drect.Is_Valid() && dwindow.Is_Valid() && srect.Is_Valid() && scliprect.Is_Valid()\n\t\t&& Blit_Clip(drect, dwindow, srect, scliprect)) {\n\t\toverlapped = false;\n\t\tif (&source == &dest && srect.Is_Overlapping(drect)) {\n\t\t\tif (srect.Y < drect.Y || (srect.Y == drect.Y && srect.X < drect.X)) {\n\t\t\t\toverlapped = true;\n\t\t\t}\n\t\t}\n\t\tdbuffer = dest.Lock(dwindow.Top_Left() + drect.Top_Left());\n\t\tif (dbuffer != NULL) {\n\t\t\tsbuffer = source.Lock(scliprect.Top_Left() + srect.Top_Left());\n\t\t\tif (sbuffer == NULL) {\n\t\t\t\tdest.Unlock();\n\t\t\t} else {\n\t\t\t\tprepared = true;\n\t\t\t}\n\t\t}\n\t}\n\tdrect.X += shift_x;\n\tdrect.Y += shift_y;\n\treturn(prepared);\n}\n",
+   "why": "Lane P12 (main's lane C6 row at XSurface::Prep_For_Blit 0x007753B0, native/port/fixups.json; codex4 R703/R705/R706): Prep_For_Blit clips a blit to the destination window the caller gives, which in the original always lies inside the destination surface. Natively Game interface size lays the sidebar out on a surface shorter than the window ShapeButtonClass::Draw_Me passes (VisibleRect), and main's ASan run caught a sidebar button blit writing 15 KB before its surface: heap corruption that later saves recorded or that faulted. The window is clipped to the surface first (drect kept relative to the caller's window, as callers use it); a window inside its surface, every original case, is unchanged. The trial had not carried it (an Enhancements setting, the user's Duo report 2026-11-24)."
+  },
+  {
    "file": "src/dsurface.cpp",
    "append": "dsurface_native.inc",
    "why": "Lane P4: DSurface::Draw_Depth_Antialiased_Line 0x004AC650 (the rebuild keeps TibSun's text under #if 0), main's behaviour body; reached by the laser beams and Draw_Radial_Indicator."
@@ -1046,6 +1063,17 @@
    "old": "\\(int\\)slot < \\(int\\)&Session\\.Slots\\[8\\]",
    "new": "(intptr_t)slot < (intptr_t)&Session.Slots[8]",
    "why": "Lane P7 (pointer width, the clang -Wpointer-to-int-cast/-Wint-to-pointer-cast sweep over every unit): as queue.cpp: the slot loop's bound compared through cut addresses. Pointer width."
+  },
+  {
+   "file": "src/session.cpp",
+   "after_includes": "extern \"C\" unsigned int ra2port_install_id(void);   /* NATIVE: port/src/port_core.cpp (main's lane C20) */\n",
+   "why": "Lane P12: the declaration for the UniqueID row below."
+  },
+  {
+   "file": "src/session.cpp",
+   "old": "            Add_CRC(&id, path[i]);\n        }\n    }\n    return id;\n}",
+   "new": "            Add_CRC(&id, path[i]);\n        }\n    }\n    Add_CRC(&id, ra2port_install_id());   /* NATIVE: this installation's random id (main's lane C20) */\n    return id;\n}",
+   "why": "Lane P12 (main's lane C20 rows at SessionClass::Compute_Unique_ID, native/port/fixups.json rows 494-495; found by the parity audit): the LAN UniqueID is a CRC of the time, the free disk space and PATH. Natively two devices started the same way (two iPhones, two Macs from Finder) share PATH and often the rest, and a player whose UniqueID equals another's drops that player's announcements (NET_CHAT_ANNOUNCE), so the two never see each other. This installation's random id (ra2port_install_id, port/src/port_core.cpp, kept in the app's settings) is added to the CRC, as main's port does."
   },
   {
    "file": "hdr/tooltip.h",
@@ -1604,6 +1632,12 @@
   },
   {
    "file": "src/ownrdraw.cpp",
+   "old": "    return id == 0x686; // RA2: as above\n}",
+   "new": "    return id == 0x686 || id == 0x7f03;   /* NATIVE (C7): the Enhancements page's Cancel */\n}",
+   "why": "Lane P12 (main's lane C7 row at OwnerDraw::Is_Default_Button 0x005E72C0, native/port/fixups.json): 0x005E72C0 names, per dialog kind, the button that sits in the bottom slot of the right-hand column (as the Options dialog's Main Menu 0x686). The Enhancements page is created under the Options dialog's id 0xD5 (port/src/native_dialogs.cpp), so listing its Cancel 0x7F03 beside 0x686 puts it in that slot as a column button; without it the page's Cancel stayed at the template's place over the page (the user's Duo report 2026-11-24, the Enhancements menu). No original dialog has a control 0x7F03."
+  },
+  {
+   "file": "src/ownrdraw.cpp",
    "old": "    int item = CallWindowProcA(proc, owner, 0x199, index, 0); // RA2: as above\n    if (item == -1 || item == 0) { // RA2: as above\n        item = CallWindowProcA(proc, owner, 0x150, index, 0); // RA2: as above",
    "new": "    intptr_t item = CallWindowProcA(proc, owner, 0x199, index, 0); // RA2: as above (native: pointer-sized, the item's node)\n    if (item == -1 || item == 0) { // RA2: as above\n        item = CallWindowProcA(proc, owner, 0x150, index, 0); // RA2: as above",
    "why": "Lane P8 (pointer width; found by main's enhancements_newgame.py on the trial: opening a dropdown of the Enhancements page faulted in Combo_Drop_Proc): Get_Item_Text keeps the combo row's node pointer (0x199, else CB_GETITEMDATA) in an int and reads its text through it; cut to 32 bits natively. Every owner-draw dropdown's open list reaches it (the Options resolution box, the skirmish setup's combos when opened)."
@@ -1705,6 +1739,12 @@
    "why": "Lane P8 (the width sweep, item 5: main's width rows checked one by one against the rebuild text): As above: the list's item data is the MovieListEntry * (options.cpp Fill_Movie_List)."
   },
   {
+   "file": "src/init.cpp",
+   "old": "\tHWND dialog = OwnerDraw::Begin_Dialog(IDD_MAIN_MENU, (DLGPROC)Main_Menu_Dialog_Proc); // RA2: as above\n\tif (dialog != NULL) {\n",
+   "new": "\tHWND dialog = OwnerDraw::Begin_Dialog(IDD_MAIN_MENU, (DLGPROC)Main_Menu_Dialog_Proc); // RA2: as above\n\tif (dialog != NULL) {\n\t\tEnableWindow(GetDlgItem(dialog, 0x684), FALSE);   /* NATIVE: no Internet play (main's lane C20) */\n",
+   "why": "Lane P12 (main's lane C20 row at the main menu's Begin_Dialog, native/port/fixups.json; user 2026-11-16, and the user's Duo report 2026-11-24: the Internet button was live): the native build has no Internet play (Westwood Online; its code is left out here, its entries link-closure traps). The main menu dialog 0xE2's Internet button 0x684 (STT:MainButtonWWOnline) is disabled as soon as the dialog is made: it draws with the original's own disabled shape-button look and a click does nothing."
+  },
+  {
    "file": "src/movie.cpp",
    "old": "((wchar_t **)data)[5], 0, (TextPrintType)(TPF_6PT_GRAD | TPF_FULLSHADOW | TPF_USE_GRAD_PAL), ((int *)data)[1], false);",
    "new": "((SubTitle *)data)->Get_Caption(), 0, (TextPrintType)(TPF_6PT_GRAD | TPF_FULLSHADOW | TPF_USE_GRAD_PAL), (int)((SubTitle *)data)->Get_Display_Duration(), false); /* native: the SubTitle's Caption (+0x14 on VC6) and Duration (+0x04) by name */",
@@ -1763,6 +1803,42 @@
    "old": "struct ScrollBarRecord { // RA2: as above\n    char SubclassParam[0x08]; // RA2: as above\n    HWND ScrollOwner; // RA2: as above\n    char Reserved_0C[0x10 - 0x0c]; // RA2: as above\n    Surface *Back; // RA2: as above\n    char Reserved_14[0x20 - 0x14]; // RA2: as above\n    int SkipCheckPaint; // RA2: as above\n    char Reserved_24[0xbc - 0x24]; // RA2: as above\n    bool IsDisabled; // RA2: as above\n    char IsHidden[0xc8 - 0xbd]; // RA2: as above\n    int TextStyle; // RA2: as above\n    char Reserved_CC; // RA2: as above\n    bool IsAlternateColors; // RA2: as above\n    char Reserved_CE[0xe8 - 0xce]; // RA2: as above\n",
    "new": "struct ScrollBarRecord { // RA2: as above (native: WinData's own offsets)\n    char SubclassParam[offsetof(WinData, ScrollOwner)]; // RA2: as above\n    HWND ScrollOwner; // RA2: as above\n    char Reserved_0C[offsetof(WinData, Back) - offsetof(WinData, ScrollOwner) - sizeof(HWND)]; // RA2: as above\n    Surface *Back; // RA2: as above\n    char Reserved_14[offsetof(WinData, SkipCheckPaint) - offsetof(WinData, Back) - sizeof(Surface *)]; // RA2: as above\n    int SkipCheckPaint; // RA2: as above\n    char Reserved_24[offsetof(WinData, IsDisabled) - offsetof(WinData, SkipCheckPaint) - sizeof(int)]; // RA2: as above\n    bool IsDisabled; // RA2: as above\n    char IsHidden[offsetof(WinData, TextStyle) - offsetof(WinData, IsDisabled) - 1]; // RA2: as above\n    int TextStyle; // RA2: as above\n    char Reserved_CC; // RA2: as above\n    bool IsAlternateColors; // RA2: as above\n    char Reserved_CE[offsetof(WinData, ItemState) - offsetof(WinData, IsAlternateColors) - 1]; // RA2: as above\n",
    "why": "Lane P8 (the width sweep, item 5: main's width rows checked one by one against the rebuild text): Pointer width: Scroll_Bar_Proc reads its control record through ScrollBarRecord, a view with VC6 char padding; natively SkipCheckPaint, IsDisabled, TextStyle and IsAlternateColors lay elsewhere in WinData (8-byte HWNDs and pointers) and the bar's private state overlapped Result/IsFlashing/TextStyle. The padding is WinData's own offsets natively."
+  },
+  {
+   "file": "src/ownrdraw.cpp",
+   "old": "\t\t\t\t\tControl_Table.remove((unsigned int)dropdown);\n\t\t\t\t\tdata->IsEditFocus = 0;\n\t\t\t\t}\n\t\t\t\treturn 1;",
+   "new": "\t\t\t\t\tControl_Table.remove((unsigned int)dropdown);\n\t\t\t\t\tdata->IsEditFocus = 0;\n\t\t\t\t\tCallWindowProcA(previous, window, CB_SHOWDROPDOWN, FALSE, 0);   /* NATIVE (lane P12): see the row */\n\t\t\t\t\tInvalidateRect(GetParent(window), NULL, FALSE);\n\t\t\t\t}\n\t\t\t\treturn 1;",
+   "why": "Lane P12 (the user's Duo report 2026-11-24, the Enhancements menu; main's behaviour row native/link/behaviour_m14_ownerdraw.cpp case 0x14F): Combo_Proc is a parked draft in the rebuild (not exact). When its drop list closed, nothing repainted the dialog under it, so the list's rows stayed on the screen over the rows below (an Enhancements dropdown left '1.25x' over Map zoom), and the box's own Win32 state stayed dropped, so its arrow kept the dropped look. Main closes it the same way and repaints the parent (InvalidateRect, behaviour; the original's trigger is not identified) and tells the box's previous procedure (the port's combo state, which answers CB_GETDROPPEDSTATE for the paint's arrow)."
+  },
+  {
+   "file": "src/ownrdraw.cpp",
+   "old": "\t\t\tShowWindow(dropdown, SW_SHOWNORMAL);\n\t\t\tdata->IsEditFocus = (int)dropdown;\n\t\t\treturn 1;",
+   "new": "\t\t\tShowWindow(dropdown, SW_SHOWNORMAL);\n\t\t\tdata->IsEditFocus = (int)dropdown;\n\t\t\tCallWindowProcA(previous, window, CB_SHOWDROPDOWN, TRUE, 0);   /* NATIVE (lane P12): see the row */\n\t\t\tInvalidateRect(dropdown, NULL, FALSE);\n\t\t\tInvalidateRect(GetParent(window), NULL, FALSE);\n\t\t\treturn 1;",
+   "why": "Lane P12 (as the row above, main's case 0x14F open path): the drop list's frame is drawn one pixel outside its own rectangle (0x005EAD20) and reaches the screen only through the dialog's repaint (0x005EE460 paints a dialog, then its ComboDropWin children last); without it the trial's open list had no frame and no backing, its rows drawn over the page's rows. Main invalidates the list and the parent after showing it and sets the box's Win32 dropped state, so the paint draws the arrow pressed (Draw_Arrow's dropped argument)."
+  },
+  {
+   "file": "src/ownrdraw.cpp",
+   "old": "\t\tcase WM_LBUTTONDBLCLK:\n\t\t\tVocClass::PlayGlobal(Rule->GenericClick, 1.0f, 0x2000, NULL);\n\t\t\tif (LOWORD(lparam) > client.right - 20) {",
+   "new": "\t\tcase WM_LBUTTONDBLCLK:\n\t\t\tVocClass::PlayGlobal(Rule->GUIComboOpenSound, 1.0f, 0x2000, NULL);   /* NATIVE (lane P12): the original's Rules +0x19C */\n\t\t\tif (LOWORD(lparam) > client.right - 20) {",
+   "why": "Lane P12: the box's click plays the original's sound: Combo_Proc's WM_LBUTTONDOWN reads Rules +0x19C (0x005F5DF2: mov ecx,[0x839848]; mov ecx,[ecx+0x19C]; call 0x713DB0), GUIComboOpenSound, as main's behaviour row plays it; the parked draft played GenericClick."
+  },
+  {
+   "file": "src/ownrdraw.cpp",
+   "old": "\t\t\t\tint color = data->IsAlternateColors ? Highlight_Text_Color : Text_Color;\n\t\t\t\tif (disabled) color = data->IsAlternateColors ? Light_Grey_Color : Disabled_Text_Color;",
+   "new": "\t\t\t\tint color = data->IsAlternateColors ? Highlight_Text_Color : Text_Color;\n\t\t\t\tif (disabled) color = Light_Grey_Color;   /* NATIVE (lane P12): main's port's grey; see the row */",
+   "why": "Lane P12 (the user's Duo report 2026-11-24, owner: match the played port): a disabled drop list's selected text (the Enhancements page's Fullscreen 'Automatic' on a touch host) is drawn in Light_Grey_Color (0x00A7363C, 0x8F8F8F), as main's behaviour row native/link/behaviour_m14_ownerdraw.cpp draws it; the parked draft drew Disabled_Text_Color (0x9F, dark red), unreadable on the page. NOT the original's choice: the original's paint (0x005F5389-0x005F53A7) takes Light_Grey only with the alternate colours (+0xCD) and Disabled_Text_Color (0x00A737EC) otherwise; this is the played port's look, kept by the owner's ruling, reversible by dropping the row."
+  },
+  {
+   "file": "src/ownrdraw.cpp",
+   "old": "\t\t\tRECT update_rect;\n\t\t\tif (!GetUpdateRect(window, &update_rect, FALSE)) {\n\t\t\t\tbreak;\n\t\t\t}",
+   "new": "\t\t\tRECT update_rect;\n\t\t\tif (!GetUpdateRect(window, &update_rect, FALSE)) {\n\t\t\t\t/* NATIVE (lane P12): the port keeps no update regions (its GetUpdateRect answers none), and every\n\t\t\t\t   WM_PAINT it sends repaints the whole window: the rows are drawn over the whole client area. */\n\t\t\t\tGetClientRect(window, &update_rect);\n\t\t\t}",
+   "why": "Lane P12 (found by the new shell-frames check, ra2/tests/rb_shell_frames.py: the Load Mission list and Options > Keyboard's commands list were empty in the trial while main's port lists the saves and commands): List_Proc is a parked draft in the rebuild, and its WM_PAINT stops when GetUpdateRect reports no update region. The port's GetUpdateRect (port/src/user32.cpp) always answers none, because the port keeps no update regions and repaints a window whole on every WM_PAINT, so no list box row was ever drawn (the frame and backing were). With no region reported, the client rectangle is the region; main's behaviour row (native/link/behaviour_m14_ownerdraw.cpp, 0x005F6690) draws every visible row the same way."
+  },
+  {
+   "file": "src/ownrdraw.cpp",
+   "old": "\t\t\t\t\t\t\t\tOD_Draw_Text(text_color, font, text_rect, string, wcslen(string), 0, 0, NULL, 0);\n\t\t\t\t\t\t\t} else if (cell->type == CellData::SURFACE) {",
+   "new": "\t\t\t\t\t\t\t\ttext_rect.Width = max_width;   /* NATIVE (lane P12): see the row */\n\t\t\t\t\t\t\t\ttext_rect.Height = item_rect.bottom - item_rect.top;\n\t\t\t\t\t\t\t\tOD_Draw_Text(text_color, font, text_rect, string, wcslen(string), 0, 0, NULL, 0);\n\t\t\t\t\t\t\t} else if (cell->type == CellData::SURFACE) {",
+   "why": "Lane P12 (found by ra2/tests/rb_shell_frames.py: the Load Mission list showed its selection bar with no text, main's port lists '(Original) Operation: ...'): in the parked List_Proc draft a column list's text cell is drawn with a 0x0 rectangle, and OD_Draw_Text clips the font to that rectangle (BitFont Set_Clip/Set_Bounds), so nothing of a column list's text was drawn (the Load, Save and Delete lists, which have columns). The cell's rectangle is the column's width (the draft's max_width, already clipped to the list) by the row's height, as main's behaviour row draws a column (native/link/behaviour_m14_ownerdraw.cpp, 0x005F6690's columns)."
   },
   {
    "file": "*",
