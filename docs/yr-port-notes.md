@@ -1732,6 +1732,31 @@ a gesture. Harness order `view` (`harness-view <x>,<y> locked <0|1> zoom <z> fra
 and the touch controls on; a swipe and a pinch step while the intro's camera rests (frames 500-520, input locked)
 leave the view and the zoom as they were, the same at frame 1600 (after the unlock at about 1490) move and zoom it.
 
+## Lane P15 (2026-11-24): the Skirmish Game screen's column and the Start column's "???"
+
+The user's Duo report (the combined app; the earlier port had it too): the map labels on the right sat too low, the
+map name across a panel border, and the Start column's "???" wrapped onto two lines. Not the resolution or the
+interface size: Yuri's Revenge shows its shell in its own 800x600 mode and the same picture was drawn at 800x600.
+The labels are where the template puts them (0x6EC at 432,103 DLU, 0x5A8 at 432,116); the column's art behind them
+was wrong. gamemd.exe sets record flags at 32-bit offsets 0xD5 (the preview's frame, FUN_0060CAF0) and 0xD6 (the
+label box under it, FUN_0060C930) for the skirmish, LAN host and guest dialogs (0xD5 also Choose Map, 0x105, 0x113;
+0xD7 for 0x103/0xBC7), and OwnerDraw::Paint draws those pieces (FUN_0072E8C0, FUN_0072E860) and the slide starts the
+button rows one slot lower. The flag accessors spell the offsets `(unsigned char *)data + 0xd5` / `+ 213`, which
+lane Y3's raw-offset fixup (`(char *)data + 0x`) did not cover, so natively they wrote 0x20 bytes before the Dialog
+view's fields that Paint and the slide read; the plain column (the main menu's monitor ring, an empty first slot)
+was drawn. A fixup takes them through the Dialog view too. The combo's field text (draft in
+glue/ownrdraw_combo_native.inc) was drawn in a box ending at the arrow (15 pixels in the 37-pixel Start field);
+gamemd.exe (0x00617B42-0x00617C04) cuts the text while it is wider than the client width less 20 and draws it to
+the field's right edge. ctest `yr-native-skirmish-layout` (yr/tests/yr_skirmish_layout.py): 800x600, the Duo
+(1024x720, the phone's settings, 1136x800 window) and 1024x768 in a 1440x900 window: the label box dark behind
+the labels, the labels inside it, "???" on one line.
+
+Still different from the original on this screen (seen against a picture of the original's skirmish setup, not
+fixed here): the fields' frames are red where the original's are grey and drawn inside the control's rectangle
+where the original's sit outside it; the closed dropdowns are 20 rows high where the original's rows touch; the
+port's dialog units truncate (x * 6 / 4) where Windows rounds each of x, y, cx, cy (MulDiv), so the Start field
+is 37 pixels wide, not 38, and "???" fills its room exactly.
+
 ## Next
 
 0. The Windows builds on a real PC (RA2YRNative.exe with its two DLLs and SDL3.dll is on the user's PC, lane P1;

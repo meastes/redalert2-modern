@@ -444,6 +444,15 @@ add_test(NAME yr-native-choose-map COMMAND "${Python3_EXECUTABLE}" -B "${CMAKE_C
          --work "${CMAKE_CURRENT_BINARY_DIR}/yr-choose-map")
 set_tests_properties(yr-native-choose-map PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 600)
 
+# ctest yr-native-skirmish-layout (lane P15, the user's Duo report 2026-11-24): the Skirmish Game screen as gamemd.exe
+# lays it out at 800x600, on the Duo (1024x720, the phone's settings) and at a Mac size: the column's label box
+# behind "Battle" and the map name (record flags 0xD5/0xD6, yr/fixups.json), and the Start column's "???" on one line
+# (yr/tests/yr_skirmish_layout.py)
+add_test(NAME yr-native-skirmish-layout COMMAND "${Python3_EXECUTABLE}" -B "${CMAKE_CURRENT_SOURCE_DIR}/yr/tests/yr_skirmish_layout.py"
+         --binary $<TARGET_FILE:yr-native> --data-dir "${RA2_NATIVE_YR_DATA_DIR}"
+         --work "${CMAKE_CURRENT_BINARY_DIR}/yr-skirmish-layout")
+set_tests_properties(yr-native-skirmish-layout PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 400)
+
 # ctest yr-native-campaign-allied / -soviet (lane Y12): each side's campaign through the menus, its seven
 # missions won in turn (RA2_NATIVE_FORCE_END) through their score screens, the final movie, the credits
 # and the main menu again (yr/tests/yr_campaign_chain.py; about 6 minutes a side).

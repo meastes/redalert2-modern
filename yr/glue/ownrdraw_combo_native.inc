@@ -408,17 +408,24 @@ LRESULT CALLBACK OwnerDraw::ComboBoxHandler(HWND window, UINT message, WPARAM wp
 				surface->Fill_Rect(swatch, DSurface::Build_Hicolor_Pixel(fill & 0xFF, (fill >> 8) & 0xFF, (fill >> 16) & 0xFF));
 				color = fill;
 			}
-			RECT box = {area.X + 2, area.Y, area.X + area.Width - 20, area.Y + area.Height};
-			int room = box.right - box.left;
+			// gamemd.exe 0x00617B42-0x00617C04 (lane P15): the text is cut a character at a time, "..." put after the
+			// cut, while it is wider than the client width less the arrow's 20 (0x00617B4E), and drawn in the
+			// display rectangle from its left + 2 to its right edge (0x00617BC6), the arrow's width included; a
+			// box ending at the arrow wrapped the Start column's "???" onto two lines.
+			RECT box = {area.X + 2, area.Y, area.X + area.Width, area.Y + area.Height};
+			RECT client;
+			GetClientRect(window, &client);
+			int room = client.right - 20;
 			BitFont *font = data->Wide.font;
 			int length = wcslen(text);
 			if (font != NULL) {
-				while (length > 3 && font->FUN_00433ED0(text, 0) > room) {
-					length--;
-					text[length - 3] = L'.';
-					text[length - 2] = L'.';
-					text[length - 1] = L'.';
-					text[length] = L'\0';
+				int width = font->FUN_00433ED0(text, 0);
+				while (length > 0 && width > room) {
+					text[--length] = L'\0';
+					if (length + 3 < 256) {
+						wcscat(text, L"...");
+					}
+					width = font->FUN_00433ED0(text, 0);
 				}
 			}
 			if (text[0]) {

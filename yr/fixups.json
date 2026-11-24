@@ -582,6 +582,12 @@
   },
   {
    "file": "src/ownrdraw.cpp",
+   "old": "(unsigned char *)data + ",
+   "new": "((unsigned char *)&data->Dialog - 0x28) + ",
+   "why": "Lane P15 (the user's Duo report 2026-11-24: the skirmish screen's map labels sat over the column's first button slot): the dialog flags at 32-bit offsets 0xD5..0xD8 (FUN_0060C8D0..FUN_0060CE00: 0xD5 the map preview frame, 0xD6 the label box under it, 0xD7 the main screen piece, 0xD8) are set and read as (unsigned char *)data + 0xd5 / + 213, which the (char *) rule above does not cover. Natively they landed 0x20 bytes early, so OwnerDraw::Paint (Dialog.HasTopPanelAnimation, Dialog.HasButtonAnimation, by name) and the slide (YR_REC 0xD5..0xD7) never saw them: the skirmish, LAN host and guest and Choose Map screens drew the plain column (the main menu's monitor ring and an empty first slot) where gamemd.exe draws the preview frame and the label box. Taken through the Dialog view, the setters and the named readers agree."
+  },
+  {
+   "file": "src/ownrdraw.cpp",
    "old": "*(BitFont **)((char *)this + 0x64) = BitFont::Instance;",
    "new": "Wide.font = BitFont::Instance;",
    "why": "The record constructor sets the font at its 32-bit offset 0x64, which is Wide.font: natively a pointer member placed after 8-byte pointers, so it is set by name (lane Y3)."
