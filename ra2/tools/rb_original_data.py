@@ -42,7 +42,13 @@ CAP = 0x10000
 # Plain records the rebuild declares (no pointers; the VC6 layout is the native one), with RA2's sizes.
 POD_SIZES = {'TheaterDataType': 0x68,   # theater.h: chars, floats, a double and ints
              'ZGradStruct': 24,         # _zbuffer.h: five ints and a bool
-             'MouseStruct': 24}         # mouse.h: six ints
+             'MouseStruct': 24,         # mouse.h: six ints
+             'PixelFXTypeStruct': 40}   # pixelfx.h: ten ints (lane P14: zero, every pixel effect drew black)
+# Records of 4-byte pointers and ints, loaded as pointer words (each word an original address made native, or 0
+# when it is not one), which is their native layout too: two pointers and an int padded to a word. Lane P14: the
+# movie lists were zero, so the Movies menu's list was empty (Play Movie did nothing; the played port's
+# menu_movie check) and no campaign movie was ever recorded as unlocked.
+POINTER_WORD_RECORDS = {'MovieEntry': 12}   # movieentry.h: Name, Label, Side (Side read by nothing)
 
 
 def tsv(path):
@@ -110,6 +116,9 @@ def main():
             elif stars == 0 and base in ('GUID', 'IID', 'CLSID', '_GUID'):
                 extent = 16 * (count or 1)
                 shape, storage = 0, extent
+            elif stars == 0 and base in POINTER_WORD_RECORDS:
+                extent = POINTER_WORD_RECORDS[base] * count if count else gap
+                shape, storage = 2, 2 * extent
             elif stars == 0 and base in POD_SIZES:
                 # Records of chars, ints and floats only: the same bytes natively (lane P2: the theater
                 # table unloaded gave no tile sets and the skirmish map's Load_Tiles faulted).

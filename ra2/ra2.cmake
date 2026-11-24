@@ -273,7 +273,7 @@ enable_testing()
 add_test(NAME rb-native-original-layouts COMMAND "${RB_PYTHON3}" -B "${RB_DIR}/tools/rb_original_layouts.py" --gen "${RB_GEN}"
          --out "${CMAKE_CURRENT_BINARY_DIR}/rb_original_layouts_check.cpp" --check)
 set_tests_properties(rb-native-original-layouts PROPERTIES LABELS rb-quick TIMEOUT 600)
-foreach(rb_route skirmish soak exit audio save resave original combat combatsave production)
+foreach(rb_route skirmish soak exit audio save resave original combat combatsave production tankdamage)
   set(rb_test rb-native-${rb_route})
   if(rb_route STREQUAL "exit")
     set(rb_test rb-native-exit-route)
@@ -365,7 +365,10 @@ set(rb_main_cases
   "hd-vehicles|hd_vehicles.py|--log,@W@.log"
   "hd-vehicles-3x|hd_vehicles.py|--case,units,--scale,3,--budget-ms,0,--log,@W@.log"
   "hd-air-base|hd_vehicles.py|--case,air-base,--log,@W@.log"
-  "widescreen|widescreen.py|--work,@W@")
+  "widescreen|widescreen.py|--work,@W@"
+  # Lane P14: the user's Movies-menu report (C11, S1209: a movie cut at the sidebar, the menu's buttons gone after a focus
+  # change); on this port it found the empty Movies list (the movie tables were zero storage, ra2/tools/rb_original_data.py).
+  "menu-movie|menu_movie.py|--work,@W@")
 foreach(rb_case IN LISTS rb_main_cases)
   string(REPLACE "|" ";" rb_parts "${rb_case}")
   list(GET rb_parts 0 rb_name)
@@ -384,6 +387,39 @@ add_test(NAME rb-main-lan-pair COMMAND "${RB_PYTHON3}" -B "${rb_main_dir}/lan_pa
          --game-exe "${RB_GAME_EXE}" --work "${CMAKE_CURRENT_BINARY_DIR}/tests/main-lan-pair")
 set_tests_properties(rb-main-lan-pair PROPERTIES SKIP_RETURN_CODE 77 RUN_SERIAL TRUE TIMEOUT 3600 LABELS rb-main
                      ENVIRONMENT "RB_TRIAL=$<TARGET_FILE:rb-native-trial>")
+# Lane P14: the differential gate against the src-based port (label rb-gate, ra2/tests/rb_gate.py): every campaign mission
+# of each side for 6,000 frames (digests every 50 frames and every trigger line), the six skirmish set-ups, the order
+# scripts (ra2/tests/gate) and the save crossings. Long (about 40 minutes for the missions); added with RB_IDENTITY_SRC.
+# Left out on purpose: Allied 7, 8, 11, 12 and Soviet 2, 9, where the src port's non-exact Evaluate_Object draft (and in
+# Soviet 2 its path search) part from the original and this port follows it (docs/differences.md). '%' stands for ';'
+# in --orders (a CMake list separator). Clicks timed by loop frame (--input) are not repeatable in a skirmish in either
+# port (a port's second run can differ from its first), so the skirmish order row uses harness orders only.
+if(RB_IDENTITY_SRC)
+  set(rb_gate_rows
+    "missions-allied|missions,--side,allied,--missions,1-6@9@10,--frames,6000"
+    "missions-soviet|missions,--side,soviet,--missions,1@3-8@10-12,--frames,6000"
+    "skirmish-m3|skirmish,--map,3,--sides,British@5:8:1@4:5:2,--frames,6000"
+    "skirmish-m7|skirmish,--map,7,--sides,French@6:6:1@6:7:2@5:8:3,--frames,6000"
+    "skirmish-m10|skirmish,--map,10,--sides,Arabs@6:0:1@6:1:2,--frames,6000"
+    "skirmish-m20|skirmish,--map,20,--sides,Germans@6:8:1,--frames,6000"
+    "orders-allied1|missions,--side,allied,--missions,1,--frames,4000,--input,${RB_DIR}/tests/gate/allied1_orders.input,--orders,+1800/600 hunt"
+    "orders-skirmish|skirmish,--map,3,--sides,British@6:8:1,--frames,5000,--orders,+30 deploy *% +600 train E1% +700 train E1% +1800/600 hunt% +3000 super 0 home 8 8% +3600 super 0 home -6 4"
+    "load-user-saves|load,--save,ALL01T.sav@ALL02S.sav@ALL03U.sav@SAVE397A.SAV@SAVE4FBD.SAV,--frames,3000,--seconds,200"
+    "cross-src-skirmish|cross,--maker,src,--route,skirmish,--save-at,900,--frames,3000,--seconds,150"
+    "cross-rb-skirmish|cross,--maker,rb,--route,skirmish,--save-at,900,--frames,3000,--seconds,150")
+  foreach(rb_row IN LISTS rb_gate_rows)
+    string(REPLACE "|" ";" rb_parts "${rb_row}")
+    list(GET rb_parts 0 rb_name)
+    list(GET rb_parts 1 rb_args)
+    string(REPLACE "," ";" rb_args "${rb_args}")
+    string(REPLACE "@" "," rb_args "${rb_args}")
+    add_test(NAME rb-gate-${rb_name} COMMAND "${RB_PYTHON3}" -B "${RB_DIR}/tests/rb_gate.py" ${rb_args}
+             --src "${RB_IDENTITY_SRC}" --rb $<TARGET_FILE:rb-native-trial> --data-dir "${RB_DATA_DIR}"
+             --game-exe "${RB_GAME_EXE}" --work "${CMAKE_CURRENT_BINARY_DIR}/tests/gate-${rb_name}")
+    set_tests_properties(rb-gate-${rb_name} PROPERTIES SKIP_RETURN_CODE 77 RUN_SERIAL TRUE TIMEOUT 3600 LABELS rb-gate)
+  endforeach()
+endif()
+
 # Frame identity against redalert2-decomp's src-based port (label rb-identity): added only when RB_IDENTITY_SRC names
 # a built src-based ra2-native (from that repository; not part of this one).
 set(RB_IDENTITY_SRC "" CACHE FILEPATH "A src-based ra2-native from redalert2-decomp for the frame identity checks; empty: not added")

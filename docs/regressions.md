@@ -1,0 +1,86 @@
+# The user's own bugs, checked on this port
+
+Every bug the user found by hand in the played port (Mac, iPhone Duo, LAN), from redalert2-decomp's
+`docs/PORTS_FACTS.md`, `docs/PORTS_REMAINING.md`, `docs/CAMPAIGN_PLAY_LIST.md`, `docs/HANDOFF.md`, `native/README.md`
+(lanes N1-N33, C, Y, Scout and R rows) and lane P12's Duo report on this port; lane P14, 2026-11-24. The id after each
+bug is the one those notes use.
+
+Status: **scripted, passing** a check on this port runs it and passed (the ctest named; the P12 full run of 60 rows
+at e084c67 plus lane P14's new rows); **fixed** the played port's fix is carried (a `fixups.json` row or glue) but no
+script reaches it; **same code** the code is the shared host's, byte for byte the played port's; **needs his check**
+nothing scripted reaches it: worth a look while playing.
+
+Counts (RA2 rows, 66): scripted and passing 30 (2 of them, the Movies menu, failed here first and lane P14 fixed
+them), fixed 10, same code 5, needs his check 19, waiting for other lanes 2 (the both-games toggle, Windows). The 25
+Yuri's Revenge-only rows wait for the YR port (lane P13): N32, N13, Y15-diff, N3-mac-defeat, Y13-anim, N4-garrison,
+N18-internet, N18-slide, N18-rows, Y11-backdrop, Y11-focus, N21-banner, N27, Y14-bar, N3-typesel, N3-savedlg,
+N5-origload, N3-netcrash, N3-yrkbd, N21-abort, Y14-noise, N4-mirage, N12-mirage1, N4-derrick, Y14-skip.
+
+| Bug | Where found | Status on the new port | Check |
+| --- | --- | --- | --- |
+| Map could be panned (and pinch-zoomed) during a mission intro whose input is locked (Allied 'Hail to the... (N31-3) | iPhone Duo, campaign | scripted, passing | rb-main-locked-input |
+| With one unit selected, a tap on another of the player's units moved the selected one ('not able to select... (C18-cross) | iPhone Duo, campaign | scripted, passing | rb-main-touch-cross-classic, -cross-modern, -cross-mouse; rb-ios-sim-touch-cross-classic |
+| 'Pink flag' seen by the user; unexplained (user will report again if seen) (U-pink) | iPhone Duo, campaign | needs his check | never explained; watch for it |
+| Allied 1 crash around Tanya's C4 (uncertain whether user-reported; the commit names only 'Allied 1 Tanya... (r20) | Mac, campaign | scripted, passing | rb-native-chain-allied; the gate: Allied 1 identical to the played port for 6,000 frames, with Tanya clicked through (allied-01-orders) |
+| A skirmish started from the menus ran ~95 frames/s ('way too fast') at the slider's default Fastest (M20-speed) | Mac, skirmish | scripted, passing | rb-native-skirmish (3,747 frames in 75 s at the 16 ms floor); P12 row keeps the floor to game speed 0 |
+| Tank shells did no damage (in a LAN game tanks never damaged each other; GIs did); Sight_From also... (C22-tank) | Mac + iPhone LAN (affects every mode), combat | scripted, passing | rb-native-tankdamage (new, lane P14): a Grizzly shells an enemy Rhino, strength 400 to 264 to 60, dead at frame 350 |
+| Ctrl+click force fire did not work (the user's force-attack bug) (S1209-force) | Mac, combat | needs his check | Ctrl+click force fire: the gate's order scripts use Ctrl+click on Allied 1 (identical), no damage check |
+| Units would not select, move or deploy with the trackpad (default skirmish, windowed, tap-to-click) (S1209-trackpad) | Mac (trackpad), combat | needs his check | host code identical to the played port |
+| Crash when the mouse moved over the map (U-mousecrash) | Mac, combat | scripted, passing | every gate run and rb-main-controls-* move the mouse over the map |
+| Menu buttons drawn with the wrong art (main menu and in-game menus need the red/blue sidebar button shapes) (M20-buttons) | Mac, menus/shell | scripted, passing | rb-shell-frames-mac / -iphone (menu frames against the played port) |
+| Menu buttons invisible after the window lost and regained focus (S1209-invis) | Mac, menus/shell | fixed by lane P14, scripted, passing | rb-main-menu-movie (new): failed here first, the Movies list was empty (the movie tables were zero storage); passes after the fix |
+| Main menu flashed (user video); labels missing right after the slide-in (S1209-flash) | Mac, menus/shell | needs his check | no script |
+| Window went unresponsive (beachball) in long busy stretches such as loads (S1209-beachball) | Mac, menus/shell | needs his check | host code identical |
+| Loads from a game folder on a network share slow or failing (directory-listing cache, negative opens;... (S1209-share) | Mac, menus/shell | needs his check | host code identical |
+| A movie from the Movies menu was cut at the sidebar edge (its right part drawn lower and larger); the main... (C11-movie) | iPhone Duo, menus/shell | fixed by lane P14, scripted, passing | rb-main-menu-movie (as S1209-invis) |
+| Main menu art and buttons apart with noise around them at the Duo's 944x634 (sizes between 800x600 and... (Scout1274-menu) | iPhone Duo, menus/shell | scripted, passing | rb-main-widescreen; P12 carried the menu panel rows |
+| Exit Game -> OK left a black screen instead of quitting the app (r31-exit) | iPhone Duo, menus/shell | needs his check | iOS host code identical; Simulator only |
+| Internet button clickable (showed a message box); the user wanted it disabled (C20-internet) | Mac / all, menus/shell | fixed | P12 row (Internet disabled at the main menu); lan_lobby.py not yet run on the new port |
+| One-game toggle read as help text, then flickered over the menu movie (C23-toggle) | iPhone Duo, menus/shell | YR port pending | the one-game toggle comes with lane P13 |
+| With Menu fill = Scale to fit and Pinch zoom on, RA2's menus were letterboxed on all four sides (YR's... (N28-fit) | iPhone Duo, menus/shell | needs his check | zoom rows carried; one-game-menu-backdrop is a both-games check (lane P13) |
+| Enhancements page talked about gestures on the Mac and Windows (Y8-labels) | Mac / Windows, menus/shell | same code | platform/sdl/enhancements.cpp is the played port's |
+| Enhancements page did not look like the game's own dialogs (the user's restyle request) (C7-restyle) | all, menus/shell | scripted, passing | rb-shell-frames (Enhancements page); P12 fixed the Cancel button |
+| A double tap in the LAN lobby read as a right click (probably user-reported) (r29-lobbytap) | iPhone Duo, menus/shell | needs his check | host code identical |
+| Building placement preview did not follow the mouse (M20-place) | Mac, sidebar/command bar | needs his check | placement preview: the gate's skirmish order script places a power plant by clicks (both ports), the preview is not checked |
+| Sidebar flickered (cursor-erased sidebar every frame while a cameo's clock ran) (M20-flicker) | Mac, sidebar/command bar | scripted, passing | cursor_stress.py passed on the trial (lane P9) |
+| With Game interface size above 1x the command bar ran across the Escape menu and the column ended above... (C16-dlg) | iPhone Duo, sidebar/command bar | scripted, passing | rb-main-zoom-menu, rb-main-zoom-menu-ui |
+| A command bar closed with its close thumb could not be opened again with Zoom gestures on (open thumb off... (N31-1) | iPhone Duo, sidebar/command bar | scripted, passing | rb-main-command-bar-thumb |
+| Command bar flashed higher up the map when its icons were tapped (after any in-play dialog) (N31-2) | iPhone Duo, sidebar/command bar | scripted, passing | rb-main-command-bar-thumb |
+| No way to set a command-bar team on touch (the toolbar's Fire/Ctrl did nothing on team buttons) (probably... (Y15-team) | iPhone Duo, sidebar/command bar | scripted, passing | rb-main-touch-team-hold, rb-ios-sim-touch-team-hold |
+| Game crashed after a few minutes with two machines (reused control-group orders) (r21-lancrash) | Mac + Mac (two machines), multiplayer/LAN | scripted, passing | rb-main-lan-pair (18,000 frames, no CRC difference) |
+| Opening Escape > Game Controls > Sound in a network game crashed (r22-sound) | Mac LAN, multiplayer/LAN | scripted, passing | rb-main-lan-pair |
+| Edge scrolling 'way too fast' in a network game (r19-scroll) | Mac LAN, multiplayer/LAN | scripted, passing | rb-main-lan-pair |
+| First LAN lobby issues: name entry, name focus and caret across activation, lobby list background, slot... (r17-lobby) | Mac LAN, multiplayer/LAN | needs his check | lan_lobby.py not yet run on the new port |
+| Return in the lobby's chat line sent nothing (C20-chat) | Mac + iPhone, multiplayer/LAN | needs his check | lan_lobby.py not yet run on the new port |
+| The iOS app saw the other players but no hosted game, in either direction (C20-ios-host) | iPhone + Mac, multiplayer/LAN | needs his check | lan_lobby.py not yet run on the new port |
+| Two games with the same PATH got the same session UniqueID about half the time and ignored each other's... (C20-uniqueid) | iPhone / Mac, multiplayer/LAN | fixed | P12 carried main's C20 install id row |
+| iPhone in a LAN game: a notification, Control Center or the background held the game and stalled or... (C22-bg) | iPhone + Mac, multiplayer/LAN | needs his check | lan_pair.py --background not yet run on the new port |
+| 'Reconnection Error!' with Stop (once): out of sync between an old Mac build and a newer phone build, not... (C22-reconn) | Mac + iPhone, multiplayer/LAN | needs his check | a LAN game between the played port and the new one was not tried |
+| Game froze after the glass toolbar closed (host pause never lifted: a background/focus pause without SDL's... (r27-freeze) | iPhone Duo, iPhone touch | same code | iOS host identical |
+| The '...' button stayed pressed (grey) without opening the toolbar, and from then on taps did nothing (r28-stuck) | iPhone Duo, iPhone touch | same code | iOS host identical |
+| Two-finger tap (right click: deselect) often came out as a one-finger tap that moved the units (r28-2finger) | iPhone Duo, iPhone touch | scripted, passing | rb-main-touch-two-finger, rb-ios-sim-touch-two-finger |
+| Two-finger tap kept panning; a single tap once began a selection box at a skirmish's start (UIKit reused... (r31-fingerid) | iPhone Duo, iPhone touch | scripted, passing | rb-main-touch-two-finger (partly) |
+| Two-finger tap did not deselect; the toolbar's A-Move tap gave no order (a selection band instead)... (C8-race) | iPhone Duo, iPhone touch | scripted, passing | rb-main-touch-two-finger, rb-main-touch-attack-move, rb-ios-sim-touch-attack-move |
+| The user's choice: Fire/Move/Add/A-Move as one either-or group, A-Move a toggle (it was one-shot) (C10-modes) | iPhone Duo, iPhone touch | same code | touch modes are host code; rb-main-touch-modern |
+| Keys button misplaced right of the menu panel (C12); black safe-area bars in play though the Duo has no cutout (C13-keys) | iPhone Duo, iPhone touch | same code | host code |
+| On-screen keyboard did not come up for the player-name fields or the chat line (probably a user request;... (C14-kbd) | iPhone Duo, iPhone touch | needs his check | the game-side hook is carried (glue/ownrdraw_native.inc); no route types into a field |
+| Abort Mission screen laid out wrong at render scale 2 (Zoom gestures) (C16-abort) | iPhone Duo, display/zoom/HD | scripted, passing | rb-main-zoom-menu |
+| After Abort Mission the zoomed screen was shown whole: tactical part in the top-left corner, bottom half black (C16-abort2) | iPhone Duo, display/zoom/HD | scripted, passing | rb-main-zoom-abort |
+| The Mac app did not lay the game out at the window's aspect (the iOS app did) (Y8-wide) | Mac, display/zoom/HD | scripted, passing | rb-main-widescreen |
+| Black bars around the 800x600 menus (the user's 'no black bars'; a request) (C12-fill) | iPhone Duo / all, display/zoom/HD | needs his check | enhancements_frames.py not run on the new port |
+| Crash when a vehicle took the veteran crate (Allied 'Hail to the Chief'): SIGSEGV in Audio_List_Remove... (N30-crate) | iPhone Duo, audio/movies | needs his check | the sacrifice event offset (N30): the new port's EventClass is typed (lane P8); no crate route |
+| Music never played in the menus or in game (the theme restarted every frame) (M20-music) | Mac, audio/movies | scripted, passing | rb-native-audio |
+| Movies did not play properly (Bink tables) (M20-movies) | Mac, audio/movies | scripted, passing | rb-native-audio (Bink intro with sound) |
+| No Windows-specific bug reported by the user: RA2 LAN Mac + PC 'works great', the installed game loaded... (W-none) | Windows PC, Windows | pending | Windows targets come with lane P13 |
+| Enhancements page: Cancel drawn as a grey push button in the page body (P12-cancel) | iPhone Duo (new rebuild port, lane P12), menus/shell | scripted, passing | rb-shell-frames |
+| Dropdown lists: no frame, rows left on screen after closing, the arrow never pressed (P12-combo) | iPhone Duo (new rebuild port, lane P12), menus/shell | scripted, passing | rb-shell-frames |
+| Dropdown click played the generic click instead of the combo open sound (P12-combosound) | iPhone Duo (new rebuild port, lane P12), audio/movies | fixed | P12 row |
+| Fullscreen 'Automatic' row drawn dark red on touch hosts (P12-auto) | iPhone Duo (new rebuild port, lane P12), menus/shell | fixed | P12 row (owner ruling: the played look) |
+| Internet button live on the main menu (P12-internet) | iPhone Duo (new rebuild port, lane P12), menus/shell | fixed | P12 row |
+| Every list box empty (Load/Save/Delete, Keyboard commands); the column lists drew no text (P12-lists) | iPhone Duo (new rebuild port, lane P12), saves | scripted, passing | rb-shell-frames (Load list); the Movies list was still empty: fixed by lane P14 |
+| After a load error nothing was left to click (P12-loaderr) | iPhone Duo (new rebuild port, lane P12), saves | fixed | P12 row |
+| LAN UniqueID could collide between devices (P12-uniqueid) | iPhone Duo (new rebuild port, lane P12), multiplayer/LAN | fixed | P12 row |
+| 16 ms frame floor applied at every game speed (P12-floor) | iPhone Duo (new rebuild port, lane P12), skirmish | fixed | P12 row |
+| Pinch zoom off on iOS by default (no 0.5x map zoom); the played app's On was the user's saved choice (P12-pinch) | iPhone Duo (new rebuild port, lane P12), display/zoom/HD | fixed | P12 (iOS default on) |
+| Play resolution differs from the played app (976x720 vs 1024x720 at 944x634 points, interface 1.25x); not... (P12-res) | iPhone Duo (new rebuild port, lane P12), display/zoom/HD | needs his check | 976x720 on the Duo against 1024x720 here; the app log line settles it |
+| Home-screen name was 'RA2 Rebuild Trial' (P12-name) | iPhone Duo (new rebuild port, lane P12), iPhone touch | fixed | P12 |
