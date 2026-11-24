@@ -54,8 +54,11 @@ Prerequisites (the script downloads and installs nothing):
 - All builds: the llvm-mingw 20261020 macOS release (`llvm-mingw-20261020-ucrt-macos-universal`,
   github.com/mstorsjo/llvm-mingw) extracted, at `RA2_LLVM_MINGW` or under `toolchains/`. The game's Win32 and
   DirectX headers come from it at build time; nothing of it is copied or linked.
-- iOS: the SDL 3.4.2 source, `RA2_SDL_SOURCE` or `toolchains/SDL3-3.4.2.tar.gz` (SHA-256 checked). It is built
-  statically into the app.
+- iOS and Windows: the SDL 3.4.2 source, `RA2_SDL_SOURCE` or `toolchains/SDL3-3.4.2.tar.gz` (SHA-256 checked). It is
+  built statically into the app (windows-one: as the one `SDL3.dll` beside the thin host and the two engine DLLs).
+- Windows: llvm-mingw (above) is also the cross compiler (`cmake/llvm-mingw-x86_64.cmake`); the executables link libc++
+  statically and need only Windows 10 or later. The Windows build's checks (`ctest --test-dir build/windows`, label
+  `rb-wine`, and the YR and one-game rows) run the .exe under Wine when `RA2_NATIVE_WINE` names one, else skip.
 - iOS device: your Apple team id in `RA2_IOS_TEAM` (never stored in Git) and a development profile Xcode has made
   that covers `io.github.ra2native.RBTrial` (your team's wildcard profile does); `packaging/ios_sign.py` signs.
   Install with `xcrun devicectl device install app --device <udid> build/ios-device/RBTrial.app`.
