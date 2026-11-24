@@ -266,7 +266,7 @@ def main():
     ap.add_argument('--launch-arg', action='append', default=[], help='arguments to the app (ra2yr-one: --game=yr)')
     ap.add_argument('--toggle', action='store_true',
                     help='ra2yr-one: the first game\'s main menu toggle, then the play in the other game')
-    ap.add_argument('--enhancements', default='', help='RA2_NATIVE_ENHANCEMENTS for the play run ("controls=modern,...")')
+    ap.add_argument('--enhancements', default='zoomgestures=off', help='RA2_NATIVE_ENHANCEMENTS for the play run ("controls=modern,...")')
     ap.add_argument('--team-hold', action='store_true',
                     help='(lane Y15) a hold on the command bar\'s Team 1 after the selection box sets the team: checked by the '
                          'touch log and a harness listing of the tanks\' teams (RA2_NATIVE_ORDERS groups MTNK)')

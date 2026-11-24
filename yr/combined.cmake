@@ -218,6 +218,30 @@ if(RA2_NATIVE_ONE_EXECUTABLE)
     ra2_ios_app(ra2yr-one RA2YR "${RA2_ONE_BUNDLE_ID}" "Red Alert 2")
   endif()
 endif()
+# The iOS combined app in the "RA2 Duo Validation" Simulator (label one-ios, opt in: RA2_ONE_IOS_SIM=ON in the Mac
+# build; the app from ./build.sh ios simulator). Each test boots that Simulator if needed and shuts it down after;
+# no other Simulator is used. one-game-ios-sim: the carry-over route (a Red Alert 2 import, its skirmish and save, the
+# toggle, Yuri's Revenge's own import, its skirmish and save, a second YR start after a reset, both saves loaded);
+# -fresh: one import of both games in a new install (removed afterwards); -menus: both games' menus and play.
+option(RA2_ONE_IOS_SIM "Add the iOS combined app's Simulator checks (label one-ios)" OFF)
+get_filename_component(RA2_ONE_IOS_APP "${CMAKE_CURRENT_SOURCE_DIR}/build/ios-simulator/RA2YR.app" ABSOLUTE)
+set(RA2_ONE_IOS_APP "${RA2_ONE_IOS_APP}" CACHE PATH "The Simulator RA2YR.app the one-ios checks install")
+if(RA2_ONE_IOS_SIM AND NOT CMAKE_SYSTEM_NAME STREQUAL "iOS")
+  foreach(one_case "sim|ios_sim_one_game.py|" "sim-fresh|ios_sim_one_game.py|--fresh,--uninstall-after" "sim-menus|ios_sim_menus.py|")
+    string(REPLACE "|" ";" one_parts "${one_case}")
+    list(GET one_parts 0 one_name)
+    list(GET one_parts 1 one_script)
+    list(LENGTH one_parts one_n)
+    set(one_args "")
+    if(one_n GREATER 2)
+      list(GET one_parts 2 one_args)
+      string(REPLACE "," ";" one_args "${one_args}")
+    endif()
+    add_test(NAME one-game-ios-${one_name} COMMAND "${Python3_EXECUTABLE}" -B "${CMAKE_CURRENT_SOURCE_DIR}/yr/tests/${one_script}"
+             --app "${RA2_ONE_IOS_APP}" --data-dir "${RA2_NATIVE_YR_DATA_DIR}" --work "${CMAKE_CURRENT_BINARY_DIR}/one-ios-${one_name}" ${one_args})
+    set_tests_properties(one-game-ios-${one_name} PROPERTIES SKIP_RETURN_CODE 77 RUN_SERIAL TRUE TIMEOUT 1800 LABELS one-ios)
+  endforeach()
+endif()
 if(RA2_NATIVE_ONE_EXECUTABLE AND NOT CMAKE_SYSTEM_NAME STREQUAL "iOS")
   # ctest one-exe-toggle (lane Y8): the one-game-toggle route on ra2yr-one (the second Red Alert 2
   # start is a reset of its data in place, not a fresh image).

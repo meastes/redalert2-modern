@@ -111,6 +111,8 @@ def launch(a, name, args, scripts, seconds, env_extra=None, import_dir=True):
     child = dict(RA2_NATIVE_LOG_STDERR='1', RA2_NATIVE_NO_CRASH_DIALOG='1', RA2_NATIVE_NO_RELAUNCH='1',
                  RA2_NATIVE_MOVIE_SKIP='1', RA2_NATIVE_DIALOG_LOG='1', RA2_NATIVE_MSG_LOG='0',
                  RA2_NATIVE_IGNORE_FOCUS='1')
+    if a.enhancements:
+        child['RA2_NATIVE_ENHANCEMENTS'] = a.enhancements
     if import_dir:
         child['RA2_NATIVE_IMPORT'] = a.data_dir
     child.update(env_extra or {})
@@ -200,6 +202,9 @@ def main():
     ap.add_argument('--shot-seconds', type=float, default=30)
     ap.add_argument('--play-w', type=int, default=872, help='the play width on the Duo Simulator (872)')
     ap.add_argument('--save-frame', type=int, default=900, help='the loop frame the harness saves at')
+    # The taps are laid out for the unscaled screen: Zoom gestures (on by default on iOS since lane P12) make Red Alert
+    # 2's whole screen render scale 2 times larger, menus too (yr_map_zoom.cpp scales only Yuri's Revenge's game mode).
+    ap.add_argument('--enhancements', default='zoomgestures=off', help='RA2_NATIVE_ENHANCEMENTS for every start')
     ap.add_argument('--fresh', action='store_true', help='the fresh-install route (both games in one import)')
     ap.add_argument('--keep-booted', action='store_true')
     ap.add_argument('--uninstall-after', action='store_true', help='remove the app and its data afterwards')

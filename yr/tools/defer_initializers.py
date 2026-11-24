@@ -28,7 +28,7 @@ IMAGE_FILE_MACHINE_AMD64 = 0x8664
 COFF_SECTION = b'.yrini$m'
 
 
-def defer_coff(path, data):
+def defer_coff(path, data, coff_section=COFF_SECTION):
     """The x86_64 Windows build (lane Y13): each COFF object's .ctors section (the mingw-w64
     runtime's initialiser list) is renamed .yrini$m: the runtime no longer runs the pointers, lld
     keeps them in link order, grouped between yr_host_glue.cpp's .yrini$a and .yrini$z markers
@@ -39,17 +39,17 @@ def defer_coff(path, data):
     for i in range(nsects):
         s = 20 + optsize + 40 * i
         if bytes(data[s:s + 8]).rstrip(b'\0') == b'.ctors':
-            data[s:s + 8] = COFF_SECTION
+            data[s:s + 8] = coff_section.ljust(8, b'\0')
             changed += 1
     if changed:
         path.write_bytes(bytes(data))
     return changed
 
 
-def defer(path, section=b'__yr_init_func'):
+def defer(path, section=b'__yr_init_func', coff_section=COFF_SECTION):
     data = bytearray(path.read_bytes())
     if len(data) >= 20 and struct.unpack_from('<H', data, 0)[0] == IMAGE_FILE_MACHINE_AMD64:
-        return defer_coff(path, data)
+        return defer_coff(path, data, coff_section)
     if struct.unpack_from('<I', data, 0)[0] != MH_MAGIC_64:
         return 0
     ncmds = struct.unpack_from('<I', data, 16)[0]
@@ -78,13 +78,14 @@ def main():
     ap.add_argument('--inputs', type=Path)
     ap.add_argument('--object', type=Path, help='one object (an engine\'s ld -r output, lane Y8) instead of --inputs')
     ap.add_argument('--section', default='__yr_init_func', help='the section the pointers move to')
+    ap.add_argument('--coff-section', default=COFF_SECTION.decode(), help='COFF: the section .ctors becomes (8 bytes at most)')
     ap.add_argument('--only', default='/gen-yr/units/', help='objects whose path contains this')
     a = ap.parse_args()
     if a.object:
         paths = [a.object]
     else:
         paths = [Path(l.strip()) for l in a.inputs.read_text().splitlines() if l.strip() and a.only in l]
-    n = sum(defer(p, a.section.encode()) for p in paths)
+    n = sum(defer(p, a.section.encode(), a.coff_section.encode()) for p in paths)
     print('defer_initializers: %d initialiser sections deferred in %d objects' % (n, len(paths)))
 
 

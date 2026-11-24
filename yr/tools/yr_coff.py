@@ -35,6 +35,7 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('--gen', type=Path, required=True)
     ap.add_argument('--out', type=Path, required=True)
+    ap.add_argument('--var', default='YR_NATIVE_UNITS', help='the CMake variable the list is written to')
     a = ap.parse_args()
     units = re.findall(r'"([^"]+)"', (a.gen / 'units.cmake').read_text())
     names, copies = [], 0
@@ -51,7 +52,7 @@ def main():
             copy.write_text(new)
         names.append(str(copy))
         copies += 1
-    a.out.write_text('set(YR_NATIVE_UNITS\n%s)\n' % ''.join('  "%s"\n' % n for n in names))
+    a.out.write_text('set(%s\n%s)\n' % (a.var, ''.join('  "%s"\n' % n for n in names)))
     print('yr_coff: %d of %d units with COFF labels' % (copies, len(names)))
 
 

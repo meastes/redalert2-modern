@@ -25,14 +25,20 @@ find_package(Python3 REQUIRED COMPONENTS Interpreter)
 # installed package (Homebrew's dylib on the Mac, bundled into the app by packaging/make_app.sh).
 set(RA2_SDL_SOURCE "" CACHE PATH "SDL 3.4.2 source folder to build statically (iOS)")
 if(RA2_SDL_SOURCE)
-  set(SDL_SHARED OFF CACHE BOOL "" FORCE)
+  # The combined app on Windows shares one SDL3.dll between its host and its two engine DLLs (one SDL owns the window
+  # both games draw in): SDL3::SDL3 is then the shared library; the static one stays for the link closure.
+  if(WIN32 AND RA2_NATIVE_COMBINED)
+    set(SDL_SHARED ON CACHE BOOL "" FORCE)
+  else()
+    set(SDL_SHARED OFF CACHE BOOL "" FORCE)
+  endif()
   set(SDL_STATIC ON CACHE BOOL "" FORCE)
   set(SDL_TEST_LIBRARY OFF CACHE BOOL "" FORCE)
   set(SDL_TESTS OFF CACHE BOOL "" FORCE)
   set(SDL_EXAMPLES OFF CACHE BOOL "" FORCE)
   add_subdirectory("${RA2_SDL_SOURCE}" "${CMAKE_CURRENT_BINARY_DIR}/sdl3" EXCLUDE_FROM_ALL)
-elseif(CMAKE_SYSTEM_NAME STREQUAL "iOS")
-  message(FATAL_ERROR "the iOS build needs RA2_SDL_SOURCE (the SDL 3.4.2 source)")
+elseif(CMAKE_SYSTEM_NAME STREQUAL "iOS" OR WIN32)
+  message(FATAL_ERROR "the iOS and Windows builds need RA2_SDL_SOURCE (the SDL 3.4.2 source)")
 else()
   find_package(SDL3 3.2 CONFIG REQUIRED)
 endif()
@@ -43,6 +49,11 @@ file(GLOB RA2_PORT_SOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/port/s
 add_library(ra2_port STATIC ${RA2_PORT_SOURCES})
 target_include_directories(ra2_port PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/port/include")
 target_compile_options(ra2_port PRIVATE -Wall -Wno-unused-parameter -Wno-unused-function)
+if(WIN32)
+  # The x86_64 Windows build (cmake/llvm-mingw-x86_64.cmake): the port's Windows layer (platform/win).
+  include(cmake/windows.cmake)
+  ra2_windows_port()
+endif()
 
 # The SDL host (platform/sdl): window, input, touch, the app's setup and the Enhancements page, in its game mode
 # (RA2_NATIVE_GAME: the played app's mode, which asks for the user's game folder on first start).
@@ -51,6 +62,8 @@ set(ra2_host_sources platform/sdl/main.cpp platform/sdl/host.cpp platform/sdl/to
 if(APPLE)
   list(APPEND ra2_host_sources platform/sdl/host_apple.mm)
   set_source_files_properties(platform/sdl/host_apple.mm PROPERTIES COMPILE_OPTIONS "-fobjc-arc")
+elseif(WIN32)
+  list(APPEND ra2_host_sources platform/win/host_win.cpp)
 endif()
 add_library(ra2_host_objs OBJECT ${ra2_host_sources})
 target_link_libraries(ra2_host_objs PRIVATE SDL3::SDL3 ra2_port)
@@ -82,19 +95,33 @@ if(RA2_NATIVE_YR)
     "$<$<COMPILE_LANGUAGE:CXX>:-frounding-math>"
     "$<$<COMPILE_LANGUAGE:CXX>:-Wno-error=address-of-temporary;-Wno-register;-Wno-c++11-narrowing;-w>"
     "$<$<COMPILE_LANGUAGE:CXX>:SHELL:-include ${CMAKE_CURRENT_SOURCE_DIR}/port/include/ra2port/prelude.hpp>")
+  if(WIN32)
+    # The VC6 dialect on mingw-w64 headers (platform/win/dialect_win.hpp), before the prelude.
+    target_compile_options(ra2_dialect BEFORE INTERFACE
+      "$<$<COMPILE_LANGUAGE:CXX>:SHELL:-include ${CMAKE_CURRENT_SOURCE_DIR}/platform/win/dialect_win.hpp>")
+  endif()
   # The host's Apple frameworks and zlib, and what link_closure.py counts as system.
-  if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
+  if(WIN32)
+    set(ra2_closure_frameworks "")
+    set(RA2_NATIVE_CLOSURE_SYSTEM_LIBS "$<TARGET_FILE:SDL3-static>")
+  elseif(CMAKE_SYSTEM_NAME STREQUAL "iOS")
     set(ra2_closure_frameworks Foundation UIKit UniformTypeIdentifiers AVFAudio CoreGraphics)
     set(RA2_NATIVE_CLOSURE_SYSTEM_LIBS "$<TARGET_FILE:SDL3-static>")
   else()
     set(ra2_closure_frameworks Foundation AppKit)
     set(RA2_NATIVE_CLOSURE_SYSTEM_LIBS "")
   endif()
-  set(ra2_host_frameworks -lz)
+  set(ra2_host_frameworks "")
+  if(APPLE)
+    set(ra2_host_frameworks -lz)
+  endif()
   foreach(f IN LISTS ra2_closure_frameworks)
     list(APPEND ra2_host_frameworks "-framework ${f}")
   endforeach()
   set(ra2_original_layouts_target "")
+  if(WIN32)
+    set(ra2_original_layouts_target --target windows "--cxx=${CMAKE_CXX_COMPILER}")
+  endif()
   if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
     # One iOS app bundle: TARGET's executable named EXE in EXE.app, bundle id ID, home-screen name NAME, the icon
     # drawn by make_icon.py with the remaining arguments, SDL3's licence; never game data

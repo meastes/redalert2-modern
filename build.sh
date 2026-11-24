@@ -6,6 +6,10 @@
 #   ./build.sh mac-one                Red Alert 2 + Yuri's Revenge for the Mac:  build/mac/RA2YR.app
 #   ./build.sh ios [simulator|device] the iPhone/iPad app, both games:           build/ios-<platform>/RA2YR.app
 #   ./build.sh ios [simulator|device] --ra2   Red Alert 2 alone:                 build/ios-<platform>/RBTrial.app
+#   ./build.sh windows                Red Alert 2 for Windows (x86_64):          build/windows/RA2Native.exe
+#   ./build.sh yr-windows             Yuri's Revenge for Windows (x86_64):       build/windows/YRNative.exe
+#   ./build.sh windows-one            both games for Windows:                    build/windows-one/RA2YRNative/
+#   ./build.sh all                    mac, mac-one, ios simulator, windows, yr-windows and windows-one in turn
 #
 # Each configures its own build folder (Release), builds the game, packages it and prints the result's path.
 # Rerunning only rebuilds what changed. Extra arguments after the platform go to CMake's configure step;
@@ -129,11 +133,58 @@ build_ios() {
   echo "Built: $app"
 }
 
+# The Windows builds (cmake/llvm-mingw-x86_64.cmake): cross-compiled here with llvm-mingw, SDL3 built from source.
+# windows and yr-windows share build/windows (SDL linked statically: each .exe is self-contained); windows-one has its
+# own folder (one SDL3.dll shared by the thin host and the two engine DLLs).
+windows_configure() {   # <build folder> <mingw> [CMake options]
+  local b="$1" mingw="$2"; shift 2
+  local sdl; sdl=$(sdl_source)
+  RA2_LLVM_MINGW="$mingw" cmake -S . -B "$b" -G Ninja -DCMAKE_TOOLCHAIN_FILE="$root/cmake/llvm-mingw-x86_64.cmake" \
+        -DRA2_LLVM_MINGW="$mingw" -DRA2_SDL_SOURCE="$sdl" "$@"
+}
+
+build_windows() {
+  local b="${RA2_BUILD_DIR:-build/windows}"
+  common_checks; local mingw; mingw=$(llvm_mingw)
+  windows_configure "$b" "$mingw" "$@"
+  RA2_LLVM_MINGW="$mingw" cmake --build "$b" --target RA2Native rb-native-trial   # ra2-native.exe: the console build
+  echo "Built: $b/RA2Native.exe (self-contained: copy it to the Windows PC on its own)"
+}
+
+build_yr_windows() {
+  local b="${RA2_BUILD_DIR:-build/windows}"
+  common_checks; local mingw; mingw=$(llvm_mingw)
+  windows_configure "$b" "$mingw" -DRA2_NATIVE_YR=ON "$@"
+  RA2_LLVM_MINGW="$mingw" cmake --build "$b" --target YRNative yr-native
+  echo "Built: $b/YRNative.exe (self-contained: copy it to the Windows PC on its own)"
+}
+
+build_windows_one() {
+  # The thin host RA2YRNative.exe loads ra2-engine.dll or yr-engine.dll from its own folder; all three share SDL3.dll.
+  # ra2yr-native.exe is the console host the Wine tests run. RA2YRNative/ holds only what a PC needs.
+  local b="${RA2_BUILD_DIR:-build/windows-one}"
+  common_checks; local mingw; mingw=$(llvm_mingw)
+  windows_configure "$b" "$mingw" -DRA2_NATIVE_YR=ON -DRA2_NATIVE_COMBINED=ON "$@"
+  RA2_LLVM_MINGW="$mingw" cmake --build "$b" --target RA2YRNative ra2yr-native ra2-engine yr-engine
+  local pkg="$b/RA2YRNative" f
+  /bin/rm -rf "$pkg"; mkdir -p "$pkg"
+  for f in RA2YRNative.exe ra2-engine.dll yr-engine.dll SDL3.dll; do
+    [[ -f "$b/$f" ]] || die "$b/$f was not built"
+    /bin/cp -f "$b/$f" "$pkg/$f"
+  done
+  /bin/cp -f "$(sdl_source)/LICENSE.txt" "$pkg/SDL3-LICENSE.txt"
+  echo "Built: $pkg (RA2YRNative.exe, ra2-engine.dll, yr-engine.dll, SDL3.dll: copy the folder to the Windows PC)"
+}
+
 what="${1:-}"
 if [[ $# -gt 0 ]]; then shift; fi
 case "$what" in
   mac) build_mac "$@" ;;
   mac-one) build_mac_one "$@" ;;
+  windows) build_windows "$@" ;;
+  yr-windows) build_yr_windows "$@" ;;
+  windows-one) build_windows_one "$@" ;;
+  all) build_mac; build_mac_one; build_ios simulator; build_windows; build_yr_windows; build_windows_one ;;
   ios) build_ios "$@" ;;
-  *) sed -n '3,8p' "$0" | sed 's/^# \{0,1\}//' >&2; exit 64 ;;
+  *) sed -n '3,12p' "$0" | sed 's/^# \{0,1\}//' >&2; exit 64 ;;
 esac

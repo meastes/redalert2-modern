@@ -151,8 +151,7 @@ def main():
 
     undefined = [s for s in a.undefined.read_text().split('\n') if s]
     inputs = [l for l in a.inputs.read_text().split('\n') if l]
-    out = subprocess.run(['nm', '-g', '--defined-only', '-j'] + inputs, capture_output=True, text=True).stdout
-    defined = sorted({s for s in out.split('\n') if s and not s.endswith(':')})
+    defined = rb_data.nm_defined(inputs)
     dem_defined = data_globals.demangle([s[1:] if s.startswith('_') else s for s in defined])
     by_qual = defaultdict(list)
     for sym, dem in zip(defined, dem_defined):

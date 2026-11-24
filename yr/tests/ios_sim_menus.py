@@ -118,7 +118,7 @@ def main():
     ap.add_argument('--play-seconds', type=int, default=120)
     ap.add_argument('--play-w', type=int, default=872)
     ap.add_argument('--shot-seconds', type=float, default=20)
-    ap.add_argument('--enhancements', default='menufill=backdrop,vsync=on,scaling=smooth')
+    ap.add_argument('--enhancements', default='menufill=backdrop,vsync=on,scaling=smooth,zoomgestures=off')
     ap.add_argument('--keep-booted', action='store_true')
     ap.add_argument('--movies', action='store_true', help='play the movies (the loading screen as a player sees it)')
     a = ap.parse_args()

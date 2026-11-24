@@ -23,6 +23,7 @@ import argparse
 import bisect
 import json
 import re
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -71,9 +72,28 @@ def load_catalog(gen=None):
     return dict(regions=regions), refs, users
 
 
+def is_coff(path):
+    """An x86_64 COFF object (the Windows build, lane P13), or an archive of them."""
+    try:
+        with open(path, 'rb') as f:
+            head = f.read(8)
+    except OSError:
+        return False
+    if head.startswith(b'!<arch>'):
+        return os.environ.get('RB_TARGET') == 'windows'
+    return head[:2] == b'\x64\x86'
+
+
+def nm_defined(paths):
+    """The external names objects define, in the Mach-O spelling (COFF names gain the leading underscore, as
+    tools/link_closure.py reads them on Windows)."""
+    out = subprocess.run(['nm', '-g', '--defined-only', '-j'] + paths, capture_output=True, text=True).stdout
+    prefix = '_' if paths and is_coff(paths[0]) else ''
+    return sorted({prefix + s for s in out.split('\n') if s and not s.endswith(':')})
+
+
 def defined_symbols(objs):
-    out = subprocess.run(['nm', '-g', '--defined-only', '-j'] + objs, capture_output=True, text=True).stdout
-    return sorted({s for s in out.split('\n') if s and not s.endswith(':')})
+    return nm_defined(objs)
 
 
 def main():

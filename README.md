@@ -1,6 +1,7 @@
 # redalert2-modern
 
-Red Alert 2 as a native app for the Mac (Apple silicon) and iPhone/iPad, built from the **rebuild tree** of
+Red Alert 2 and Yuri's Revenge as native apps for the Mac (Apple silicon), iPhone/iPad and Windows (x86_64). Red Alert 2
+is built from the **rebuild tree** of
 redalert2-decomp: C++ reconstructed from the base Red Alert 2 executable (1.006) and checked there against it
 function by function, here compiled by modern clang for arm64 on an SDL3 platform layer. No emulation, Wine,
 Rosetta or original code runs.
@@ -8,7 +9,8 @@ Rosetta or original code runs.
 **You need your own copy of the game.** Nothing of the game is in this repository or in the apps it builds: no
 executables, mix files, movies, maps, tables or saves. The apps ask for your installed Red Alert 2 folder the
 first time they start (the Mac: a folder; iPhone/iPad: the Files picker, copied once into the app) and read the
-game's files and the data the original executable stores from your own `game.exe` at run time. Supported
+game's files and the data the original executables store from your own `game.exe` (and `gamemd.exe` for Yuri's Revenge)
+at run time. Supported
 `game.exe` builds are listed in `port/include/ra2port/game_builds.hpp` (the base 1.006 executable of 4,485,392
 bytes, and copies whose data is unchanged, such as the signed 4,489,184-byte no-CD build). The CD check is skipped.
 
@@ -20,7 +22,9 @@ bytes, and copies whose data is unchanged, such as the signed 4,489,184-byte no-
 | `ra2/` | the Red Alert 2 build on that tree: the generator (`tools/rb_units.py`), the clang fixups (`fixups.json`, each with its VC6 meaning), native glue for what the rebuild carries neither exact nor as a draft (`glue/`), data binding, the checks (`tests/`) and `ra2.cmake` |
 | `port/` | the platform seams: Win32, DirectDraw, DirectSound, Winsock, OLE and the VC6 C runtime the game imports, on POSIX and SDL3 |
 | `platform/` | the SDL host (window, input, touch, the first-run setup, the Enhancements page); `platform/win` is the Windows host, not built here yet |
-| `yr/` | the pieces of the Yuri's Revenge port the RA2 build shares (SDK headers, the C runtime glue, the initialiser and data tools); the YR port itself is not here yet |
+| `vendor/ra2-decomp/`, `vendor/tibsun/` | the Yuri's Revenge tree (gibbo101/ra2-decomp) and the TibSun headers it falls back on, at pinned commits, unchanged, each with its `PIN` (`tools/update_yr_vendor.sh`) |
+| `yr/` | the Yuri's Revenge port on that tree (`yr.cmake`: generated units, `fixups.json`, `glue/`, data binding, `tests/`), which uses none of Red Alert 2's game code, and the combined app (`combined.cmake`, `combined/`: both games behind one thin host, a toggle in each main menu); also the SDK headers and tools the Red Alert 2 build shares. Notes: `docs/yr-port-notes.md` |
+| `cmake/` | the Windows cross-build (llvm-mingw toolchain file, `windows.cmake`) |
 | `tools/` | link closure, data binding and layout tools, `update_rebuild.sh` (re-vendor), `check_tree.py` (hygiene) |
 | `tests/` | the feature tests the played checks run (scripted input through the real menus) |
 | `packaging/` | the Mac app bundle, the iOS bundle audit and device signing, the placeholder icon |
@@ -35,8 +39,12 @@ On a Mac with Apple silicon:
 | Command | Result |
 | --- | --- |
 | `./build.sh mac` | `build/mac/RA2.app`: Red Alert 2 for the Mac |
-| `./build.sh ios simulator` | `build/ios-simulator/RBTrial.app`: the iPhone/iPad app for the Simulator (home-screen name "RA2"; bundle id `io.github.ra2native.RBTrial`, kept apart from the played app's until parity) |
-| `RA2_IOS_TEAM=<team id> ./build.sh ios device` | `build/ios-device/RBTrial.app`, signed for your devices |
+| `./build.sh ios simulator` | `build/ios-simulator/RA2YR.app`: the iPhone/iPad app, both games in one executable, for the Simulator (home-screen name "Red Alert 2"; bundle id `io.github.ra2native.RA2`, the played app's, so its saves, settings and imported files carry over; `-DRA2_ONE_BUNDLE_ID=` names another). `./build.sh ios simulator --ra2`: Red Alert 2 alone, `RBTrial.app` (bundle id `io.github.ra2native.RBTrial`) |
+| `RA2_IOS_TEAM=<team id> ./build.sh ios device` | `build/ios-device/RA2YR.app`, signed for your devices |
+| `./build.sh mac-one` | `build/mac/RA2YR.app`: Red Alert 2 and Yuri's Revenge in one Mac app |
+| `./build.sh windows` / `yr-windows` | `build/windows/RA2Native.exe` / `YRNative.exe` (each self-contained) |
+| `./build.sh windows-one` | `build/windows-one/RA2YRNative/`: both games for Windows (the folder is the app) |
+| `./build.sh all` | mac, mac-one, ios simulator, windows, yr-windows and windows-one in turn |
 
 Prerequisites (the script downloads and installs nothing):
 
@@ -76,7 +84,11 @@ cmake -S . -B build/mac -DRB_DATA_DIR=<your game folder> && ctest --test-dir bui
 The played checks (labels `rb-quick`, `rb-main`, `rb-campaign`, `rb-resaves`, `rb-chain`; `rb-ios` with
 `-DRB_IOS_UDID=<simulator>`) run the game through its real menus with scripted input and skip (77) without your
 game. Frame identity against the decompilation's src-based port (`rb-identity`) is added only with
-`-DRB_IDENTITY_SRC=<its ra2-native>`. `python3 tools/check_tree.py --game-exe <your game.exe>` also proves that no
+`-DRB_IDENTITY_SRC=<its ra2-native>`. Yuri's Revenge and the combined app (configure with `-DRA2_NATIVE_YR=ON -DRA2_NATIVE_COMBINED=ON`, as `./build.sh mac-one`
+does) add `yr-native-*` (YR alone: skirmishes, saves in gamemd.exe's format, both campaigns, the enhancements, LAN) and
+`one-game-*` (the toggle both ways, saves after a swap, the menus' backdrop); `-DRA2_ONE_IOS_SIM=ON` adds `one-game-ios-*`
+(label `one-ios`: the iOS app in the "RA2 Duo Validation" Simulator). They read the same installation, which needs
+Yuri's Revenge installed. `python3 tools/check_tree.py --game-exe <your game.exe>` also proves that no
 piece of the executable's code or resources is in the tree.
 
 ## Updating the rebuild

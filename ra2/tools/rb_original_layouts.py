@@ -66,6 +66,12 @@ def rb_args(unit, triple, cache):
                  '-DRA2PORT_ALLOW_HOST', '-I', str(ol.YR_SDK / 'i686')] + out + dump +
                 ['-include', str(d / 'prelude_i686.hpp'), '-include', str(d / 'yr_prelude_i686.h'),
                  '-idirafter', str(d / 'ov'), '-idirafter', str(GEN / 'mingw'), str(unit)])
+    if triple == 'win64':
+        # The x86_64 Windows build (lane P13; ra2/ra2.cmake passes --target windows --cxx): as rb_probe.py --target
+        # windows compiles the units.
+        return ([ol.CXX['win64'], '-include', str(ol.YR_SDK / 'yr_win_first.h'), '-include', str(ROOT / 'platform/win/dialect_win.hpp')]
+                + out + dump + ['-include', str(ol.PRELUDE), '-include', str(ol.YR_SDK / 'yr_prelude.h'),
+                                '-isystem', str(GEN / 'mingw'), str(unit)])
     return (['clang++', '-arch', 'arm64'] + out + dump +
             ['-include', str(ol.PRELUDE), '-include', str(ol.YR_SDK / 'yr_prelude.h'),
              '-idirafter', str(GEN / 'mingw'), str(unit)])

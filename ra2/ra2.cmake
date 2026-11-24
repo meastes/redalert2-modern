@@ -29,11 +29,22 @@ if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
   set(rb_sdl_frameworks AVFoundation AudioToolbox CoreAudio CoreBluetooth CoreHaptics CoreMedia CoreMotion CoreVideo GameController
       IOKit Metal OpenGLES QuartzCore UIKit CoreFoundation)
   set(rb_closure_sys "--sdk=${CMAKE_OSX_SYSROOT}" --frameworks ${rb_frameworks} --system-libs "${RB_SDL3}")
+elseif(WIN32)
+  # The x86_64 Windows build (lane P13; cmake/windows.cmake): COFF objects read in the Mach-O spelling by the link
+  # tools (RB_TARGET=windows for the rebuild's own), the toolchain's system libraries, SDL3 built from source.
+  set(RB_IOS OFF)
+  set(RB_SDL3 SDL3::SDL3)
+  set(rb_closure_sys --target windows "--nm=${CMAKE_NM}" "--sysroot=${RA2_LLVM_MINGW}/x86_64-w64-mingw32"
+      --system-libs "$<TARGET_FILE:SDL3-static>")
+  execute_process(COMMAND xcrun --sdk macosx --show-sdk-path OUTPUT_VARIABLE rb_mac_sdk OUTPUT_STRIP_TRAILING_WHITESPACE)
+  set(rb_probe_target --target windows --host-headers "${rb_mac_sdk}/usr/include")
+  set(rb_layouts_target --target windows "--cxx=${CMAKE_CXX_COMPILER}")
 else()
   set(RB_IOS OFF)
   set(RB_SDL3 SDL3::SDL3)
   set(rb_closure_sys --sdk= --frameworks Foundation AppKit --system-libs)
 endif()
+set(rb_env "${CMAKE_COMMAND}" -E env "RB_TARGET=$<IF:$<BOOL:${WIN32}>,windows,apple>")
 
 # The generated tree (at configure time; re-run when the pin, the fixups or a glue append change).
 set(RB_GEN "${CMAKE_CURRENT_BINARY_DIR}/gen")
@@ -41,7 +52,7 @@ execute_process(COMMAND "${RB_PYTHON3}" -B "${RB_DIR}/tools/rb_units.py" --out "
 if(rb_rc)
   message(FATAL_ERROR "rb_units.py failed")
 endif()
-execute_process(COMMAND "${RB_PYTHON3}" -B "${RB_DIR}/tools/rb_probe.py" --gen "${RB_GEN}" --print-flags
+execute_process(COMMAND "${RB_PYTHON3}" -B "${RB_DIR}/tools/rb_probe.py" --gen "${RB_GEN}" --print-flags ${rb_probe_target}
                 OUTPUT_VARIABLE rb_unit_flags RESULT_VARIABLE rb_rc)
 if(rb_rc)
   message(FATAL_ERROR "rb_probe.py --print-flags failed")
@@ -53,7 +64,7 @@ foreach(rb_flag IN LISTS rb_unit_flags)
   if(rb_pending)
     list(APPEND rb_unit_options "SHELL:${rb_pending} ${rb_flag}")
     set(rb_pending "")
-  elseif(rb_flag MATCHES "^-(include|idirafter|Xclang|arch)$")
+  elseif(rb_flag MATCHES "^-(include|idirafter|isystem|Xclang|arch)$")
     set(rb_pending "${rb_flag}")
   else()
     list(APPEND rb_unit_options "${rb_flag}")
@@ -63,11 +74,23 @@ file(GLOB rb_appends "${RB_DIR}/glue/*.inc")
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${rb_appends} "${RB_DIR}/PIN" "${RB_DIR}/fixups.json"
   "${RB_DIR}/tools/rb_units.py" "${RB_DIR}/tools/rb_probe.py")
 include("${RB_GEN}/units.cmake")
+if(WIN32)
+  # COFF spellings of the units' assembler labels (yr/tools/yr_coff.py): RB_NATIVE_UNITS names the copies.
+  execute_process(COMMAND "${RB_PYTHON3}" -B "${RB_ROOT}/yr/tools/yr_coff.py" --gen "${RB_GEN}" --out "${RB_GEN}/coff_units.cmake"
+                  --var RB_NATIVE_UNITS RESULT_VARIABLE rb_rc)
+  if(rb_rc)
+    message(FATAL_ERROR "yr_coff.py failed")
+  endif()
+  include("${RB_GEN}/coff_units.cmake")
+endif()
 
 # The units.
 # Lane P8: native additions compiled as units (the units' flags and headers; no port rewrites, no VC6 for-scope rewrite):
 # glue/unit/*.cpp (HD vehicles).
 file(GLOB rb_unit_glue CONFIGURE_DEPENDS "${RB_DIR}/glue/unit/*.cpp")
+if(WIN32)
+  ra2_windows_coff_sources(rb_unit_glue ${rb_unit_glue})
+endif()
 add_library(rb_units_objs OBJECT ${RB_NATIVE_UNITS} ${rb_unit_glue})
 set_target_properties(rb_units_objs PROPERTIES CXX_STANDARD 17)
 target_compile_options(rb_units_objs PRIVATE ${rb_unit_options})
@@ -77,7 +100,11 @@ endif()
 
 # The host's hooks and the native bodies outside any unit; the VC6 C runtime spellings (the YR port's).
 file(GLOB rb_glue_sources CONFIGURE_DEPENDS "${RB_DIR}/glue/*.cpp")
-add_library(rb_glue_objs OBJECT ${rb_glue_sources} "${RB_ROOT}/yr/glue/yr_crt.cpp")
+list(APPEND rb_glue_sources "${RB_ROOT}/yr/glue/yr_crt.cpp")
+if(WIN32)
+  ra2_windows_coff_sources(rb_glue_sources ${rb_glue_sources})
+endif()
+add_library(rb_glue_objs OBJECT ${rb_glue_sources})
 set_target_properties(rb_glue_objs PROPERTIES CXX_STANDARD 17)
 target_compile_options(rb_glue_objs PRIVATE -O2)
 
@@ -88,7 +115,7 @@ add_custom_command(
   OUTPUT "${RB_GEN}/rb_bss_globals.cpp" "${RB_GEN}/rb_original_data.cpp" "${RB_GEN}/rb_bss_aliases.tsv"
   COMMAND "${RB_PYTHON3}" -B "${RB_ROOT}/tools/link_closure.py" --inputs "${RB_GEN}/link_inputs0.txt"
           --host ${rb_host_objs} --out "${RB_GEN}/link_closure0.c" ${rb_closure_sys} --list-undefined "${RB_GEN}/undefined.txt"
-  COMMAND "${RB_PYTHON}" -B "${RB_DIR}/tools/rb_data.py" --gen "${RB_GEN}" --undefined "${RB_GEN}/undefined.txt"
+  COMMAND ${rb_env} "${RB_PYTHON}" -B "${RB_DIR}/tools/rb_data.py" --gen "${RB_GEN}" --undefined "${RB_GEN}/undefined.txt"
   COMMAND "${RB_PYTHON}" -B "${RB_DIR}/tools/rb_original_data.py" --gen "${RB_GEN}"
   DEPENDS rb_units_objs ra2_port ra2_host_objs $<TARGET_OBJECTS:rb_units_objs> "${rb_port_archive}" "${RB_DIR}/tools/rb_data.py"
           "${RB_DIR}/tools/rb_original_data.py" "${RB_ROOT}/tools/link_closure.py"
@@ -97,7 +124,7 @@ add_custom_command(
 add_custom_command(
   OUTPUT "${RB_GEN}/rb_original_layouts.cpp"
   COMMAND "${RB_PYTHON3}" -B "${RB_DIR}/tools/rb_original_layouts.py" --gen "${RB_GEN}" --out "${RB_GEN}/rb_original_layouts.cpp"
-          --report "${RB_GEN}/rb_original_layouts.json" --members "${RB_GEN}/rb_original_layouts_members.json" -j 8
+          --report "${RB_GEN}/rb_original_layouts.json" --members "${RB_GEN}/rb_original_layouts_members.json" -j 8 ${rb_layouts_target}
   DEPENDS ${RB_NATIVE_UNITS} "${RB_DIR}/tools/rb_original_layouts.py" "${RB_DIR}/data/original_save_types.txt"
           "${RB_ROOT}/tools/original_layouts.py"
   WORKING_DIRECTORY "${RB_GEN}" VERBATIM)
@@ -113,7 +140,7 @@ add_custom_command(
   OUTPUT "${RB_GEN}/link_closure.c" "${RB_GEN}/alias_list.txt" "${RB_GEN}/link_closure.json"
   COMMAND "${RB_PYTHON3}" -B "${RB_ROOT}/tools/link_closure.py" --inputs "${RB_GEN}/link_inputs.txt"
           --host ${rb_host_objs} --out "${RB_GEN}/link_closure1.c" ${rb_closure_sys} --list-undefined "${RB_GEN}/undefined1.txt"
-  COMMAND "${RB_PYTHON}" -B "${RB_DIR}/tools/rb_aliases.py" --gen "${RB_GEN}" --undefined "${RB_GEN}/undefined1.txt"
+  COMMAND ${rb_env} "${RB_PYTHON}" -B "${RB_DIR}/tools/rb_aliases.py" --gen "${RB_GEN}" --undefined "${RB_GEN}/undefined1.txt"
           --inputs "${RB_GEN}/link_inputs.txt" --extra "${RB_GEN}/rb_bss_aliases.tsv" "${RB_DIR}/data/aliases.tsv" --out "${RB_GEN}/rb_aliases.tsv"
   COMMAND "${RB_PYTHON3}" -B "${RB_ROOT}/tools/link_closure.py" --inputs "${RB_GEN}/link_inputs.txt"
           --host ${rb_host_objs} --out "${RB_GEN}/link_closure.c" ${rb_closure_sys}
@@ -126,7 +153,25 @@ add_custom_command(
 add_executable(rb-native-trial ${rb_host_objs} $<TARGET_OBJECTS:rb_units_objs> $<TARGET_OBJECTS:rb_data_objs>
                $<TARGET_OBJECTS:rb_glue_objs> "${RB_GEN}/link_closure.c")
 set_source_files_properties("${RB_GEN}/link_closure.c" PROPERTIES COMPILE_OPTIONS "-O1")
-if(RB_IOS)
+if(WIN32)
+  # ra2-native.exe (console: the test runs read its output) and RA2Native.exe (GUI subsystem, the players' build) from
+  # the same objects; select-any for repeated definitions, the initialisers in link order, the units' own moved to
+  # .rbini$m (run by glue/rb_host_glue.cpp after the game.exe load), the address aliases as -alternatename
+  # directives in link_closure.c.
+  set_target_properties(rb-native-trial PROPERTIES OUTPUT_NAME ra2-native)
+  target_link_libraries(rb-native-trial PRIVATE SDL3::SDL3 ra2_port)
+  ra2_windows_game_link(rb-native-trial)
+  add_custom_command(TARGET rb-native-trial PRE_LINK
+    COMMAND "${RB_PYTHON3}" -B "${RB_ROOT}/yr/tools/defer_initializers.py" --inputs "${RB_GEN}/link_order.txt"
+            --section __rb_init_func --coff-section .rbini$m --only /rb_units_objs.dir/
+    VERBATIM)
+  ra2_windows_gui_exe("${rb_host_objs};$<TARGET_OBJECTS:rb_units_objs>;$<TARGET_OBJECTS:rb_data_objs>;$<TARGET_OBJECTS:rb_glue_objs>;${RB_GEN}/link_closure.c"
+                      "SDL3::SDL3;ra2_port")
+  if(TARGET RA2Native)
+    add_dependencies(RA2Native rb-native-trial)   # after rb-native-trial's PRE_LINK has moved the initialisers
+  endif()
+  return()   # the played checks run the Mac build
+elseif(RB_IOS)
   set(rb_link_frameworks "")
   foreach(f IN LISTS rb_frameworks rb_sdl_frameworks)
     list(APPEND rb_link_frameworks "-framework ${f}")

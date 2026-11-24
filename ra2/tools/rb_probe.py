@@ -25,8 +25,20 @@ ROOT = Path(__file__).resolve().parents[2]
 MINGW = os.environ.get('RA2_LLVM_MINGW', '')
 
 
-def flags(gen):
+def flags(gen, windows=False):
     sdk = ROOT / 'yr/sdk'
+    if windows:
+        # The x86_64 Windows build (lane P13, as the YR units' there: yr/yr.cmake): yr_win_first.h and
+        # platform/win/dialect_win.hpp first, the rewritten Win32 headers ahead of the toolchain's (-isystem),
+        # the toolchain's own target instead of -arch arm64.
+        out = ['-include', str(sdk / 'yr_win_first.h'), '-include', str(ROOT / 'platform/win/dialect_win.hpp')]
+        for f in flags(gen):
+            out.append(f)
+        i = out.index('-arch')
+        del out[i:i + 2]
+        i = out.index('-idirafter')
+        out[i] = '-isystem'
+        return out
     return ['-DRA2_NATIVE_YR=1', '-DRA2_NATIVE_RB=1', '-DWIN32', '-D_WIN32', '-D__GNUC_MINOR__=2', '-D__GNUC__=4',
             '-I' + str(ROOT / 'ra2/sdk'), '-I' + str(sdk), '-I' + str(gen / 'hdr'),
             '-O2', '-DNDEBUG', '-std=c++17', '-arch', 'arm64',
@@ -48,6 +60,9 @@ def main():
     ap.add_argument('--asan', action='store_true', help='AddressSanitizer objects (OUT/obj[-nm]-asan), for diagnosing heap faults')
     ap.add_argument('--print-flags', action='store_true',
                     help="make the rewritten mingw headers if needed, print the units' compile flags (';'-separated, for CMake) and stop")
+    ap.add_argument('--target', choices=('apple', 'windows'), default='apple',
+                    help="windows: the x86_64 Windows build's flags and headers (the macOS SDK's C headers named by --host-headers)")
+    ap.add_argument('--host-headers', default='', help='the Windows build: <macOS SDK>/usr/include (yr_sdk.py --host-headers)')
     ap.add_argument('--obj', action='store_true', help='compile to OUT/obj/*.o instead of -fsyntax-only')
     ap.add_argument('-j', type=int, default=6)
     ap.add_argument('--only', default='')
@@ -62,9 +77,10 @@ def main():
             raise SystemExit('rb_probe: no llvm-mingw toolchain (set RA2_LLVM_MINGW to the extracted '
                              'llvm-mingw-20261020-ucrt-macos-universal folder, or extract it under toolchains/)')
         subprocess.run([sys.executable, '-B', str(ROOT / 'yr/tools/yr_sdk.py'), '--mingw', str(mingw[0]),
-                        '--out', str(gen / 'mingw')], check=True, stdout=sys.stderr)
+                        '--out', str(gen / 'mingw')] + (['--host-headers', a.host_headers] if a.host_headers else []),
+                       check=True, stdout=sys.stderr)
     if a.print_flags:
-        print(';'.join(flags(gen)), end='')
+        print(';'.join(flags(gen, a.target == 'windows')), end='')
         return
     only = set(x for x in a.only.split(',') if x)
     units = sorted(u for u in (gen / 'units').glob('*.cpp') if not only or u.stem in only or u.name in only)
