@@ -2101,6 +2101,18 @@
    "old": "float length = Vector3((float)displacement.X, (float)displacement.Y, (float)displacement.Z).Length();",
    "new": "float length = (float)fastmath::sqrt((double)(float)displacement.Z * (double)(float)displacement.Z + ((double)(float)displacement.X * (double)(float)displacement.X + (double)(float)displacement.Y * (double)(float)displacement.Y)); /* native: lane P11, main's exact text (the squares summed in double) */",
    "why": "Lane P11 (the overlay: behaviour of TechnoClass::Fire_At, a judgment-call row in the rebuild, against main's exact 0x006CA890): the flak-scatter branch's length. Vector3::Length sums X*X+Y*Y+Z*Z in float; main's exact text (Point3F_006ca890::Length) converts each float component to double and sums Z*Z + (X*X + Y*Y) before the square root, then narrows to float. Past about 4,096 leptons per component the float sum loses bits and (int)length can come out one lower, moving the scatter spread. Main's order and widths carried."
+  },
+  {
+   "file": "src/ownrdraw.cpp",
+   "old": "        if (Is_Campaign_Button((unsigned int)parent, window)) { // RA2: as above\n            record->ButtonKind = 1; // RA2: as above\n",
+   "new": "        // NATIVE (lane C23, Y11; lane P13): the combined app's toggle (port/src/user32.cpp, id 0x7F5E) is a main-menu sidebar button.\n        if (Is_Campaign_Button((unsigned int)parent, window) || GetDlgCtrlID(window) == 0x7F5E) { // RA2: as above\n            record->ButtonKind = 1; // RA2: as above\n",
+   "why": "Lane P13, main's port row (redalert2-decomp native/port/fixups.json, the src/recovered/ownrdraw.cpp row of lanes C23 and Y11): native addition, not original behaviour. The combined app's main-menu toggle (port/src/user32.cpp, id 0x7F5E, a clone of the main menu's Exit Game 0x3EE) is drawn and animated as the main menu's sidebar buttons (WinData::ButtonKind = 1, as Is_Campaign_Button 0x005E7740 gives Exit Game), as YR's twin ClassifyLayoutBand gives it (yr/fixups.json). Is_Campaign_Button knows only the listed dialogs' ids. Without the toggle (RA2.app, every other dialog) nothing changes: no control has that id. This row: Assign_Button_Kind 0x005E7EB0."
+  },
+  {
+   "file": "src/ownrdraw.cpp",
+   "old": "\tint state = data->ItemState; // RA2: as above\n\tLONG style = GetWindowLongA(window, GWL_STYLE); // RA2: as above\n",
+   "new": "\tint state = data->ItemState | ((CallWindowProcA(previous, window, BM_GETSTATE, 0, 0) & BST_PUSHED) ? 1 : 0); // RA2: as above (native: lane P13, the button's BST_PUSHED too)\n\tLONG style = GetWindowLongA(window, GWL_STYLE); // RA2: as above\n",
+   "why": "Lane P13, main's port behaviour (redalert2-decomp native/link/behaviour_m14_ownerdraw.cpp, Paint_Button for 0x005F0320): Owner_Button_Proc draws a button pressed from the owner-draw state the dialog's WM_DRAWITEM stores in WinData +0xE8 (ItemState, ODS_SELECTED); the port's Win32 layer sends no WM_DRAWITEM, so no push button (main menu, dialogs, the combined app's toggle) ever drew its pressed frame. Main's port also takes the button's own BST_PUSHED (BM_GETSTATE, which port/src/user32.cpp answers from its press tracking); carried. Found by one-game-toggle (\"the toggle shows no press\")."
   }
  ]
 }

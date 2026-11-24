@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // The VC6 C runtime names the YR tree calls that the port spells with an underscore, and the
-// secure forms the mingw COM headers call (lane Y1; native/yr/sdk/yr_crt.h declares them).
+// secure forms the mingw COM headers call (lane Y1; yr/sdk/yr_crt.h declares them).
 #include <stdarg.h>
 #include <stddef.h>
 #include <stdio.h>

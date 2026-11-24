@@ -2,9 +2,10 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # One command per platform (README.md "Building"):
 #
-#   ./build.sh mac                    Red Alert 2 for the Mac:                build/mac/RA2.app
-#   ./build.sh ios [simulator]        the iPhone/iPad app for the Simulator:  build/ios-simulator/RBTrial.app
-#   ./build.sh ios device             the same, for your devices (needs RA2_IOS_TEAM): build/ios-device/RBTrial.app
+#   ./build.sh mac                    Red Alert 2 for the Mac:                   build/mac/RA2.app
+#   ./build.sh mac-one                Red Alert 2 + Yuri's Revenge for the Mac:  build/mac/RA2YR.app
+#   ./build.sh ios [simulator|device] the iPhone/iPad app, both games:           build/ios-<platform>/RA2YR.app
+#   ./build.sh ios [simulator|device] --ra2   Red Alert 2 alone:                 build/ios-<platform>/RBTrial.app
 #
 # Each configures its own build folder (Release), builds the game, packages it and prints the result's path.
 # Rerunning only rebuilds what changed. Extra arguments after the platform go to CMake's configure step;
@@ -67,10 +68,30 @@ build_mac() {
   echo "Built: $b/RA2.app"
 }
 
+build_mac_one() {
+  # Both games (yr/combined.cmake): the thin host ra2yr-native with the engine bundles ra2-engine.so (Red Alert 2 from
+  # the rebuild) and yr-engine.so (Yuri's Revenge from vendor/ra2-decomp), packaged as RA2YR.app.
+  common_checks
+  if ! { command -v brew >/dev/null 2>&1 && brew --prefix sdl3 >/dev/null 2>&1; }; then
+    [[ -n "${SDL3_DIR:-}" ]] || die "SDL3 not found: brew install sdl3 (or set SDL3_DIR to an SDL3 CMake package)"
+  fi
+  local mingw; mingw=$(llvm_mingw)
+  local b="${RA2_BUILD_DIR:-build/mac}"
+  RA2_LLVM_MINGW="$mingw" cmake -S . -B "$b" -G Ninja -DCMAKE_BUILD_TYPE=Release -DRA2_NATIVE_YR=ON \
+        -DRA2_NATIVE_COMBINED=ON "$@"
+  RA2_LLVM_MINGW="$mingw" cmake --build "$b" --target ra2yr-native ra2-engine yr-engine
+  sh packaging/make_app.sh --one-game "$b/ra2yr-native" "$b"
+  echo "Built: $b/RA2YR.app"
+}
+
 build_ios() {
   common_checks
   local platform="${1:-simulator}"
   if [[ $# -gt 0 ]]; then shift; fi
+  # The default: both games in one executable (yr/combined.cmake ra2yr-one, RA2YR.app); --ra2: Red Alert 2 alone.
+  local one=1
+  if [[ "${1:-}" == --ra2 ]]; then one=0; shift; fi
+  if [[ "${1:-}" == --one ]]; then shift; fi
   local sdk
   case "$platform" in
     simulator) sdk=iphonesimulator ;;
@@ -82,21 +103,29 @@ build_ios() {
   local sdl; sdl=$(sdl_source)
   local b="${RA2_BUILD_DIR:-build/ios-$platform}"
   local opt="${RA2_IOS_OPT--O2}"
+  local game_opts=()
+  [[ $one == 1 ]] && game_opts=(-DRA2_NATIVE_YR=ON -DRA2_NATIVE_COMBINED=ON -DRA2_NATIVE_ONE_EXECUTABLE=ON)
   RA2_LLVM_MINGW="$mingw" cmake -S . -B "$b" -G Ninja -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_SYSROOT="$sdk" \
         -DCMAKE_OSX_ARCHITECTURES=arm64 -DCMAKE_OSX_DEPLOYMENT_TARGET="${RA2_IOS_MIN:-17.0}" -DRA2_SDL_SOURCE="$sdl" \
-        -DCMAKE_C_FLAGS="$opt" -DCMAKE_CXX_FLAGS="$opt" -DCMAKE_OBJCXX_FLAGS="$opt" "$@"
-  RA2_LLVM_MINGW="$mingw" cmake --build "$b" --target rb-native-trial
-  local app="$b/RBTrial.app"
+        -DCMAKE_C_FLAGS="$opt" -DCMAKE_CXX_FLAGS="$opt" -DCMAKE_OBJCXX_FLAGS="$opt" ${game_opts[@]+"${game_opts[@]}"} "$@"
+  local target=rb-native-trial exe=RBTrial bundle_id=io.github.ra2native.RBTrial
+  if [[ $one == 1 ]]; then
+    target=ra2yr-one exe=RA2YR
+    bundle_id=$(sed -n 's/^RA2_ONE_BUNDLE_ID:STRING=//p' "$b/CMakeCache.txt")
+  fi
+  RA2_LLVM_MINGW="$mingw" cmake --build "$b" --target "$target"
+  local app="$b/$exe.app"
   if [[ "$platform" == simulator ]]; then
     codesign --force --sign - --timestamp=none "$app"
   elif [[ -n "${RA2_IOS_TEAM:-}" ]]; then
-    # Your team id and a development profile Xcode has already made for io.github.ra2native.RBTrial (the team
-    # wildcard profile covers it); the team id comes from the environment, never from Git.
-    python3 -I packaging/ios_sign.py "$app" --team "$RA2_IOS_TEAM"
+    # Your team id and a development profile Xcode has already made for the bundle id (the team wildcard profile
+    # covers io.github.ra2native.RBTrial; RA2YR.app has the played app's id unless RA2_ONE_BUNDLE_ID names another);
+    # the team id comes from the environment, never from Git.
+    python3 -I packaging/ios_sign.py "$app" --team "$RA2_IOS_TEAM" ${RA2_IOS_PROFILE:+--profile "$RA2_IOS_PROFILE"}
   else
     echo "build.sh: device app left unsigned (set RA2_IOS_TEAM to sign it with your development profile)"
   fi
-  python3 -I packaging/audit_ios_bundle.py "$app" --executable RBTrial --bundle-id io.github.ra2native.RBTrial
+  python3 -I packaging/audit_ios_bundle.py "$app" --executable "$exe" --bundle-id "$bundle_id"
   echo "Built: $app"
 }
 
@@ -104,6 +133,7 @@ what="${1:-}"
 if [[ $# -gt 0 ]]; then shift; fi
 case "$what" in
   mac) build_mac "$@" ;;
+  mac-one) build_mac_one "$@" ;;
   ios) build_ios "$@" ;;
-  *) sed -n '3,7p' "$0" | sed 's/^# \{0,1\}//' >&2; exit 64 ;;
+  *) sed -n '3,8p' "$0" | sed 's/^# \{0,1\}//' >&2; exit 64 ;;
 esac

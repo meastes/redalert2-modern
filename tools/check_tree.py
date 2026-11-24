@@ -6,7 +6,7 @@
     python3 tools/check_tree.py [--game-exe <game.exe>] [--scan <file>...]
 
 Checks:
-  * vendor/ra2-rebuild equals its PIN list (no edits to the pinned text, no file added or missing);
+  * every vendor/ folder (ra2-rebuild, ra2-decomp, tibsun) equals its PIN list (no edits to the pinned text, no file added or missing);
   * no game data or program: refuses game file extensions and names (.mix, .bik, .vqa, .tlb, .sav, game.exe,
     gamemd.exe, BINKW32.DLL, ...), signing material (.mobileprovision, .p12, .cer) and any file over 8 MiB;
   * no machine-specific paths (/Users/..., /Volumes/...) in tracked text;
@@ -43,11 +43,15 @@ def files():
 
 
 def check_vendor(problems):
-    vendor = ROOT / 'vendor/ra2-rebuild'
+    return sum(check_pin(ROOT / 'vendor' / d.name, problems) for d in sorted((ROOT / 'vendor').iterdir()) if d.is_dir())
+
+
+def check_pin(vendor, problems):
+    tag = 'vendor/%s' % vendor.name
     pin = vendor / 'PIN'
     if not pin.is_file():
-        problems.append('vendor/ra2-rebuild/PIN is missing')
-        return
+        problems.append('%s/PIN is missing' % tag)
+        return 0
     listed = {}
     for line in pin.read_text().split('\n'):
         if line.startswith('sha256 '):
@@ -55,12 +59,12 @@ def check_vendor(problems):
             listed[name] = digest
     have = {p.relative_to(vendor).as_posix() for p in vendor.rglob('*') if p.is_file() and p.name != 'PIN'}
     for name in sorted(have - set(listed)):
-        problems.append('vendor/ra2-rebuild/%s is not in PIN' % name)
+        problems.append('%s/%s is not in PIN' % (tag, name))
     for name in sorted(set(listed) - have):
-        problems.append('vendor/ra2-rebuild/%s is listed in PIN but missing' % name)
+        problems.append('%s/%s is listed in PIN but missing' % (tag, name))
     for name in sorted(have & set(listed)):
         if hashlib.sha256((vendor / name).read_bytes()).hexdigest() != listed[name]:
-            problems.append('vendor/ra2-rebuild/%s differs from its PIN digest' % name)
+            problems.append('%s/%s differs from its PIN digest' % (tag, name))
     return len(listed)
 
 

@@ -1,5 +1,5 @@
 # Yuri's Revenge: types read from gamemd.exe's saves as whole objects (lane Y10;
-# native/tools/original_layouts.py --game yr). The format of native/data/original_save_types.txt:
+# tools/original_layouts.py --game yr). The format of native/data/original_save_types.txt:
 # the type's name, then optionally the member function that reads it and size=<n>, the original's
 # object size (from gamemd.exe 1.001: the immediate of Fetch_Object_Size, vtable slot 12, or of a
 # locomotor's Size, slot 9). The i686 layouts come from the YR tree's headers; the vtables from the

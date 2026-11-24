@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// The VC6 C runtime the YR tree calls, as the port supplies it (native/port/src/crt.cpp; lane Y1).
+// The VC6 C runtime the YR tree calls, as the port supplies it (port/src/crt.cpp; lane Y1).
 // The RA2 tree's port rewrites (native_units.py) rename the calls whose VC6 contract differs from
 // the host libc's to ra2_ names (printf family %ld, rand, fopen, time_t, overlapping strcpy/memcpy,
 // UTF-16 wide strings); these are their declarations, and the Windows-only names beside them.
@@ -82,7 +82,7 @@ char *ra2_strcpy(char *dst, const char *src);
 char *ra2_strncpy(char *dst, const char *src, size_t count);
 void *ra2_memcpy(void *dst, const void *src, size_t count);
 char *ra2_strcat(char *dst, const char *src);
-// Winsock as the port supplies it (native/port/src/wsock32.cpp: SOCKET is the Win32 32-bit
+// Winsock as the port supplies it (port/src/wsock32.cpp: SOCKET is the Win32 32-bit
 // handle; the RA2 tree's port rewrites send these calls to the ra2_ names).
 unsigned int ra2_socket(int family, int type, int protocol);
 int ra2_bind(unsigned int s, const void *address, int length);
@@ -97,7 +97,7 @@ uint32_t ra2_htonl(uint32_t v);
 uint32_t ra2_ntohl(uint32_t v);
 uint16_t ra2_htons(uint16_t v);
 uint16_t ra2_ntohs(uint16_t v);
-// The VC6 names without the underscore (native/yr/glue/yr_crt.cpp: the port's underscored forms).
+// The VC6 names without the underscore (yr/glue/yr_crt.cpp: the port's underscored forms).
 char *strupr(char *s);
 char *strlwr(char *s);
 int strnicmp(const char *a, const char *b, size_t n);

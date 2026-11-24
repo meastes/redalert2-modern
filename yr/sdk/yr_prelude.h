@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // The native YR build's second prelude (lane Y1), after ra2port/prelude.hpp: the host's C
 // library types first, then the switches that make the mingw-w64 Win32/DirectX headers
-// (build/yr-native/mingw, native/yr/tools/yr_sdk.py) take them instead of declaring their own.
+// (build/yr-native/mingw, yr/tools/yr_sdk.py) take them instead of declaring their own.
 #ifndef YR_NATIVE_PRELUDE_H
 #define YR_NATIVE_PRELUDE_H
 #ifdef __MINGW32__

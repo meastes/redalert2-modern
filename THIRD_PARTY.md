@@ -61,6 +61,30 @@ Not used by this tree: the Generals `GameText.cpp` adoption (redalert2-decomp, 2
 vendored commit and not in it; OpenSSL and LZO, which the decompilation's earlier native work linked, are not
 linked here.
 
+## Vendored Yuri's Revenge tree: `vendor/ra2-decomp` and `vendor/tibsun`
+
+The Yuri's Revenge port (`yr/`) builds from the tree the decompilation repository pinned for it (`yr/` of
+redalert2-decomp, here copied from its commit `887b1a2e11` by `tools/update_yr_vendor.sh`, unchanged; each folder's
+`PIN` holds the upstream commit, the redalert2-decomp commit and the SHA-256 of every file, and `tools/check_tree.py`
+fails when a file differs):
+
+- `vendor/ra2-decomp`: **ra2-decomp** (gibbo101/ra2-decomp) at commit `8719494727dd9d5db16f92087e3cc13ea99f4dd3`,
+  copied whole (`src/`, `include/`, `data/`, `COPYING.md`, `LICENSE`, `README.md`). Game source GPL-3.0-or-later,
+  Copyright 2026 ra2-decomp contributors, with Electronic Arts' section 7 terms on files that carry Electronic Arts or
+  OpenTS material (`COPYING.md`); its `data/` (the function map, manifest and names the YR tools read) MIT (`LICENSE`).
+- `vendor/tibsun`: the **TibSun reconstruction** (OpenTS-Developers/TibSun) at commit
+  `dbfbfbfaac40364ce7e1cd8fad7bcade5c6fb0d4` (ra2-decomp's pinned `TIBSUN_COMMIT`), headers only (`code/**/*.h`,
+  `*.hh`), which ra2-decomp's build falls back on, with `LICENSE.md` and `README.md`: GPL-3.0-or-later with
+  Electronic Arts' section 7 terms.
+
+The YR port's own text (`yr/yr.cmake`, `yr/combined.cmake`, `yr/combined/`, `yr/fixups.json`, `yr/glue/`, `yr/data/`,
+`yr/tools/`, `yr/tests/`, `docs/yr-port-notes.md`) is imported from redalert2-decomp's `native/yr` at the same
+commit (same owner, GPL-3.0-or-later), paths changed for this layout and an SPDX line added where none was. Several
+glue files carry text written from the decompilation's Red Alert 2 native tree (their comments name its
+`native/link` files) and from the YR tree's own functions; each keeps its notice. `yr/data/globals.tsv` and
+`member_aliases.tsv` are names and addresses of gamemd.exe, no bytes; the port reads the user's own `gamemd.exe` at
+run time as it reads `game.exe`.
+
 ## Linked libraries
 
 | Library | Version | Licence | Use |

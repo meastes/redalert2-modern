@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // <io.h> for the native YR build (lane Y1): the VC6 low-level file calls as the port supplies them
-// (native/port/src/crt.cpp: DOS paths, 32-bit offsets). The POSIX names (open, read, close, lseek)
+// (port/src/crt.cpp: DOS paths, 32-bit offsets). The POSIX names (open, read, close, lseek)
 // are the host's, declared here as <unistd.h>/<fcntl.h> declare them (those headers clash with
 // Winsock's gethostname); mingw's io.h would redeclare them with Windows types.
 #ifndef YR_NATIVE_IO_H

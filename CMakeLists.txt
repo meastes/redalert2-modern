@@ -59,6 +59,100 @@ target_compile_definitions(ra2_host_objs PRIVATE RA2_NATIVE_GAME=1)
 enable_testing()
 include(ra2/ra2.cmake)
 
+# Yuri's Revenge (yr/yr.cmake: yr-native, from the pinned ra2-decomp tree in vendor/ra2-decomp) and the combined app
+# (yr/combined.cmake: Red Alert 2 from the rebuild and Yuri's Revenge behind one thin host). From redalert2-decomp's
+# native/CMakeLists.txt, which defined the names below for them.
+option(RA2_NATIVE_YR "Also build yr-native, Yuri's Revenge from the pinned ra2-decomp tree (vendor/ra2-decomp)" OFF)
+option(RA2_NATIVE_COMBINED "Also build the combined app: Red Alert 2 and Yuri's Revenge in one (needs RA2_NATIVE_YR)" OFF)
+option(RA2_NATIVE_ONE_EXECUTABLE "Also build ra2yr-one: both engines linked into one executable (the iOS form)" OFF)
+if(RA2_NATIVE_COMBINED AND NOT RA2_NATIVE_YR)
+  message(FATAL_ERROR "RA2_NATIVE_COMBINED needs RA2_NATIVE_YR=ON")
+endif()
+if(RA2_NATIVE_YR)
+  # The VC6 dialect on clang/arm64 for the YR units (port/include/ra2port/prelude.hpp explains each choice; the Red
+  # Alert 2 units take theirs from ra2/tools/rb_probe.py).
+  add_library(ra2_dialect INTERFACE)
+  target_compile_options(ra2_dialect INTERFACE
+    "$<$<COMPILE_LANGUAGE:CXX>:-fms-extensions;-fms-compatibility;-fdelayed-template-parsing>"
+    "$<$<COMPILE_LANGUAGE:CXX>:SHELL:-Xclang -fno-wchar>" "$<$<COMPILE_LANGUAGE:CXX>:-fshort-wchar>"
+    "$<$<COMPILE_LANGUAGE:CXX>:-fwrapv;-fno-strict-aliasing>"
+    "$<$<COMPILE_LANGUAGE:CXX>:-fno-delete-null-pointer-checks>"
+    "$<$<COMPILE_LANGUAGE:CXX>:-mms-bitfields;-Wno-incompatible-ms-struct>"
+    "$<$<COMPILE_LANGUAGE:CXX>:-fwritable-strings>"
+    "$<$<COMPILE_LANGUAGE:CXX>:-frounding-math>"
+    "$<$<COMPILE_LANGUAGE:CXX>:-Wno-error=address-of-temporary;-Wno-register;-Wno-c++11-narrowing;-w>"
+    "$<$<COMPILE_LANGUAGE:CXX>:SHELL:-include ${CMAKE_CURRENT_SOURCE_DIR}/port/include/ra2port/prelude.hpp>")
+  # The host's Apple frameworks and zlib, and what link_closure.py counts as system.
+  if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
+    set(ra2_closure_frameworks Foundation UIKit UniformTypeIdentifiers AVFAudio CoreGraphics)
+    set(RA2_NATIVE_CLOSURE_SYSTEM_LIBS "$<TARGET_FILE:SDL3-static>")
+  else()
+    set(ra2_closure_frameworks Foundation AppKit)
+    set(RA2_NATIVE_CLOSURE_SYSTEM_LIBS "")
+  endif()
+  set(ra2_host_frameworks -lz)
+  foreach(f IN LISTS ra2_closure_frameworks)
+    list(APPEND ra2_host_frameworks "-framework ${f}")
+  endforeach()
+  set(ra2_original_layouts_target "")
+  if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
+    # One iOS app bundle: TARGET's executable named EXE in EXE.app, bundle id ID, home-screen name NAME, the icon
+    # drawn by make_icon.py with the remaining arguments, SDL3's licence; never game data
+    # (packaging/audit_ios_bundle.py). Files in the build folder's ios-<exe>/.
+    set(RA2_IOS_BUILD "1" CACHE STRING "CFBundleVersion of the iOS app")
+    function(ra2_ios_app target exe id name)
+      set(icon_args ${ARGN})
+      if(CMAKE_OSX_SYSROOT MATCHES "[Ss]imulator")
+        set(RA2_IOS_PLATFORM iPhoneSimulator)
+        set(RA2_IOS_PLATFORM_NAME iphonesimulator)
+      else()
+        set(RA2_IOS_PLATFORM iPhoneOS)
+        set(RA2_IOS_PLATFORM_NAME iphoneos)
+      endif()
+      execute_process(COMMAND xcrun --sdk ${RA2_IOS_PLATFORM_NAME} --show-sdk-version
+                      OUTPUT_VARIABLE ra2_ios_sdk_version OUTPUT_STRIP_TRAILING_WHITESPACE)
+      set(RA2_IOS_SDK_NAME "${RA2_IOS_PLATFORM_NAME}${ra2_ios_sdk_version}")
+      set(RA2_IOS_APP_NAME "${name}")
+      set(dir "${CMAKE_CURRENT_BINARY_DIR}/ios-${exe}")
+      configure_file("${CMAKE_CURRENT_SOURCE_DIR}/packaging/ios/Info.plist.in" "${dir}/Info.plist.in" @ONLY)
+      set(sdl_licence "${RA2_SDL_SOURCE}/LICENSE.txt")
+      target_sources(${target} PRIVATE "${sdl_licence}")
+      set_source_files_properties("${sdl_licence}" PROPERTIES MACOSX_PACKAGE_LOCATION "licenses")
+      set_target_properties(${target} PROPERTIES
+        MACOSX_BUNDLE TRUE
+        OUTPUT_NAME ${exe}
+        MACOSX_BUNDLE_INFO_PLIST "${dir}/Info.plist.in"
+        MACOSX_BUNDLE_EXECUTABLE_NAME ${exe}
+        MACOSX_BUNDLE_GUI_IDENTIFIER "${id}"
+        MACOSX_BUNDLE_BUNDLE_VERSION "${RA2_IOS_BUILD}"
+        MACOSX_BUNDLE_SHORT_VERSION_STRING "${PROJECT_VERSION}")
+      set(icon_dir "${dir}/icons")
+      set(icon_commands)
+      set(icon_files)
+      foreach(icon AppIcon60x60@2x.png:120 AppIcon60x60@3x.png:180 AppIcon76x76@2x~ipad.png:152 AppIcon83.5x83.5@2x~ipad.png:167)
+        string(REPLACE ":" ";" icon "${icon}")
+        list(GET icon 0 icon_name)
+        list(GET icon 1 icon_size)
+        list(APPEND icon_commands COMMAND sips -z ${icon_size} ${icon_size} "${icon_dir}/icon.png" --out "${icon_dir}/${icon_name}")
+        list(APPEND icon_files "${icon_dir}/${icon_name}")
+      endforeach()
+      add_custom_command(OUTPUT ${icon_files}
+        COMMAND "${CMAKE_COMMAND}" -E make_directory "${icon_dir}"
+        COMMAND "${Python3_EXECUTABLE}" -I "${CMAKE_CURRENT_SOURCE_DIR}/packaging/make_icon.py" --full-bleed ${icon_args} "${icon_dir}/icon.png"
+        ${icon_commands}
+        DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/packaging/make_icon.py" COMMENT "iOS app icon (${exe})" VERBATIM)
+      add_custom_target(${target}-ios-icons DEPENDS ${icon_files})
+      add_dependencies(${target} ${target}-ios-icons)
+      add_custom_command(TARGET ${target} POST_BUILD
+        COMMAND "${CMAKE_COMMAND}" -E copy ${icon_files} "$<TARGET_BUNDLE_DIR:${target}>" VERBATIM)
+    endfunction()
+  endif()
+  # The YR checks read the same installation as the Red Alert 2 checks (Red Alert 2 with Yuri's Revenge installed).
+  set(RA2_NATIVE_YR_DATA_DIR "${RB_DATA_DIR}" CACHE PATH "Installed RA2 + Yuri's Revenge folder for the YR checks (read only)")
+  set(RA2_NATIVE_CENSUS_GAME_EXE "${RB_GAME_EXE}")
+  include(yr/yr.cmake)
+endif()
+
 # Hygiene (no device, no game): the vendored files equal their PIN list, no game data or oversized file is
 # tracked, every own source keeps its SPDX line, THIRD_PARTY.md names each vendor folder.
 add_test(NAME repo-hygiene COMMAND "${Python3_EXECUTABLE}" -B "${CMAKE_CURRENT_SOURCE_DIR}/tools/check_tree.py")
