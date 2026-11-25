@@ -128,3 +128,19 @@ Counts (25): scripted and passing 20, same code (no script) 2, needs his check 3
 Rows that change with the combined app (the RA2 table above): C23-toggle is **scripted, passing** (one-game-toggle,
 one-game-toggle-wine, one-game-ios-sim), C14-kbd is **scripted, passing** in the Simulator (one-game-ios-sim-menus), and
 W-none has the Windows builds (ctest label rb-wine and the YR and one-game rows on build/windows, build/windows-one).
+
+Lane P17 (the user's Duo reports of 2026-11-24): C14-kbd ("Keyboard does not automatically show when selecting text
+fields"). Every text field of both games is covered by the two hooks the host asks: the dialogs' fields are one
+mechanism in each game (Red Alert 2's Replace_Edit and Yuri's Revenge's FUN_0060F320 hide each dialog Edit behind a
+NewEdit list box: the skirmish and LAN player names, the lobby chat line, the save description), answered by
+`ra2_native_new_edit_focused` (Red Alert 2's took the rebuild's list box only from lane P13's fix, after the build the
+user had); the in-game chat and beacon line by `ra2_native_message_edit_open` (both games). The host now also takes
+the keyboard's own hide key (SDL stops text input behind its back) as a dismissal, so a tap on the field brings the
+keyboard back; before, it thought the keyboard still shown and never asked again while that focus lasted.
+**scripted** in the Simulator: one-game-ios-sim-keyboard (both games: the name field raises it, Keys puts it away, a
+second tap brings it back, a tap away puts it away; in play the chat line opened and closed by the harness's
+`chat open|close` raises it and puts it away). The toggle flash ("the Play Yuri's Revenge button flashes between menu
+changes, after buttons slide out and before they slide in"): the toggle was not among the controls
+Enable_Animated_Control rests through the sidebar slide, so a repaint asked during the slide-out drew it alone over
+the emptied column (two presents in Red Alert 2, four in Yuri's Revenge, main menu -> Options); fixed in both games
+(ra2/fixups.json, yr/fixups.json), **scripted, passing**: one-game-toggle-slide (Mac; fails without the rows).

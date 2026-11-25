@@ -116,6 +116,9 @@
 //                   (Tactical::Get_Tactical_Position), whether the game ignores the player's input (IgnoreInput
 //                   0x00A8ED9C, a mission's locked intro) and the map zoom (lane N32: the touch pan and the pinch must
 //                   not move the view while it is set; RA2's harness `view`, lane N31);
+//   chat open|close  the message list's edit line (Session.Messages) opened as Main_Loop's chat key opens it (Add_Edit)
+//                   or closed (Remove_Edit): `harness-chat <open|close> edit <0|1>` (lane P17, C14-kbd: the touch keyboard
+//                   for the chat line, shown in a skirmish);
 // "+<n>[/<p>] <order>" (lane N25, the mission soak): n game frames (Unsorted::CurrentFrame) into each scenario, then
 // every p frames; a new scenario starts the count again.
 // RA2_NATIVE_SOAK=<period> and the rest of the mission soak (lane N25; RA2's link/harness_soak.cpp, the same lines):
@@ -168,6 +171,7 @@ LayerType Layer_From_Name(char const * name);
 #include "suprtype.h"
 #include "wave.h"
 #include "laser.h"
+#include "session.h"
 #include "objtype.h"
 #include "infatype.h"
 #include "infantry.h"
@@ -976,6 +980,16 @@ int Run_Order(int frame, char const * text)
 			++count;
 		}
 		return(count);
+	}
+	if (!strcmp(word[0], "chat") && words >= 2) {
+		static wchar_t to[1] = {0};
+		if (!strcmp(word[1], "open")) {
+			Session.Messages.Add_Edit(Session.PrefColor, TextPrintType(TPF_6PT_GRAD | TPF_USE_GRAD_PAL | TPF_FULLSHADOW), to, 0, -1);
+		} else {
+			Session.Messages.Remove_Edit();
+		}
+		fprintf(stderr, "harness-chat %s edit %d\n", word[1], Session.Messages.Is_Edit() ? 1 : 0);
+		return(1);
 	}
 	if (!strcmp(word[0], "rects")) {
 		Rect bar = DAT_00B0FC58 != NULL ? *DAT_00B0FC58 : Rect(0, 0, 0, 0);

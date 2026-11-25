@@ -135,6 +135,13 @@ add_test(NAME one-game-menu-backdrop COMMAND "${Python3_EXECUTABLE}" -B "${CMAKE
          --binary $<TARGET_FILE:ra2yr-native> --data-dir "${RA2_NATIVE_YR_DATA_DIR}"
          --game-exe "${RA2_NATIVE_CENSUS_GAME_EXE}" --work "${CMAKE_CURRENT_BINARY_DIR}/one-game-menu-backdrop")
 set_tests_properties(one-game-menu-backdrop PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 400)
+# ctest one-game-toggle-slide (lane P17): main menu -> Options -> Main Menu -> Single Player -> Main Menu in each game,
+# a window dump at every present: the toggle is never drawn over the emptied sidebar column (the user's "flashes
+# between menu changes"; yr/tests/one_game_toggle_slide.py); the same conditions.
+add_test(NAME one-game-toggle-slide COMMAND "${Python3_EXECUTABLE}" -B "${CMAKE_CURRENT_SOURCE_DIR}/yr/tests/one_game_toggle_slide.py"
+         --binary $<TARGET_FILE:ra2yr-native> --data-dir "${RA2_NATIVE_YR_DATA_DIR}"
+         --work "${CMAKE_CURRENT_BINARY_DIR}/one-game-toggle-slide")
+set_tests_properties(one-game-toggle-slide PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 700)
 
 endif()
 
@@ -222,12 +229,14 @@ endif()
 # build; the app from ./build.sh ios simulator). Each test boots that Simulator if needed and shuts it down after;
 # no other Simulator is used. one-game-ios-sim: the carry-over route (a Red Alert 2 import, its skirmish and save, the
 # toggle, Yuri's Revenge's own import, its skirmish and save, a second YR start after a reset, both saves loaded);
-# -fresh: one import of both games in a new install (removed afterwards); -menus: both games' menus and play.
+# -fresh: one import of both games in a new install (removed afterwards); -menus: both games' menus and play;
+# -keyboard: the on-screen keyboard for both games' name field and in-game chat line (lane P17, C14-kbd).
 option(RA2_ONE_IOS_SIM "Add the iOS combined app's Simulator checks (label one-ios)" OFF)
 get_filename_component(RA2_ONE_IOS_APP "${CMAKE_CURRENT_SOURCE_DIR}/build/ios-simulator/RA2YR.app" ABSOLUTE)
 set(RA2_ONE_IOS_APP "${RA2_ONE_IOS_APP}" CACHE PATH "The Simulator RA2YR.app the one-ios checks install")
 if(RA2_ONE_IOS_SIM AND NOT CMAKE_SYSTEM_NAME STREQUAL "iOS")
-  foreach(one_case "sim|ios_sim_one_game.py|" "sim-fresh|ios_sim_one_game.py|--fresh,--uninstall-after" "sim-menus|ios_sim_menus.py|")
+  foreach(one_case "sim|ios_sim_one_game.py|" "sim-fresh|ios_sim_one_game.py|--fresh,--uninstall-after" "sim-menus|ios_sim_menus.py|"
+                   "sim-keyboard|ios_sim_keyboard.py|")
     string(REPLACE "|" ";" one_parts "${one_case}")
     list(GET one_parts 0 one_name)
     list(GET one_parts 1 one_script)

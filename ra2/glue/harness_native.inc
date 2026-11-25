@@ -40,6 +40,10 @@
 //   goto <ID|*> <x> <y>             main's order: the player's infantry and vehicles of type ID ('*' all) move to cell x,y
 //                                   (MISSION_MOVE): `harness-goto <ID> @x,y <n>`
 //   where <ID>                      `harness-where <ID> @x,y s<strength> m<mission>` (the player's first ID) or `... gone`
+// Lane P17 (C14-kbd, the touch keyboard for the chat line):
+//   chat open|close                 the message list's edit line (Session.Messages) opened as Main_Loop's chat key opens it
+//                                   (Add_Edit) or closed (Remove_Edit), so a skirmish can show what a network game's chat does
+//                                   to the on-screen keyboard: `harness-chat <open|close> edit <0|1>`
 // RA2_NATIVE_TRIGGERS=1 watches the scenario's triggers each frame (main's harness_soak.cpp): `harness-triggers
 // <scenario> <n>` at the first frame, then `harness-trigger <frame> gone <ID> <name>` (a live trigger left Triggers:
 // a volatile trigger sprung and deleted), `... new <ID> <name>` (one made after the start) and `... tripped <ID>
@@ -63,6 +67,7 @@
 #include "infatype.h"
 #include "target.h"
 #include "techtype.h"
+#include "session.h"
 
 bool RB_Run_Input_Order(char const * word);    // harness_input_native.inc (lane P8): thumb, view
 extern int RB_Draw_Ellipse_Count;              // xsurface_native.inc
@@ -447,6 +452,14 @@ void RB_Run_Order(char const * text)
 		fprintf(stderr, "harness-state %s money %ld timer %s technos %d win %d lose %d\n", Scen ? Scen->ScenarioName : "?",
 			PlayerPtr ? (long)PlayerPtr->Available_Money() : 0L, timer, technos, PlayerPtr ? (int)PlayerPtr->IsToWin : 0,
 			PlayerPtr ? (int)PlayerPtr->IsToLose : 0);
+	} else if (!strcmp(word[0], "chat") && words >= 2) {
+		static wchar_t to[1] = {0};
+		if (!strcmp(word[1], "open")) {
+			Session.Messages.Add_Edit(Session.PrefColor, TextPrintType(TPF_6PT_GRAD | TPF_USE_GRAD_PAL | TPF_FULLSHADOW), to, 0, -1);
+		} else {
+			Session.Messages.Remove_Edit();
+		}
+		fprintf(stderr, "harness-chat %s edit %d\n", word[1], Session.Messages.Is_Edit() ? 1 : 0);
 	} else if (RB_Run_Input_Order(word[0])) {
 	} else {
 		fprintf(stderr, "harness: unknown order '%s'\n", text);

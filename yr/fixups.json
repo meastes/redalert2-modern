@@ -1389,6 +1389,12 @@
    "why": "Native addition: the one-game app's toggle (port/src/user32.cpp, id 0x7F5E, a clone of the main menu's Exit Game 0x3EE) is drawn and animated as the main menu's sidebar buttons (WinData +0xB0 = 1, as FUN_00609BC0 gives Exit Game), as RA2's twin 0x005E7EB0 gives it (port/fixups.json). FUN_00609BC0 knows only the listed dialogs' ids. Lane Y11 (user request 2026-11-17, adopted by the owner): the toggle is a regular main-menu sidebar button in the slot directly above Exit Game, so it takes the sidebar buttons' kind as Exit Game does (record +0xB0 = 1) instead of the dialogs' push buttons' (3)."
   },
   {
+   "file": "src/ownrdraw.cpp",
+   "old": "\t\t(Is_Plain_Control(window) && FUN_00609730(parent, window))) {\n\t\tFUN_00606740(window, value);",
+   "new": "\t\t(Is_Plain_Control(window) && FUN_00609730(parent, window)) ||\n\t\tGetDlgCtrlID(window) == 0x7F5E) {\t// NATIVE (lane P17): the one-game toggle rests through the slide as Exit Game does\n\t\tFUN_00606740(window, value);",
+   "why": "Lane P17 (the user's Duo report: the one-game toggle flashed between menu changes, after the sidebar's buttons slid out and before the next dialog's slid in): native addition, not original behaviour. FUN_00606800 (gamemd.exe 0x00606800, Red Alert 2's Enable_Animated_Control 0x005E4780) marks the listed controls, the main menu's sidebar buttons and Exit Game among them, as resting (FUN_00606740: WM_PAINT only validates) while the dialog's slide draws the column's slots, and restores them after. The toggle (port/src/user32.cpp, id 0x7F5E; ClassifyLayoutBand's row above) was not listed, so a repaint asked during the slide-out drew it over the emptied column until the next dialog slid in. It now rests with the other sidebar buttons, as ra2/fixups.json's row for Red Alert 2. No other control has that id."
+  },
+  {
    "file": "src/egos.cpp",
    "append": "egos_native.inc",
    "why": "Show_Who_Was_Responsible (0x004C3E30, the credits: the main menu's Credits and the end of a campaign) is unmatched in the YR tree; a native draft from the RA2 draft's text and gamemd.exe's code (lane Y12), appended to the egos unit."

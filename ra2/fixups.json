@@ -2110,6 +2110,12 @@
   },
   {
    "file": "src/ownrdraw.cpp",
+   "old": "\t\t(Is_Plain_Control(window) && Is_Default_Button((unsigned int)parent, window))) {\n\t\tSet_Control_Disabled(window, value);",
+   "new": "\t\t(Is_Plain_Control(window) && Is_Default_Button((unsigned int)parent, window)) ||\n\t\tGetDlgCtrlID(window) == 0x7F5E) { /* NATIVE (lane P17): the combined app's toggle rests through the slide as Exit Game does */\n\t\tSet_Control_Disabled(window, value);",
+   "why": "Lane P17 (the user's Duo report: \"the Play Yuri's Revenge button flashes between menu changes, after buttons slide out and before they slide in\"): native addition, not original behaviour. Enable_Animated_Control 0x005E4780 marks the listed controls (the main menu's sidebar buttons, Exit Game 0x3EE) as resting (WinData::IsDisabled: WM_PAINT only validates) while Slide_Dialog draws the column's slots, and restores them after. The combined app's toggle (port/src/user32.cpp, id 0x7F5E, Exit Game's clone in the slot above it; Assign_Button_Kind's row above) was not listed, so a repaint asked during the main menu's slide-out drew it over the emptied column, and it was presented alone between the slide-out and the next dialog's slide-in (window dumps of main menu -> Options). It now rests with the other sidebar buttons. Without the toggle (RA2.app, every other dialog) nothing changes: no control has that id."
+  },
+  {
+   "file": "src/ownrdraw.cpp",
    "old": "\tint state = data->ItemState; // RA2: as above\n\tLONG style = GetWindowLongA(window, GWL_STYLE); // RA2: as above\n",
    "new": "\tint state = data->ItemState | ((CallWindowProcA(previous, window, BM_GETSTATE, 0, 0) & BST_PUSHED) ? 1 : 0); // RA2: as above (native: lane P13, the button's BST_PUSHED too)\n\tLONG style = GetWindowLongA(window, GWL_STYLE); // RA2: as above\n",
    "why": "Lane P13, main's port behaviour (redalert2-decomp native/link/behaviour_m14_ownerdraw.cpp, Paint_Button for 0x005F0320): Owner_Button_Proc draws a button pressed from the owner-draw state the dialog's WM_DRAWITEM stores in WinData +0xE8 (ItemState, ODS_SELECTED); the port's Win32 layer sends no WM_DRAWITEM, so no push button (main menu, dialogs, the combined app's toggle) ever drew its pressed frame. Main's port also takes the button's own BST_PUSHED (BM_GETSTATE, which port/src/user32.cpp answers from its press tracking); carried. Found by one-game-toggle (\"the toggle shows no press\")."

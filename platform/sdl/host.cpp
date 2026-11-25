@@ -1734,6 +1734,17 @@ void pump_events()
         // NewEdit: player names) or the game's own edit line (chat and beacon text in network
         // games); lane C14 added the last two.
         bool edit = text_field_focused() || ra2_native_message_edit_open();
+        // The keyboard's own hide key stops SDL's text input behind the host's back
+        // (SDL_uikitviewcontroller.m keyboardWillHide): taken as a dismissal, as Return is, so a tap
+        // on the field (or Keys) brings it back; the host had still thought it shown and never asked
+        // again while that focus lasted (lane P17, C14-kbd).
+        if (text_input_on && !SDL_TextInputActive(window)) {
+            text_input_on = false;
+            keys_dismissed = true;
+            toggles[kKeysToggle].on = false;
+            fprintf(stderr, "host: on-screen keyboard put away by its hide key\n");
+            sync_toolbar();
+        }
         if (!edit && keys_dismissed && !toggles[kKeysToggle].on) keys_dismissed = false;   // the focus left the edit control
         bool want = toggles[kKeysToggle].on || (edit && !keys_dismissed);
         if (want != text_input_on) {
