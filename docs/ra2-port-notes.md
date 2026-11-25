@@ -896,7 +896,7 @@ is released (the game's mouse is read once a frame), so a click is followed by t
 must be followed by a drawn frame before a click on an object (objects register where they were last drawn); with an
 infantry selected, a left click on another controlled (allied house) infantry is a move, so a selection starts with a
 right click; Escape opens the in-game options menu, whose modal loop runs no Main_Loop frame, so the step server stops
-answering (the run had to be restarted from its recording; the helpers never press Escape). The command bar's AttackMove
+answering (the run had to be restarted from its recording). The step server now refuses "input key Escape" with an error (not queued, not recorded), so a script cannot wedge the session. The command bar's AttackMove
 button is not on the bar in every state (input-script: no command bar button), so a scripted attack move through it fell
 back to a plain move; the game's own attack move is Ctrl+Shift with a left click (Can_Force_Order), which the helper now
 uses. Units standing at a barracks' door block its exit: the finished infantry is refunded, not built (the original's

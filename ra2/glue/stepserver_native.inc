@@ -368,6 +368,17 @@ bool RB_Step_Command(int frame, char const * text, bool live)
 	if (RB_IS("input")) {
 		int delay = 0;
 		if (*rest == '+') { delay = atoi(rest + 1); while (*rest && *rest != ' ') ++rest; while (*rest == ' ') ++rest; }
+		// lane P22: Escape opens the options dialog, whose modal loop runs no Main_Loop frame, so the server (which
+		// answers between loop frames) would never answer again: refused, not queued or recorded.
+		if (!strncmp(rest, "key", 3)) {
+			char const * name = rest;
+			while (*name && *name != ' ') ++name;
+			while (*name == ' ') ++name;
+			if (!strncasecmp(name, "Escape", 6)) {
+				if (live) RB_Step_Out("error key Escape refused: it opens a modal dialog the step server cannot serve through");
+				return(false);
+			}
+		}
 		// click / rclick P: the pointer moved there, the button pressed two frames later and released four after that
 		// (a real click holds the button for several frames; the script's one-frame click was read a click late here).
 		int queued = 0;
