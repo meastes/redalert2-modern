@@ -103,6 +103,7 @@ static void RB_Harness_Force_End(int frame)
 void RB_Harness_Frame(int frame);   // harness_native.inc (lane P5): RA2_NATIVE_ORDERS
 void RB_Harness_Soak(int frame);    // harness_input_native.inc (lane P8): RA2_NATIVE_SOAK, main's harness_soak.cpp
 void RB_Harness_Input_Frame(int frame);   // harness_input_native.inc (lane P8): scripted points, RA2_NATIVE_INPUT_LOG
+void RB_Step_Server_Frame(int frame);     // stepserver_native.inc (lane P21): RA2_NATIVE_STEP, _STEP_REPLAY
 
 // The host's game-side hooks (lane P7, the feature audit; main's native/link/app_hooks.cpp, native_touch_cursor.cpp,
 // harness_skirmish.cpp and harness_save.cpp, the YR port's yr_app_hooks.cpp under the rebuild's names). Not original code.
@@ -240,6 +241,7 @@ bool RB_Main_Loop_Seam(void)
 	RB_Harness_Soak(frames);
 	RB_Harness_Frame(frames);
 	RB_Harness_Input_Frame(frames);
+	RB_Step_Server_Frame(frames);
 	if (frames >= ra2port_skirmish_frames()) {
 		ra2port_progress("frames", detail);
 	}

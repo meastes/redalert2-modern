@@ -8,3 +8,10 @@ HANDLE RB_Mouse_Mutex(void)
 {
 	return MouseMutex;
 }
+
+// Lane P21 (the step server, glue/stepserver_native.inc): the mouse processed now from the game's thread (under the
+// mouse mutex, as the mouse thread does), so the game's pointer is where the frame's scripted input put it.
+void RB_Process_Mouse_Now(void)
+{
+	if (_MousePtr != NULL) _MousePtr->Process_Mouse();
+}

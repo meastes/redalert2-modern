@@ -1,0 +1,100 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Allied 1 (ALL01T, Lone Guardian) won by lane P21 through the step server (ra2/tools/ra2_step.py), replayed by
+# ra2/tests/ra2_campaign.py. Inputs and ticks only: '<tick> <command>', ticks from the scenario's first loop frame;
+# @^<n> is an object id, @=x,y a cell, @tab/@cameo the sidebar. No game-event shortcut was used.
+# ALL01T.MAP: ticks are loop frames from the scenario's first
+900 look 60 101
+901 input click @^1018554
+926 look 61 91
+927 input click @^1018524
+1332 look 64 91
+1333 input click @^1018527
+1453 look 64 91
+1454 input click @^1018527
+1514 look 67 90
+1515 input click @^1018533
+1635 look 67 90
+1636 input click @^1018533
+1696 look 58 90
+1697 input click @^1018530
+1877 look 58 90
+1878 input click @^1018530
+1938 save A1OBJ1.SAV
+1938 look 66 38
+1941 input click @=66,38
+3766 save A1FORT.SAV
+3766 look 72 40
+3768 input click @tab=0
+3783 input click @cameo=GAPILE
+4103 input click @cameo=GAPILE
+4118 input click @=72,42
+4158 input click @tab=2
+4173 input click @cameo=ENGINEER
+4185 input click @cameo=E1
+4197 input click @cameo=E1
+4209 input click @cameo=E1
+4221 input click @cameo=E1
+4233 input click @cameo=E1
+4245 input click @cameo=E1
+4257 look 66 38
+4258 input click @^1018554
+4283 look 62 23
+4286 input click @=62,23
+4761 save A1TANKS.SAV
+4761 look 72 44
+4762 input click @^1023826
+4787 look 80 48
+4788 input click @^1018617
+5213 save A1BRIDGE.SAV
+5213 look 55 18
+5216 input click @^1018542
+5241 input key T
+5251 look 62 30
+5254 input click @=62,30
+5399 look 70 38
+5402 input click @=70,38
+5607 look 81 42
+5610 input click @=81,42
+5755 look 82 55
+5758 input click @=82,55
+6383 save A1ACROSS.SAV
+6383 look 77 58
+6386 input click @^1024321
+6486 look 77 63
+6489 input click @^1024416
+6589 look 82 72
+6592 input click @^1018536
+6692 look 84 72
+6695 input click @^1018538
+6795 look 86 72
+6798 input click @^1018540
+6898 look 93 63
+6901 input click @^1018654
+7201 look 95 63
+7204 input click @^1018655
+7404 look 92 56
+7407 input click @^1024126
+7607 look 97 56
+7610 input click @^1024216
+7710 look 90 66
+7713 input click @^1018646
+8013 look 95 69
+8016 input click @^1018641
+8416 look 99 67
+8419 input click @^1018650
+8719 look 99 70
+8722 input click @^1018647
+9022 look 97 76
+9025 input click @^1018829
+9425 look 91 73
+9428 input click @^1018653
+9728 look 92 78
+9731 input click @^1018832
+10031 look 85 78
+10034 input click @^1018700
+10134 look 85 78
+10137 input click @^1018700
+10437 save A1BASE.SAV
+10437 look 85 83
+10440 input click @^1018703
+11007 # game over: won

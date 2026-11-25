@@ -303,6 +303,22 @@ foreach(rb_route allied1 allied1idle)
            --work "${CMAKE_CURRENT_BINARY_DIR}/tests/${rb_route}")
   set_tests_properties(ra2-native-${rb_route} PROPERTIES SKIP_RETURN_CODE 77 RUN_SERIAL TRUE TIMEOUT 600 LABELS ra2-campaign)
 endforeach()
+# Lane P21: campaign missions won by a recorded play (the step server, ra2/glue/stepserver_native.inc; ra2/tools/ra2_step.py),
+# replayed from ra2/tests/campaign/<name>.replay (inputs and ticks only); pass: the mission's own triggers win it at the
+# recorded tick and its score screen shows (ra2/tests/ra2_campaign.py; label ra2-campaign-won, about a minute each).
+# Entries: <name>|<side>|<mission>.
+foreach(rb_won "all01|allied|1")
+  string(REPLACE "|" ";" rb_won_parts "${rb_won}")
+  list(GET rb_won_parts 0 rb_won_name)
+  list(GET rb_won_parts 1 rb_won_side)
+  list(GET rb_won_parts 2 rb_won_mission)
+  add_test(NAME ra2-native-campaign-won-${rb_won_name} COMMAND "${RB_PYTHON3}" -B "${RB_DIR}/tests/ra2_campaign.py"
+           --replay "${RB_DIR}/tests/campaign/${rb_won_name}.replay" --side ${rb_won_side} --mission ${rb_won_mission}
+           --binary $<TARGET_FILE:ra2-native> --data-dir "${RB_DATA_DIR}" --game-exe "${RB_GAME_EXE}"
+           --work "${CMAKE_CURRENT_BINARY_DIR}/tests/campaign-won-${rb_won_name}")
+  set_tests_properties(ra2-native-campaign-won-${rb_won_name} PROPERTIES SKIP_RETURN_CODE 77 RUN_SERIAL TRUE TIMEOUT 1200
+                       LABELS ra2-campaign-won)
+endforeach()
 # Lane P5: the resave route over the user's other four saves in the install folder (ra2-native-resave is ALL01T);
 # label ra2-resaves, not ra2-quick (about 2.5 minutes each).
 foreach(rb_save ALL02S.sav ALL03U.sav SAVE397A.SAV SAVE4FBD.SAV)

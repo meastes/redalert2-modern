@@ -10,6 +10,7 @@
 //                         moved by dx, dy cells: its centre's screen pixel (Tactical::Coord_To_Pixel)
 //      "@!ID[:n]"         the n-th newest object of type ID of a house the player does not control
 //      "@=X,Y"            the centre of cell X,Y
+//      "@^ID"             the object whose ID (AbstractClass::ID) is ID (lane P21: the step server's obj lines)
 //      "@tab=N"           the sidebar's tab button N (0 buildings, 1 defences, 2 infantry, 3 vehicles)
 //      "@cameo=ID"        the build icon of type ID in the strip shown now
 //      "@cmd=NAME"        the command bar's button for a command (AttackMove, Beacon, Cheer, Deploy, Guard,
@@ -33,6 +34,7 @@
 //      RA2_NATIVE_SOAK_DUMP=<from>[-<to>]  every techno at those frames (soak-techno lines)
 // ---------------------------------------------------------------------------------------------
 #include "cell.h"
+#include "_rect.h"
 #include "spawnmanager.h"
 #include "factory.h"
 extern "C" void ra2port_progress(const char * milestone, const char * detail);
@@ -160,6 +162,33 @@ int RB_Resolve(char const * spec, int * x, int * y)
 		*x = pixel.X;
 		*y = pixel.Y;
 		return 1;
+	}
+	if (spec[0] == '^') {   // lane P21: "@^<id>" the object with that ID (the step server's obj lines), where it was drawn
+		// The pixel the last render drew it at (Tactical::SelectableObjects, what a click is matched against): a ship's
+		// or an aircraft's picture is not at its centre's ground pixel. Not drawn in the view: no point (no click).
+		int id = atoi(spec + 1);
+		// A building: the middle of its foundation (its listed point is a corner of the picture, where a click finds the
+		// ground beside it).
+		for (int b = 0; b < Technos.Count(); ++b) {
+			TechnoClass * techno = Technos[b];
+			if (techno == NULL || techno->ID != id || techno->IsInLimbo || techno->Fetch_RTTI() != RTTI_BUILDING) continue;
+			Point2D pixel;
+			TacticalMap->Coord_To_Pixel(techno->Center_Coord(), pixel);
+			if (pixel.X < 0 || pixel.Y < 0 || pixel.X >= TacticalRect.Width || pixel.Y >= TacticalRect.Height) return 0;
+			*x = pixel.X + TacticalRect.X;
+			*y = pixel.Y + TacticalRect.Y;
+			return 1;
+		}
+		for (int k = 0; k < TacticalMap->SelectableCount; ++k) {
+			ObjectClass * object = Tactical::SelectableObjects[k].Object;
+			if (object == NULL || object->ID != id || !object->IsActive) continue;
+			Point2D pixel = Tactical::SelectableObjects[k].Position - Point2D(TacticalMap->TacPixelX, TacticalMap->TacPixelY);
+			if (pixel.X < 0 || pixel.Y < 0 || pixel.X >= TacticalRect.Width || pixel.Y >= TacticalRect.Height) return 0;
+			*x = pixel.X + TacticalRect.X;
+			*y = pixel.Y + TacticalRect.Y;
+			return 1;
+		}
+		return 0;
 	}
 	bool other = spec[0] == '!';
 	if (other) ++spec;

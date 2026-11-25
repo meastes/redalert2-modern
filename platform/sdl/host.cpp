@@ -199,6 +199,7 @@ Uint32 const kScriptedToolbar = SDL_EVENT_USER + 0x5C;   // input script "toolba
 Uint32 const kScriptedZoom = SDL_EVENT_USER + 0x5D;      // input script "zoom FACTOR X Y" (lane C16)
 Uint32 const kScriptedMapCheck = SDL_EVENT_USER + 0x5E;  // input script "mapcheck" (lane C16)
 Uint32 const kScriptedDump = SDL_EVENT_USER + 0x5F;      // input script "dump" (lane C16)
+std::string window_dump_to;    // lane P21: the step server's screenshot file (ra2port_screenshot)
 bool window_dump_now = false;   // the next present writes RA2_NATIVE_WINDOW_DUMP's picture whatever its period
 void (*before_exit)() = nullptr;     // the app's settings (main.cpp)
 // The last pointer position in game pixels (the trackpad hook's cursor).
@@ -212,6 +213,7 @@ float pan_wheel = 0;
 // Mouse events the input script pushes carry this mouse id: their coordinates
 // are already the game's (the presented surface's pixels).
 SDL_MouseID const script_mouse = 0x5C5C;
+SDL_KeyboardID const script_keyboard = 0x5C5E;   // scripted keys (lane P21: told apart from a player's under RA2_NATIVE_SCRIPT_ONLY)
 
 // SDL keycodes to Win32 virtual keys (the subset the game binds).
 int virtual_key(SDL_Keycode k)
@@ -1548,6 +1550,31 @@ void pump_events()
                         (e.type == SDL_EVENT_MOUSE_WHEEL && e.wheel.which == script_mouse) ||
                         ((e.type == SDL_EVENT_MOUSE_BUTTON_DOWN || e.type == SDL_EVENT_MOUSE_BUTTON_UP) &&
                          e.button.which == script_mouse);
+        // RA2_NATIVE_SCRIPT_ONLY=1 (lane P21, the step server's runs; test scaffolding): only scripted input reaches the
+        // game, so a player's mouse over the window cannot change a recorded run.
+        static const bool script_only = getenv("RA2_NATIVE_SCRIPT_ONLY") && *getenv("RA2_NATIVE_SCRIPT_ONLY") == '1';
+        if (script_only && !scripted) {
+            bool input = false, ours = false;
+            switch (e.type) {
+            case SDL_EVENT_MOUSE_MOTION: case SDL_EVENT_MOUSE_BUTTON_DOWN: case SDL_EVENT_MOUSE_BUTTON_UP: case SDL_EVENT_MOUSE_WHEEL:
+                input = true;
+                break;
+            case SDL_EVENT_KEY_DOWN: case SDL_EVENT_KEY_UP:
+                input = true;
+                ours = e.key.which == script_keyboard;
+                break;
+            case SDL_EVENT_FINGER_DOWN: case SDL_EVENT_FINGER_UP: case SDL_EVENT_FINGER_MOTION:
+                input = true;
+                ours = e.tfinger.touchID == script_touch;
+                break;
+            case SDL_EVENT_TEXT_INPUT:
+                input = true;
+                break;
+            default:
+                break;
+            }
+            if (input && !ours) continue;
+        }
         if (renderer && !scripted) convert_event(e);
         switch (e.type) {
         case SDL_EVENT_QUIT:
@@ -2030,6 +2057,13 @@ void present_now(const void *pixels, int width, int height, int pitch)
     static const char *window_dump_period = getenv("RA2_NATIVE_WINDOW_DUMP_MS");
     static Uint64 window_dump_ms = 0;
     static int window_dump_count = 0;
+    if (!window_dump_to.empty()) {     // the step server's screenshot (lane P21): this picture to that file
+        if (SDL_Surface *shot = SDL_RenderReadPixels(renderer, nullptr)) {
+            SDL_SaveBMP(shot, window_dump_to.c_str());
+            SDL_DestroySurface(shot);
+        }
+        window_dump_to.clear();
+    }
     if (window_dump && *window_dump && (window_dump_count == 0 || window_dump_now ||
             SDL_GetTicks() - window_dump_ms >= (Uint64)(window_dump_period ? atoi(window_dump_period) : 2000))) {
         window_dump_ms = SDL_GetTicks();
@@ -2065,6 +2099,17 @@ void redraw()
 {
     if (SDL_IsMainThread() && texture) present_now(nullptr, tex_w, tex_h, 0);
 }
+}
+// The step server's screenshot (lane P21, ra2/glue/stepserver_native.inc; test scaffolding): the last picture drawn,
+// as the window shows it, to a BMP file. 1 when written from this (the main) thread.
+extern "C" int ra2port_screenshot(const char *path)
+{
+    if (!SDL_IsMainThread() || !texture || !renderer) return 0;
+    window_dump_to = path;
+    present_now(nullptr, tex_w, tex_h, 0);
+    return window_dump_to.empty() ? 1 : 0;
+}
+namespace {
 
 void set_relative_cursor(bool show)
 {
@@ -2135,10 +2180,13 @@ extern "C" long long ra2port_dialog_settled_ms(int k);
 extern "C" long long ra2port_now_ms(void);
 std::vector<Scripted> script;
 size_t script_next = 0;
+std::vector<Scripted> *script_out = &script;   // where parsed lines go (the file's script, or the step server's live lines)
 
 int script_ms = -1;     // the line being read is timed ("t<ms>"): its events' offset
 int script_dialog = 0;  // ... after the k-th dialog was shown ("d<k>+<ms>"), or settled (-k, "s<k>+<ms>")
 Uint64 script_start = 0;
+void script_parse_line(char *line);
+void script_sort(std::vector<Scripted> &list, size_t from);
 void script_mouse_event(int frame, Uint32 type, float x, float y, std::string const &spec, Uint8 button)
 {
     Scripted s = {frame, {}, spec};
@@ -2156,7 +2204,7 @@ void script_mouse_event(int frame, Uint32 type, float x, float y, std::string co
         s.event.button.x = x;
         s.event.button.y = y;
     }
-    script.push_back(s);
+    script_out->push_back(s);
 }
 
 void script_key_event(int frame, bool down, const char *name)
@@ -2184,7 +2232,8 @@ void script_key_event(int frame, bool down, const char *name)
     s.event.key.scancode = SDL_GetScancodeFromKey(key, nullptr);
     s.event.key.down = down;
     s.event.key.mod = mod;
-    script.push_back(s);
+    s.event.key.which = script_keyboard;
+    script_out->push_back(s);
 }
 
 // A point at tokens[i]: "@spec" (one token) or "X Y" (two).
@@ -2218,11 +2267,21 @@ void load_script()
         return;
     }
     char line[256];
-    while (fgets(line, sizeof line, f)) {
+    while (fgets(line, sizeof line, f)) script_parse_line(line);
+    fclose(f);
+    script_sort(script, 0);
+    script_ms = -1;
+    fprintf(stderr, "input-script: %zu events from %s\n", script.size(), path);
+}
+
+// One script line (load_script's, and the step server's live lines: ra2port_script_add).
+void script_parse_line(char *line)
+{
+    {
         if (char *hash = strchr(line, '#')) *hash = 0;
         std::vector<std::string> tokens;
         for (char *t = strtok(line, " \t\r\n"); t; t = strtok(nullptr, " \t\r\n")) tokens.push_back(t);
-        if (tokens.size() < 2) continue;
+        if (tokens.size() < 2) return;
         // Timed lines keep the frame arithmetic below (click: +1, +2) as 60 ms steps.
         script_ms = tokens[0][0] == 't' ? atoi(tokens[0].c_str() + 1) : -1;
         script_dialog = 0;
@@ -2241,8 +2300,8 @@ void load_script()
             Scripted s = {frame, {}, std::string()};
             if (script_ms >= 0) { s.ms = script_ms; s.frame = 0x7FFFFFFF; s.dialog = script_dialog; }
             s.event.type = action == "blur" ? SDL_EVENT_WINDOW_FOCUS_LOST : SDL_EVENT_WINDOW_FOCUS_GAINED;
-            script.push_back(s);
-            continue;
+            script_out->push_back(s);
+            return;
         }
         if (action == "resign" || action == "background" || action == "foreground") {
             // resign / background / foreground: the iOS lifecycle as SDL reports it (the scene
@@ -2252,8 +2311,8 @@ void load_script()
             if (script_ms >= 0) { s.ms = script_ms; s.frame = 0x7FFFFFFF; s.dialog = script_dialog; }
             s.event.type = action == "resign" ? SDL_EVENT_WILL_ENTER_BACKGROUND
                            : action == "background" ? SDL_EVENT_DID_ENTER_BACKGROUND : SDL_EVENT_DID_ENTER_FOREGROUND;
-            script.push_back(s);
-            continue;
+            script_out->push_back(s);
+            return;
         }
         if (action == "toolbar") {
             // toolbar ITEM: the touch controls' item as its button sends it (toolbar_tapped;
@@ -2265,9 +2324,9 @@ void load_script()
             s.event.user.code = tokens.size() >= 3 ? atoi(tokens[2].c_str()) : -1;
             ok = (s.event.user.code >= 0 && s.event.user.code < kToggleCount) || s.event.user.code == kSkipButton
                  || s.event.user.code == kKeysButton;
-            if (ok) script.push_back(s);
+            if (ok) script_out->push_back(s);
             if (!ok) fprintf(stderr, "input-script: cannot read line %d %s\n", frame, action.c_str());
-            continue;
+            return;
         }
         if (action == "dump") {
             // dump: the last picture drawn again and written to RA2_NATIVE_WINDOW_DUMP whatever its
@@ -2276,15 +2335,15 @@ void load_script()
             Scripted s = {frame, {}, std::string()};
             if (script_ms >= 0) { s.ms = script_ms; s.frame = 0x7FFFFFFF; s.dialog = script_dialog; }
             s.event.type = kScriptedDump;
-            script.push_back(s);
-            continue;
+            script_out->push_back(s);
+            return;
         }
         if (action == "mapcheck") {
             // mapcheck: the window mapping checked both ways over the tactical area (lane C16's tests).
             Scripted s = {frame, {}, std::string()};
             s.event.type = kScriptedMapCheck;
-            script.push_back(s);
-            continue;
+            script_out->push_back(s);
+            return;
         }
         if (action == "zoom") {
             // zoom FACTOR X Y: the zoom gestures' step (the wheel's, a pinch's) by FACTOR about the
@@ -2301,10 +2360,10 @@ void load_script()
                 s.spec = anchor.spec;
                 s.event.wheel.mouse_x = anchor.x;
                 s.event.wheel.mouse_y = anchor.y;
-                if (ok) script.push_back(s);
+                if (ok) script_out->push_back(s);
             }
             if (!ok) fprintf(stderr, "input-script: cannot read line %d %s\n", frame, action.c_str());
-            continue;
+            return;
         }
         if (action == "quit" || action == "wheel") {
             // quit: what Cmd+Q sends (SDL_EVENT_QUIT). wheel DX DY [X Y]: a
@@ -2320,7 +2379,7 @@ void load_script()
                 s.event.wheel.mouse_x = tokens.size() >= 6 ? strtof(tokens[4].c_str(), nullptr) : 300.0f;
                 s.event.wheel.mouse_y = tokens.size() >= 6 ? strtof(tokens[5].c_str(), nullptr) : 300.0f;
             } else ok = false;
-            if (ok) script.push_back(s);
+            if (ok) script_out->push_back(s);
         } else if (action == "tdown" || action == "tmove" || action == "tup") {
             // tdown|tmove|tup X Y [finger]: a touch at game pixel X, Y (finger 1 by default;
             // the touch gestures' tests, Scout1248).
@@ -2334,7 +2393,7 @@ void load_script()
                 s.event.tfinger.fingerID = i < tokens.size() ? (SDL_FingerID)atoi(tokens[i].c_str()) : 1;
                 s.event.tfinger.x = a.x;
                 s.event.tfinger.y = a.y;
-                script.push_back(s);
+                script_out->push_back(s);
             }
         } else if (action == "key" || action == "keydown" || action == "keyup") {
             if (tokens.size() < 3) ok = false;
@@ -2369,18 +2428,40 @@ void load_script()
         }
         if (!ok) fprintf(stderr, "input-script: cannot read line %d %s\n", frame, action.c_str());
     }
-    fclose(f);
-    // Stable by frame: the order within a frame is the script's.
-    for (size_t i = 1; i < script.size(); ++i) {
-        for (size_t k = i; k > 0 && script[k - 1].frame > script[k].frame; --k) {
-            Scripted t = script[k - 1];
-            script[k - 1] = script[k];
-            script[k] = t;
+}
+
+// Stable by frame from index `from`: the order within a frame is the script's.
+void script_sort(std::vector<Scripted> &list, size_t from)
+{
+    for (size_t i = from + 1; i < list.size(); ++i) {
+        for (size_t k = i; k > from && list[k - 1].frame > list[k].frame; --k) {
+            Scripted t = list[k - 1];
+            list[k - 1] = list[k];
+            list[k] = t;
         }
     }
-    script_ms = -1;
-    fprintf(stderr, "input-script: %zu events from %s\n", script.size(), path);
 }
+
+// The step server's live input (lane P21, ra2/glue/stepserver_native.inc; test scaffolding): one script line
+// without its frame field, played from loop frame `frame` through the same SDL event path as the file's
+// lines (frame-keyed actions only: no t/d/s timing). Returns the events queued.
+std::vector<Scripted> live_script;
+size_t live_next = 0;
+}
+extern "C" int ra2port_script_add(int frame, const char *text)
+{
+    char line[320];
+    snprintf(line, sizeof line, "%d %s", frame, text);
+    size_t before = live_script.size();
+    script_out = &live_script;
+    script_ms = -1;
+    script_dialog = 0;
+    script_parse_line(line);
+    script_out = &script;
+    script_sort(live_script, live_next);
+    return (int)(live_script.size() - before);
+}
+namespace {
 
 void play(Scripted &s, int number);
 std::vector<size_t> timed;      // indices of timed events, in order
@@ -2435,6 +2516,19 @@ void frame(int number)
     load_script();
     while (script_next < script.size() && script[script_next].frame <= number) {
         play(script[script_next++], number);
+    }
+    bool played = false;
+    while (live_next < live_script.size() && live_script[live_next].frame <= number) {
+        if (getenv("RA2_NATIVE_STEP_TRACE")) fprintf(stderr, "step-input: frame %d plays event %u (for %d) %s\n", number, live_script[live_next].event.type, live_script[live_next].frame, live_script[live_next].spec.c_str());
+        play(live_script[live_next++], number);
+        played = true;
+    }
+    // RA2_NATIVE_SCRIPT_ONLY=1 (lane P21, the step server's runs): the events played now reach the game's queue now, not at
+    // the next PeekMessage pump (at most one a millisecond, user32.cpp): an uncapped loop runs frames faster than that, so
+    // the frame a click landed in depended on the machine's speed and a recorded run did not replay the same.
+    if (played || (script_next > 0 && script[script_next - 1].frame == number)) {
+        static const bool script_only = getenv("RA2_NATIVE_SCRIPT_ONLY") && *getenv("RA2_NATIVE_SCRIPT_ONLY") == '1';
+        if (script_only) pump_events();
     }
 }
 // Timed events (pump_events: menus and dialogs as well as the game).
@@ -2849,4 +2943,117 @@ extern "C" int ra2_host_widescreen_target(int cur_w, int cur_h, int *w, int *h)
     widescreen_own_change = true;
     fprintf(stderr, "host: widescreen: window %dx%d points, %d lines: %dx%d\n", ww, wh, lines, tw, th);
     return 1;
+}
+
+// The step server's transport (lane P21, ra2/glue/stepserver_native.inc; test scaffolding): a Unix socket the game
+// serves commands on while it is paused, one client at a time (ra2/tools/ra2_step.py). Each reply line ends in '\n';
+// the game side ends each reply with a line ".". POSIX only: elsewhere no server (the replay needs none).
+#ifndef _WIN32
+#include <sys/socket.h>
+#include <sys/un.h>
+namespace {
+int step_listener = -1;
+int step_client = -1;
+std::string step_pending;
+}
+extern "C" int ra2port_step_listen(const char *path)
+{
+    struct sockaddr_un address = {};
+    address.sun_family = AF_UNIX;
+    if (strlen(path) >= sizeof address.sun_path) return 0;
+    strcpy(address.sun_path, path);
+    unlink(path);
+    int fd = socket(AF_UNIX, SOCK_STREAM, 0);
+    if (fd < 0) return 0;
+    if (bind(fd, (struct sockaddr *)&address, sizeof address) != 0 || listen(fd, 4) != 0) {
+        close(fd);
+        return 0;
+    }
+    step_listener = fd;
+    return 1;
+}
+// Without a connected client: wait for the next one (connected_only 0), or answer -2 at once (1: the game is over and runs
+// on to its score screen once the last client's commands are answered).
+extern "C" int ra2port_step_getline_ex(char *buffer, int size, int connected_only);
+extern "C" int ra2port_step_getline(char *buffer, int size) { return ra2port_step_getline_ex(buffer, size, 0); }
+extern "C" int ra2port_step_getline_ex(char *buffer, int size, int connected_only)
+{
+    if (step_listener < 0) return -1;
+    for (;;) {
+        size_t newline = step_pending.find('\n');
+        if (newline != std::string::npos) {
+            std::string line = step_pending.substr(0, newline);
+            step_pending.erase(0, newline + 1);
+            if (!line.empty() && line.back() == '\r') line.pop_back();
+            snprintf(buffer, (size_t)size, "%s", line.c_str());
+            return (int)strlen(buffer);
+        }
+        if (step_client < 0) {
+            if (connected_only) return -2;
+            step_client = accept(step_listener, nullptr, nullptr);
+            if (step_client < 0) return -1;
+#ifdef SO_NOSIGPIPE
+            int one = 1;     // a client gone before its reply must not end the game (SIGPIPE)
+            setsockopt(step_client, SOL_SOCKET, SO_NOSIGPIPE, &one, sizeof one);
+#endif
+            step_pending.clear();
+        }
+        char chunk[512];
+        ssize_t got = read(step_client, chunk, sizeof chunk);
+        if (got <= 0) {
+            close(step_client);
+            step_client = -1;
+            continue;
+        }
+        step_pending.append(chunk, (size_t)got);
+    }
+}
+extern "C" void ra2port_step_reply(const char *text)
+{
+    if (step_client < 0) return;
+    std::string out(text);
+    if (out.empty() || out.back() != '\n') out += '\n';
+    for (size_t sent = 0; sent < out.size();) {
+        ssize_t n = write(step_client, out.data() + sent, out.size() - sent);
+        if (n <= 0) return;
+        sent += (size_t)n;
+    }
+}
+#else
+extern "C" int ra2port_step_listen(const char *) { return 0; }
+extern "C" int ra2port_step_getline(char *, int) { return -1; }
+extern "C" int ra2port_step_getline_ex(char *, int, int) { return -1; }
+extern "C" void ra2port_step_reply(const char *) {}
+#endif
+extern "C" void ra2port_exit_now(int code)
+{
+    fflush(stdout);
+    fflush(stderr);
+    _exit(code);
+}
+// Host-path file access for the step server (lane P21): the game units' fopen resolves names against the game and
+// write folders (port/src/crt.cpp ra2_fopen); the step server's record, replay and planning files are the host's
+// paths as given.
+extern "C" int ra2port_host_write_file(const char *path, const void *data, int size, int append)
+{
+    FILE *f = fopen(path, append ? "ab" : "wb");
+    if (!f) return 0;
+    size_t wrote = fwrite(data, 1, (size_t)size, f);
+    fclose(f);
+    return wrote == (size_t)size;
+}
+extern "C" char *ra2port_host_read_file(const char *path, int *size)
+{
+    FILE *f = fopen(path, "rb");
+    if (!f) return nullptr;
+    std::string all;
+    char chunk[4096];
+    size_t n;
+    while ((n = fread(chunk, 1, sizeof chunk, f)) > 0) all.append(chunk, n);
+    fclose(f);
+    char *out = (char *)malloc(all.size() + 1);
+    memcpy(out, all.data(), all.size());
+    out[all.size()] = 0;
+    if (size) *size = (int)all.size();
+    return out;
 }

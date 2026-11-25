@@ -757,6 +757,11 @@
    "why": "Lane P8: test scaffolding: the input script's @ points (main's harness_input.cpp resolver), the harness-state/harness-view lines main's tests read (RA2_NATIVE_INPUT_LOG), the thumb and view orders, and main's mission-soak digest (RA2_NATIVE_SOAK, _SEED, _SPEED, _END) for frame identity with the src-based port."
   },
   {
+   "file": "src/conquer.cpp",
+   "append": "stepserver_native.inc",
+   "why": "Lane P21: test scaffolding: the step server (RA2_NATIVE_STEP: the game paused, advanced a requested number of loop frames, input through the real input path, structured state; RA2_NATIVE_STEP_REPLAY: a recorded run replayed), called at the end of the Main_Loop seam."
+  },
+  {
    "file": "src/txtlabel2.cpp",
    "regex": true,
    "old": "delete \\[\\] (DialogDrawer|MainButtonDrawer);",
