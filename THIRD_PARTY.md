@@ -20,8 +20,8 @@ native ports; same owner, GPL-3.0-or-later), with no history carried over:
   `symbols.tsv` instead of the 57 MB catalog, the target's section layout from `ra2/data/target_sections.tsv`
   instead of the target executable, the toolchain and SDL by variable, an SPDX line on each own file that had
   none, and a top-level `CMakeLists.txt` that builds the port library and SDL host itself (the branch linked them
-  from a separate build). `docs/ra2-trial-notes.md` is the branch's `native/rb/README.md`, unchanged: its paths
-  name the decompilation repository's layout.
+  from a separate build). `docs/ra2-port-notes.md` is the branch's `native/rb/README.md`, unchanged
+  below a short preface: its paths name the decompilation repository's layout.
 
 Some of that text (the glue files in `ra2/glue/`, parts of `port/`) was carried from the decompilation's own
 recovered source, which adopted text from the projects below with attribution; each such file keeps its notice.

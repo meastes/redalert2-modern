@@ -1,3 +1,9 @@
+> **History.** This is the record of how the port began: redalert2-decomp's `native/rb/README.md` from the
+> `ports-on-rebuild` branch (lanes P1 to P11), kept as written. There the work was a trial beside the src-based port,
+> and its paths, names (`rb-native-trial`, `RBTrial.app`, `rb_trial.sh`) and "trial" wording are that repository's.
+> In this repository it is the port: the target is `ra2-native`, the iOS app `RA2.app`, the scripts `ra2/tools/ra2_*`,
+> and the src-based port is the old port (README.md, History).
+
 # native/rb: the native ports on the rebuild tree (branch ports-on-rebuild, lanes P1 to P11)
 
 User, 2026-11-23: start moving the ports onto the rebuild code on a branch, below recovery work.

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Behaviour-written bodies for functions the trial game reaches that the rebuild carries neither
+// Behaviour-written bodies for functions the game reaches that the rebuild carries neither
 // exact nor as a compiling parked draft (lane P2, branch ports-on-rebuild). Each is main's native
 // body (native/link/, native/drafts/) carried over under the rebuild's name and declaration; the
 // source row is named with it. NOT EXACT and never part of an exact build. Item 3 of
@@ -32,7 +32,7 @@ extern "C" unsigned int Get_CPU_Clock(unsigned int &high)
 // 0x0073C370 Is_Current_Channel_Tournament and 0x0073C3A0 Is_Current_Channel_Flag_8 (wonline.cpp, netshare.h's
 // declarations): tests of the current Westwood Online channel, false unless the session is an Internet game
 // (Session.Type 4; main's src/recovered/wonline.cpp Unknown_0073c370/0073c3a0 through 0x0073C340/0x0073C3C0).
-// The LAN host dialog and the game-mode tests call them in every network game. The trial carries no Westwood
+// The LAN host dialog and the game-mode tests call them in every network game. This port carries no Westwood
 // Online (wonline left out), so no Internet game exists and both answer false. Lane P9, found by main's
 // lan_pair.py (the LAN host aborted at the link-closure trap).
 bool Is_Current_Channel_Tournament(void)

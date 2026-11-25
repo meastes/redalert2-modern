@@ -4,7 +4,7 @@
 #
 #   ./build.sh mac | ios simulator | ios device       (the usual way: configures, builds and packages)
 #   cmake -S . -B build/mac -G Ninja -DCMAKE_BUILD_TYPE=Release && cmake --build build/mac
-#   ctest --test-dir build/mac -L rb-quick             (the played checks need RA2_DATA_DIR: the user's game)
+#   ctest --test-dir build/mac -L ra2-quick             (the played checks need RA2_DATA_DIR: the user's game)
 cmake_minimum_required(VERSION 3.24)
 project(redalert2_modern VERSION 0.1.0 LANGUAGES C CXX ASM)
 if(APPLE)
@@ -56,7 +56,7 @@ if(WIN32)
 endif()
 
 # The SDL host (platform/sdl): window, input, touch, the app's setup and the Enhancements page, in its game mode
-# (RA2_NATIVE_GAME: the played app's mode, which asks for the user's game folder on first start).
+# (RA2_NATIVE_GAME: the players' app mode, which asks for the user's game folder on first start).
 set(ra2_host_sources platform/sdl/main.cpp platform/sdl/host.cpp platform/sdl/touch.cpp platform/sdl/enhancements.cpp
     platform/sdl/mod_import.cpp)
 if(APPLE)
@@ -83,7 +83,7 @@ if(RA2_NATIVE_COMBINED AND NOT RA2_NATIVE_YR)
 endif()
 if(RA2_NATIVE_YR)
   # The VC6 dialect on clang/arm64 for the YR units (port/include/ra2port/prelude.hpp explains each choice; the Red
-  # Alert 2 units take theirs from ra2/tools/rb_probe.py).
+  # Alert 2 units take theirs from ra2/tools/ra2_probe.py).
   add_library(ra2_dialect INTERFACE)
   target_compile_options(ra2_dialect INTERFACE
     "$<$<COMPILE_LANGUAGE:CXX>:-fms-extensions;-fms-compatibility;-fdelayed-template-parsing>"
@@ -187,4 +187,4 @@ endif()
 # Hygiene (no device, no game): the vendored files equal their PIN list, no game data or oversized file is
 # tracked, every own source keeps its SPDX line, THIRD_PARTY.md names each vendor folder.
 add_test(NAME repo-hygiene COMMAND "${Python3_EXECUTABLE}" -B "${CMAKE_CURRENT_SOURCE_DIR}/tools/check_tree.py")
-set_tests_properties(repo-hygiene PROPERTIES LABELS "rb-quick;static")
+set_tests_properties(repo-hygiene PROPERTIES LABELS "ra2-quick;static")

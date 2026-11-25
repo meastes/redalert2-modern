@@ -4,17 +4,17 @@
 
 tools/original_layouts.py run unchanged in its RA2 mode (the vtable pointers by address
 from manifests/rtti_classes.json: the rebuild's classes carry the original RTTI names) over the
-generated rebuild units (rb_units.py's gen: units.cmake, units/, hdr/, mingw/), whose record
-layouts are dumped with the rebuild units' flags (rb_probe.py: the YR dialect, ra2/sdk
+generated rebuild units (ra2_units.py's gen: units.cmake, units/, hdr/, mingw/), whose record
+layouts are dumped with the rebuild units' flags (ra2_probe.py: the YR dialect, ra2/sdk
 first, -DRA2_NATIVE_RB=1) instead of the src-based build's overlay. The shared tool is imported,
 not edited: only its `dump` is replaced, so the src and YR modes are untouched.
 
-    python3 ra2/tools/rb_original_layouts.py --gen build/rb-native/gen --out <file.cpp>
+    python3 ra2/tools/ra2_original_layouts.py --gen build/mac/gen --out <file.cpp>
         [--report r.json] [--members m.json] [--types ra2/data/original_save_types.txt] [-j N] [--check]
 
 The type list defaults to ra2/data/original_save_types.txt (main's list under the rebuild's
 names). The output defines ra2port_original_layouts/ops, which port/src/original_save.cpp
-otherwise has as weak empty tables (the trial then refuses to save in the original's format).
+otherwise has as weak empty tables (this port then refuses to save in the original's format).
 """
 import subprocess
 import sys
@@ -27,7 +27,7 @@ sys.path.insert(0, str(ROOT / 'tools'))
 import original_layouts as ol   # noqa: E402
 
 sys.path.insert(0, str(HERE))
-from rb_probe import flags as rb_flags   # noqa: E402
+from ra2_probe import flags as rb_flags   # noqa: E402
 
 TYPES = ROOT / 'ra2/data/original_save_types.txt'
 GEN = None
@@ -43,7 +43,7 @@ def i686_support(gen, cache):
         fake.mkdir(exist_ok=True)
         link = fake / 'gen-yr'
         if (gen / 'mingw-i686').is_dir():
-            # The Windows build (lane P13): the i686 side reads the Mac-style rewrite (rb_probe.py --target windows).
+            # The Windows build (lane P13): the i686 side reads the Mac-style rewrite (ra2_probe.py --target windows).
             link.mkdir(exist_ok=True)
             if not (link / 'mingw').is_symlink():
                 (link / 'mingw').symlink_to(gen / 'mingw-i686')
@@ -73,7 +73,7 @@ def rb_args(unit, triple, cache):
                  '-idirafter', str(d / 'ov'), '-idirafter', str(GEN / ('mingw-i686' if (GEN / 'mingw-i686').is_dir() else 'mingw')),
                  str(unit)])
     if triple == 'win64':
-        # The x86_64 Windows build (lane P13; ra2/ra2.cmake passes --target windows --cxx): as rb_probe.py --target
+        # The x86_64 Windows build (lane P13; ra2/ra2.cmake passes --target windows --cxx): as ra2_probe.py --target
         # windows compiles the units.
         return ([ol.CXX['win64'], '-include', str(ol.YR_SDK / 'yr_win_first.h'), '-include', str(ROOT / 'platform/win/dialect_win.hpp')]
                 + out + dump + ['-include', str(ol.PRELUDE), '-include', str(ol.YR_SDK / 'yr_prelude.h'),
@@ -96,11 +96,11 @@ def main():
     global GEN
     argv = sys.argv[1:]
     if '--gen' not in argv:
-        raise SystemExit('rb_original_layouts: --gen <rb_units.py output> is required')
+        raise SystemExit('ra2_original_layouts: --gen <ra2_units.py output> is required')
     i = argv.index('--gen')
     GEN = Path(argv[i + 1]).resolve()
     if GEN.name != 'gen':
-        raise SystemExit('rb_original_layouts: --gen must be the directory named gen (the tool reads <build>/gen)')
+        raise SystemExit('ra2_original_layouts: --gen must be the directory named gen (the tool reads <build>/gen)')
     argv[i:i + 2] = ['--build', str(GEN.parent)]
     if '--types' not in argv:
         argv += ['--types', str(TYPES)]

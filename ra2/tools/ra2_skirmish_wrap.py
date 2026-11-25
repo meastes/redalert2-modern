@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""Lane P8 (branch ports-on-rebuild): main's src-port tests unchanged against the rebuild trial.
+"""Lane P8 (branch ports-on-rebuild): main's src-port tests unchanged against this port.
 
 Main's tests (tests/*.py) start their skirmish with the src-based port's skirmish harness
 (--skirmish=<map>, --skirmish-order=build with RA2_NATIVE_BUILD_LIST: link/harness_skirmish.cpp,
-harness_build.cpp), which the trial does not carry. This wrapper stands in for the binary (--binary
-rb_skirmish_wrap.py, with RB_TRIAL naming the trial, default build/mac/rb-native-trial): it keeps
---skirmish (the port takes --skirmish-frames with it; the trial's game side ignores the map) and starts the same kind of game through the real menus instead (Single Player, Skirmish,
-Start Game: the setup's defaults, one computer player; rb_routes.py's START), by putting those clicks
+harness_build.cpp), which this port does not carry. This wrapper stands in for the binary (--binary
+ra2_skirmish_wrap.py, with RB_BINARY naming the port binary, default build/mac/ra2-native): it keeps
+--skirmish (the port takes --skirmish-frames with it; this port's game side ignores the map) and starts the same kind of game through the real menus instead (Single Player, Skirmish,
+Start Game: the setup's defaults, one computer player; ra2_routes.py's START), by putting those clicks
 in front of the test's input script; the test's own lines keep their loop frames (counted from the
 game's first frame in both ports). With Zoom gestures on (RA2_NATIVE_ENHANCEMENTS zoomgestures=on) the
 menus are at the scaled screen's centre (1880x1504 for 1024x768), so the clicks move by (428, 368).
---skirmish-order=build: the RA2_NATIVE_BUILD_LIST buildings are placed by the trial's harness (spawn
+--skirmish-order=build: the RA2_NATIVE_BUILD_LIST buildings are placed by this port's harness (spawn
 orders at loop frames 60, 70, ... beside the base). Everything else is passed through.
 
 Differences from main's harness, which a test may notice: the map is the setup's default rather than
@@ -22,7 +22,7 @@ import os
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-TRIAL = os.environ.get('RB_TRIAL') or os.path.join(HERE, '..', '..', 'build', 'mac', 'rb-native-trial')
+BINARY = os.environ.get('RB_BINARY') or os.path.join(HERE, '..', '..', 'build', 'mac', 'ra2-native')
 START = [(1, 1000, 834, 304), (2, 1000, 834, 388), (3, 1500, 834, 346)]
 
 
@@ -34,7 +34,7 @@ def main():
     script = None
     for a in args:
         if a.startswith('--skirmish='):
-            skirmish = True     # kept: the port takes --skirmish-frames with it (the trial's game side ignores the map)
+            skirmish = True     # kept: the port takes --skirmish-frames with it (this port's game side ignores the map)
         if a == '--skirmish-order=build':
             build = True
             continue
@@ -65,7 +65,7 @@ def main():
                     line = '%s%d%s %s' % (t[0][0], k, t[0][t[0].index('+'):], t[1] if len(t) > 1 else '')
                 body.append(line)
             lines += body
-        merged = os.path.join(os.path.dirname(script) if script else env.get('TMPDIR', '/tmp'), 'rb-skirmish.script')
+        merged = os.path.join(os.path.dirname(script) if script else env.get('TMPDIR', '/tmp'), 'ra2-skirmish.script')
         with open(merged, 'w') as f:
             f.write('\n'.join(lines) + '\n')
         out.append('--input-script=' + merged)
@@ -81,7 +81,7 @@ def main():
             orders.append('%d spawn %s %d %d' % (60 + 10 * k, name, dx, dy))
         if orders:
             env['RA2_NATIVE_ORDERS'] = '; '.join(filter(None, [env.get('RA2_NATIVE_ORDERS', '')] + orders))
-    os.execve(TRIAL, [TRIAL] + out, env)
+    os.execve(BINARY, [BINARY] + out, env)
 
 
 if __name__ == '__main__':

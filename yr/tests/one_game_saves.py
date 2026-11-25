@@ -79,7 +79,7 @@ def run(a, name, game, scripts, args, env_extra, seconds):
 
 
 # Records written as they are because their layout is the same in the original and natively (lane P13): the rebuild's
-# Static_Sounds_Save record (voc.cpp: four ints, 16 bytes; the RA2 checks in ra2/tests/rb_routes.py flag only loads).
+# Static_Sounds_Save record (voc.cpp: four ints, 16 bytes; the RA2 checks in ra2/tests/ra2_routes.py flag only loads).
 RAW_SAME = re.compile(r'original-save: write: no layout for \(unnamed ?at ?\S*voc\.cpp:\d+:\d+\) \(16 bytes\)')
 
 

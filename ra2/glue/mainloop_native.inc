@@ -7,7 +7,7 @@
 // Frame pacing, as main's port (native/link/harness_skirmish.cpp Native_Frame_Floor, user report
 // 2026-11-09, M20/Scout1191): the skirmish speed slider's default is GameSpeed 0 ("fastest"), for which
 // Main_Loop sets the frame timer to 0 and Sync_Delay does not wait; the original ran as fast as the
-// machine drew. Natively that is hundreds of frames a second (the trial's AI won a skirmish in a minute
+// machine drew. Natively that is hundreds of frames a second (this port's AI won a skirmish in a minute
 // of wall time), so in single player and skirmish a frame whose timer gave no wait keeps a 16 ms
 // deadline (one SystemTimerClass tick, about 62 frames a second); network games pace themselves.
 // RA2_NATIVE_UNCAPPED=1 restores the uncapped loop. Each frame is also reported to the port's run
@@ -197,7 +197,7 @@ static void RB_Checkpoint(void)
 
 static int rb_loop_frames = 0;      // the seam's loop frames (the run's frame count)
 
-// Test scaffolding (lane P8): with the port's --skirmish (main's tests through tools/rb_skirmish_wrap.py, which start the game
+// Test scaffolding (lane P8): with the port's --skirmish (main's tests through tools/ra2_skirmish_wrap.py, which start the game
 // through the menus) a run plays one game, as main's skirmish harness does (its Select_Game seam answers false the second
 // time: WinMain returns 0 after the game's score screen). Select_Game asks at its top (fixups.json); without --skirmish never.
 extern "C" const char * ra2port_skirmish_map(void);

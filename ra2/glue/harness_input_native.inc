@@ -452,7 +452,7 @@ void RB_Harness_Input_Frame(int frame)
 	// RA2_NATIVE_SKIRMISH_SPEED=<0-6> (main's name, harness_skirmish.cpp): Options.GameSpeed at the game's first frame. Main's
 	// skirmish harness starts the game without the setup dialog, so its game runs at RA2.INI's [Options] GameSpeed (3 in the
 	// user's install, about 20 frames a second), where the dialog's Start stores its slider (0 by default: the 62 a second
-	// frame floor); tools/rb_skirmish_wrap.py sets 3 so main's tests' wall-clock rules (a double click's 500 ms) see the same
+	// frame floor); tools/ra2_skirmish_wrap.py sets 3 so main's tests' wall-clock rules (a double click's 500 ms) see the same
 	// frame rate.
 	if (frame == 1) {
 		if (char const * speed = getenv("RA2_NATIVE_SKIRMISH_SPEED")) {

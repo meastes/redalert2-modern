@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""ctests rb-native-skirmish, rb-native-soak, rb-native-exit-route (lane P3, branch ports-on-rebuild):
-the rebuild-based trial (native/rb, rb-native-trial) through the real menus with scripted input,
+"""ctests ra2-native-skirmish, ra2-native-soak, ra2-native-exit-route (lane P3, branch ports-on-rebuild):
+the port (ra2-native) through the real menus with scripted input,
 reading the user's installed game at run time, each run in a fresh write folder under --work.
 Modelled on yr/tests/yr_skirmish_smoke.py and tests/exit_route.py.
 
@@ -28,7 +28,7 @@ Modelled on yr/tests/yr_skirmish_smoke.py and tests/exit_route.py.
             loads the file) and plays on. Checks: the save written; the load reported; the game
             loop reached again; the time limit ends the second run; at least 900 frames (the save's game speed). Since lane P4
             the save is written in the original's format (a compound file, the field maps of
-            rb_original_layouts.py) and read back through them; the port's container is not used.
+            ra2_original_layouts.py) and read back through them; the port's container is not used.
   original  one of the user's saves from the original game (--save, default ALL01T.sav, Allied 1), read in
             place from --data-dir at run time and never copied or written (main's
             tests/original_save_load.py route): --load-save, then play on. Checks: opened as an original
@@ -81,8 +81,8 @@ Every route also fails on a trap (a link-closure function reached), a fault, a c
 blit outside its surface. Skipped (77) without the installed game (game.exe in --data-dir) or the
 pinned target game.exe (--game-exe, the build the rebuild's addresses name).
 
-  rb_routes.py --route skirmish|soak|exit|audio|save|resave|original|combat|combatsave|campaign|production|allied1|allied1idle|forcewin|forcelose|chain
-               [--side allied|soviet] --binary <rb-native-trial> --data-dir <game folder>
+  ra2_routes.py --route skirmish|soak|exit|audio|save|resave|original|combat|combatsave|campaign|production|allied1|allied1idle|forcewin|forcelose|chain
+               [--side allied|soviet] --binary <ra2-native> --data-dir <game folder>
                --game-exe <game.exe> --work <dir> [--seconds N]
 """
 import argparse

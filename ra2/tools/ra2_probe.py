@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""Compile the generated rebuild units (rb_units.py) with the native YR build's flags (lane P1).
+"""Compile the generated rebuild units (ra2_units.py) with the native YR build's flags (lane P1).
 
 A probe outside CMake: each OUT/units/*.cpp with clang (-fsyntax-only, or -c into OUT/obj), the
 flags of yr_units_objs (the RA2 dialect, the port prelude and the YR prelude, the mingw-w64 headers
 rewritten by yr/tools/yr_sdk.py). Writes OUT/probe.json: per unit ok/failed, error counts and
 the first errors, and a tally of error sites (file:line) across units.
 
-    python3 ra2/tools/rb_probe.py --gen build/rb-native/gen [--obj] [-j 6] [--only a,b]
+    python3 ra2/tools/ra2_probe.py --gen build/mac/gen [--obj] [-j 6] [--only a,b]
 """
 import argparse
 import collections
@@ -78,13 +78,13 @@ def main():
         roots = [Path(MINGW)] if MINGW else sorted(ROOT.glob('toolchains/llvm-mingw-*'))
         mingw = [inc for r in roots for inc in sorted(r.glob('**/generic-w64-mingw32/include'))[:1]]
         if not mingw:
-            raise SystemExit('rb_probe: no llvm-mingw toolchain (set RA2_LLVM_MINGW to the extracted '
+            raise SystemExit('ra2_probe: no llvm-mingw toolchain (set RA2_LLVM_MINGW to the extracted '
                              'llvm-mingw-20261020-ucrt-macos-universal folder, or extract it under toolchains/)')
         subprocess.run([sys.executable, '-B', str(ROOT / 'yr/tools/yr_sdk.py'), '--mingw', str(mingw[0]),
                         '--out', str(gen / 'mingw')] + (['--host-headers', a.host_headers] if a.host_headers else []),
                        check=True, stdout=sys.stderr)
     if a.target == 'windows' and not (gen / 'mingw-i686/windows.h').exists():
-        # The original-layout dumps' i686 side (rb_original_layouts.py) reads the headers as the Mac build rewrites them
+        # The original-layout dumps' i686 side (ra2_original_layouts.py) reads the headers as the Mac build rewrites them
         # (RA2_LONG, the C library's own headers kept): a second tree beside the Windows build's.
         roots = [Path(MINGW)] if MINGW else sorted(ROOT.glob('toolchains/llvm-mingw-*'))
         mingw = [inc for r in roots for inc in sorted(r.glob('**/generic-w64-mingw32/include'))[:1]]
@@ -128,7 +128,7 @@ def main():
     okall = sum(r['ok'] for r in prev.values())
     pj.write_text(json.dumps({'compiled': okall, 'units_probed': len(prev), 'sites': sites.most_common(60),
                               'units': prev}, indent=1) + '\n')
-    print('rb_probe: %d of %d probed now compile (%d of %d overall)' % (ok, len(results), okall, len(prev)))
+    print('ra2_probe: %d of %d probed now compile (%d of %d overall)' % (ok, len(results), okall, len(prev)))
     for s, n in sites.most_common(25):
         print('  %4d  %s' % (n, s))
 

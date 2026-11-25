@@ -7,7 +7,7 @@
 # Unrecovered code and unsourced data link as traps and zero placeholders (tools/link_closure.py):
 # gen-yr/link_closure.json is the work queue.
 set(RA2_NATIVE_YR_GEN "${CMAKE_CURRENT_BINARY_DIR}/gen-yr")
-# llvm-mingw's headers: RA2_LLVM_MINGW (as build.sh and ra2/tools/rb_probe.py find it), else an extracted release under
+# llvm-mingw's headers: RA2_LLVM_MINGW (as build.sh and ra2/tools/ra2_probe.py find it), else an extracted release under
 # toolchains/.
 set(ra2_yr_mingw_first "")
 if(DEFINED ENV{RA2_LLVM_MINGW} AND IS_DIRECTORY "$ENV{RA2_LLVM_MINGW}/generic-w64-mingw32/include")
@@ -43,7 +43,7 @@ if(ra2_yr_rc)
 endif()
 if(WIN32)
   # The original-layout dumps' i686 side (tools/original_layouts.py) reads the headers as the Mac build rewrites them
-  # (the C library's own headers kept): a second tree beside the Windows build's, as ra2/tools/rb_probe.py makes for
+  # (the C library's own headers kept): a second tree beside the Windows build's, as ra2/tools/ra2_probe.py makes for
   # the rebuild (lane P19: without it every YR i686 dump stopped at <sys/types.h> and the Windows game had 7 of 85 maps).
   execute_process(
     COMMAND "${Python3_EXECUTABLE}" -B "${CMAKE_CURRENT_SOURCE_DIR}/yr/tools/yr_sdk.py"

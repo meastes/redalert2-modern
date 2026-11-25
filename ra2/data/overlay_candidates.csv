@@ -12,8 +12,8 @@ calls_differ,techno,006ca890,6019,?Fire_At@TechnoClass@@UAEPAVBulletClass@@PAVAb
 calls_differ,wdtsel,0072e050,991,?Pick_Territory@Selection@WorldDominationTour@@QAE?AV?$rc_ptr@VTerritory@WorldDominationTour@@@@XZ,?Choose_Territory@Selection@WorldDominationTour@@QAE?AV?$rc_ptr@VTerritory@WorldDominationTour@@@@XZ,src/recovered/wdtsel.cpp,World Domination Tour: not reached
 calls_differ,wdtsel,0072e650,193,?Select_Territory_At@Selection@WorldDominationTour@@QAE_NABVPoint2D@@@Z,?Hover@Selection@WorldDominationTour@@QAE_NABUPoint2D@@@Z,src/recovered/wdtsel.cpp,World Domination Tour: not reached
 calls_differ,wdtsel,0072e780,1531,?Do_Target_Anim@Selection@WorldDominationTour@@QAEXABV?$rc_ptr@VState@WorldDominationTour@@@@_N1@Z,?Show_State@Selection@WorldDominationTour@@QAEXABV?$rc_ptr@VState@WorldDominationTour@@@@_N1@Z,src/recovered/wdtsel.cpp,World Domination Tour: not reached
-calls_differ,wonline,00756e10,707,?Remove_Buddy@@YIXABVWstring@@@Z,?Unknown_00756e10@@YIXABVWstring@@@Z,src/recovered/wonline.cpp,not compiled in the trial (wonline left out)
-calls_differ,wonline,00758750,2935,?Buddy_Dialog_Proc@@YGHPAUHWND__@@IIJ@Z,?Buddy_Dialog_Proc_00758750@@YGHPAUHWND__@@IIJ@Z,src/recovered/wonline.cpp,not compiled in the trial (wonline left out)
+calls_differ,wonline,00756e10,707,?Remove_Buddy@@YIXABVWstring@@@Z,?Unknown_00756e10@@YIXABVWstring@@@Z,src/recovered/wonline.cpp,not compiled in this port (wonline left out)
+calls_differ,wonline,00758750,2935,?Buddy_Dialog_Proc@@YGHPAUHWND__@@IIJ@Z,?Buddy_Dialog_Proc_00758750@@YGHPAUHWND__@@IIJ@Z,src/recovered/wonline.cpp,not compiled in this port (wonline left out)
 exact_when_open,building,00453de0,42,?Clear@?$DynamicVectorClass@PAVReestablish@@@@UAEXXZ,?get@Cleanup_453de0@@QAEXXZ,src/recovered/building.cpp,A by bucket (exact once the unit is open)
 exact_when_open,building,00454a80,73,??_G?$DynamicVectorClass@PAVReestablish@@@@UAEPAXI@Z,??_G?$DynamicVectorClass@PAVReestablish@@@@UAEPAXI@Z,src/recovered/building.cpp,A by bucket (exact once the unit is open)
 exact_when_open,combat,0047fcf0,42,?Clear@?$DynamicVectorClass@PAUDamageGroup@@@@UAEXXZ,?Clear@?$DynamicVectorClass@PAUDamageGroup@@@@UAEXXZ,src/recovered/combat.cpp,A by bucket (exact once the unit is open)
@@ -74,9 +74,9 @@ exact_when_open,wdtsel,007302b0,26,?Get_Territory@Map@WorldDominationTour@@QAE?A
 exact_when_open,wdtsel,007302e0,35,??0?$rc_ptr@VTerritory@WorldDominationTour@@@@QAE@ABV0@@Z,??0?$rc_ptr@VTerritory@WorldDominationTour@@@@QAE@ABV0@@Z,src/recovered/wdtsel.cpp,World Domination Tour: not reached
 exact_when_open,wdtsel,00730310,11,??1?$rc_ptr@VTerritory@WorldDominationTour@@@@UAE@XZ,?rc_ptr_dtor_00730310@seed_00730310@@YIXPAI@Z,src/recovered/wdtsel.cpp,World Domination Tour: not reached
 exact_when_open,wdtsel,00730330,4,??C?$rc_ptr@VMap@WorldDominationTour@@@@QBEPAVMap@WorldDominationTour@@XZ,?get@Leaf_730330@@QAEIXZ,src/recovered/wdtsel.cpp,World Domination Tour: not reached
-exact_when_open,wonline,00766400,276,?clear@?$Dictionary@VWstring@@UChannel@WOL@@@@QAEXXZ,?Clear_00766400@WolChannelDictionary@@QAEXXZ,src/recovered/wonline.cpp,not compiled in the trial (wonline left out)
-exact_when_open,wonline,00766f90,346,?add@?$ArrayList@I@@QAEDAAIH@Z,?Insert_00766f90@WolIntArray@@QAE_NABHH@Z,src/recovered/wonline.cpp,not compiled in the trial (wonline left out)
-exact_when_open,wonline,00768290,143,?growVector@?$ArrayList@I@@AAEDXZ,?Grow_00768290@WolIntArray@@QAE_NXZ,src/recovered/wonline.cpp,not compiled in the trial (wonline left out)
+exact_when_open,wonline,00766400,276,?clear@?$Dictionary@VWstring@@UChannel@WOL@@@@QAEXXZ,?Clear_00766400@WolChannelDictionary@@QAEXXZ,src/recovered/wonline.cpp,not compiled in this port (wonline left out)
+exact_when_open,wonline,00766f90,346,?add@?$ArrayList@I@@QAEDAAIH@Z,?Insert_00766f90@WolIntArray@@QAE_NABHH@Z,src/recovered/wonline.cpp,not compiled in this port (wonline left out)
+exact_when_open,wonline,00768290,143,?growVector@?$ArrayList@I@@AAEDXZ,?Grow_00768290@WolIntArray@@QAE_NXZ,src/recovered/wonline.cpp,not compiled in this port (wonline left out)
 inline_body,building,0043ee70,2501,?Take_Damage@BuildingClass@@UAE?AW4ResultType@@AAHHPBVWarheadTypeClass@@PAVTechnoClass@@_N3@Z,?Take_Damage@BuildingClass@@UAEHPAHHPAVWarheadTypeClass@@PAVTechnoClass@@_NH@Z,src/recovered/building.cpp,"A (lane P11, line-compared)"
 inline_body,dropship,004a6b90,10797,?Dropship_Screen@@YIXXZ,?Dropship_Screen_004A6B90@@YIXXZ,src/recovered/dropship.cpp,not reached (Scen->StartingDropships only)
 inline_body,foot,004c8ff0,2184,?AI@FootClass@@UAEXXZ,?AI@FootClass@@UAEXXZ,src/recovered/foot.cpp,"A (lane P11, line-compared)"
@@ -90,8 +90,8 @@ inline_body,map,0056a9f0,39,??4AbstractClass@@QAEAAV0@ABV0@@Z,??4AbstractClass@@
 inline_body,sidebar,0067dc90,1315,?AI@SidebarClass@@UAEXAAW4KeyNumType@@ABVPoint2D@@@Z,?AI@SidebarClass@@UAEXAAHABUPoint2D@@@Z,src/recovered/sidebar.cpp,"A (lane P11, line-compared)"
 inline_body,team,006b7ad0,3460,?AI@TeamClass@@UAEXXZ,?AI@TeamClass@@UAEXXZ,src/recovered/team.cpp,"A (lane P11, line-compared)"
 inline_body,techno,006d24e0,814,?Techno_Render_Voxel_Object@TechnoClass@@QBE?AUSurfaceRegion@@ABUVoxelDataStruct@@ABVMatrix3D@@ABVPoint2D@@ABV?$TRect@H@@HW4ShapeFlags_Type@@H@Z,?Render_Voxel_Object_006d24e0@TechnoClass@@QAE?AUSurfaceRegion@@ABVUnknownObjectPair@@ABVMatrix3D@@ABUPoint2D@@ABVRect@@HIH@Z,src/recovered/techno.cpp,"A (lane P10, line-compared)"
-inline_body,wonline,00743720,2404,?Run_Lobby_Session@@YIHPAUHWND__@@_N@Z,?Unknown_00743720@@YIHPAUHWND__@@_N@Z,src/recovered/wonline.cpp,not compiled in the trial (wonline left out)
-inline_body,wonline,0074a710,7899,?Wonline_Game_Options_Dialog_Proc@@YGHPAUHWND__@@IIJ@Z,?WOL_Game_Options_Proc_0074a710@@YGHPAUHWND__@@IIJ@Z,src/recovered/wonline.cpp,not compiled in the trial (wonline left out)
+inline_body,wonline,00743720,2404,?Run_Lobby_Session@@YIHPAUHWND__@@_N@Z,?Unknown_00743720@@YIHPAUHWND__@@_N@Z,src/recovered/wonline.cpp,not compiled in this port (wonline left out)
+inline_body,wonline,0074a710,7899,?Wonline_Game_Options_Dialog_Proc@@YGHPAUHWND__@@IIJ@Z,?WOL_Game_Options_Proc_0074a710@@YGHPAUHWND__@@IIJ@Z,src/recovered/wonline.cpp,not compiled in this port (wonline left out)
 inline_call,blight,00433970,1818,?AI@BuildingLightClass@@UAEXXZ,?AI@BuildingLightClass@@UAEXXZ,src/recovered/blight.cpp,"A (lane P11, line-compared)"
 inline_call,building,004440e0,463,?Docking_Coord@BuildingClass@@UBE?AVCoord@@PAVTechnoClass@@@Z,?unknown_slot41@BuildingClass@@UBE?AUCoordStruct@@H@Z,src/recovered/building.cpp,"A (lane P11, line-compared)"
 inline_call,building,00444660,3359,?Captured@BuildingClass@@UAE_NPAVHouseClass@@_N@Z,?Captured@BuildingClass@@UAE_NPAVHouseClass@@H@Z,src/recovered/building.cpp,"A (lane P11, line-compared)"
@@ -123,15 +123,15 @@ inline_call,wave,007221d0,349,?Load@WaveClass@@UAGJPAUIStream@@@Z,?Load@WaveClas
 inline_call,wdtconflict,00727e30,236,?Get_String@?$ValueGameOption@E@WorldDominationTour@@UBE?AVWideWstring@@ABV?$rc_ptr@VWDTTerritory@@@@ABV3@@Z,?Describe@?$ValueGameOption@E@WorldDominationTour@@UBE?AVWideString@@ABV?$rc_ptr@VWDTTerritory@@@@ABV3@@Z,src/recovered/wdtconflict.cpp,World Domination Tour: not reached
 inline_call,wdtsel,0072d560,1072,??0Selection@WorldDominationTour@@QAE@ABV?$rc_ptr@VCampaign@WorldDominationTour@@@@H@Z,??0Selection@WorldDominationTour@@QAE@ABV?$rc_ptr@VCampaign@WorldDominationTour@@@@H@Z,src/recovered/wdtsel.cpp,World Domination Tour: not reached
 inline_call,wdtsel,0072e430,532,?Handle_Click@Selection@WorldDominationTour@@QAEXABVPoint2D@@AA_N@Z,?Click@Selection@WorldDominationTour@@QAEXABUPoint2D@@AA_N@Z,src/recovered/wdtsel.cpp,World Domination Tour: not reached
-inline_call,wonline,007469c0,7172,?Wonline_Main_Dialog_Proc@@YGHPAUHWND__@@IIJ@Z,?Wonline_Main_Dialog_007469c0@@YGHPAUHWND__@@IIJ@Z,src/recovered/wonline.cpp,not compiled in the trial (wonline left out)
-inline_call,wonline,0074a120,959,?Player_Info_Tooltip@@YIPAGPBG@Z,?Player_Info_Tooltip_0074a120@@YIPAGPBG@Z,src/recovered/wonline.cpp,not compiled in the trial (wonline left out)
-inline_call,wonline,00759370,2687,?Run_Online_Menu@@YIH_N@Z,?Unknown_00759370@@YIH_N@Z,src/recovered/wonline.cpp,not compiled in the trial (wonline left out)
-inline_call,wonline,00759e20,2202,?Start_Quick_Match@@YIHXZ,?Start_Quick_Match_00759e20@@YIHXZ,src/recovered/wonline.cpp,not compiled in the trial (wonline left out)
-inline_call,wonline,00762590,281,?OnPublicMessage@CChatEventSink@@UAGJJPAUChannel@WOL@@PAUUser@3@PBD@Z,?OnPublicMessage@CChatEventSink@@UAGJJPAUChannel@WOL@@PAUUser@3@PBD@Z,src/recovered/wonline.cpp,not compiled in the trial (wonline left out)
-inline_call,wonline,00762790,306,?OnPrivateMessage@CChatEventSink@@UAGJJPAUUser@WOL@@PBD@Z,?OnPrivateMessage@CChatEventSink@@UAGJJPAUUser@WOL@@PBD@Z,src/recovered/wonline.cpp,not compiled in the trial (wonline left out)
-inline_call,wonline,00762f70,2867,?OnFind@CChatEventSink@@UAGJJPAUChannel@WOL@@@Z,?OnFind@CChatEventSink@@UAGJJPAUChannel@WOL@@@Z,src/recovered/wonline.cpp,not compiled in the trial (wonline left out)
-inline_call,wonline,00764360,222,?OnPrivateAction@CChatEventSink@@UAGJJPAUUser@WOL@@PBD@Z,?OnPrivateAction@CChatEventSink@@UAGJJPAUUser@WOL@@PBD@Z,src/recovered/wonline.cpp,not compiled in the trial (wonline left out)
-inline_call,wonline,00764500,222,?OnPublicAction@CChatEventSink@@UAGJJPAUChannel@WOL@@PAUUser@3@PBD@Z,?OnPublicAction@CChatEventSink@@UAGJJPAUChannel@WOL@@PAUUser@3@PBD@Z,src/recovered/wonline.cpp,not compiled in the trial (wonline left out)
+inline_call,wonline,007469c0,7172,?Wonline_Main_Dialog_Proc@@YGHPAUHWND__@@IIJ@Z,?Wonline_Main_Dialog_007469c0@@YGHPAUHWND__@@IIJ@Z,src/recovered/wonline.cpp,not compiled in this port (wonline left out)
+inline_call,wonline,0074a120,959,?Player_Info_Tooltip@@YIPAGPBG@Z,?Player_Info_Tooltip_0074a120@@YIPAGPBG@Z,src/recovered/wonline.cpp,not compiled in this port (wonline left out)
+inline_call,wonline,00759370,2687,?Run_Online_Menu@@YIH_N@Z,?Unknown_00759370@@YIH_N@Z,src/recovered/wonline.cpp,not compiled in this port (wonline left out)
+inline_call,wonline,00759e20,2202,?Start_Quick_Match@@YIHXZ,?Start_Quick_Match_00759e20@@YIHXZ,src/recovered/wonline.cpp,not compiled in this port (wonline left out)
+inline_call,wonline,00762590,281,?OnPublicMessage@CChatEventSink@@UAGJJPAUChannel@WOL@@PAUUser@3@PBD@Z,?OnPublicMessage@CChatEventSink@@UAGJJPAUChannel@WOL@@PAUUser@3@PBD@Z,src/recovered/wonline.cpp,not compiled in this port (wonline left out)
+inline_call,wonline,00762790,306,?OnPrivateMessage@CChatEventSink@@UAGJJPAUUser@WOL@@PBD@Z,?OnPrivateMessage@CChatEventSink@@UAGJJPAUUser@WOL@@PBD@Z,src/recovered/wonline.cpp,not compiled in this port (wonline left out)
+inline_call,wonline,00762f70,2867,?OnFind@CChatEventSink@@UAGJJPAUChannel@WOL@@@Z,?OnFind@CChatEventSink@@UAGJJPAUChannel@WOL@@@Z,src/recovered/wonline.cpp,not compiled in this port (wonline left out)
+inline_call,wonline,00764360,222,?OnPrivateAction@CChatEventSink@@UAGJJPAUUser@WOL@@PBD@Z,?OnPrivateAction@CChatEventSink@@UAGJJPAUUser@WOL@@PBD@Z,src/recovered/wonline.cpp,not compiled in this port (wonline left out)
+inline_call,wonline,00764500,222,?OnPublicAction@CChatEventSink@@UAGJJPAUChannel@WOL@@PAUUser@3@PBD@Z,?OnPublicAction@CChatEventSink@@UAGJJPAUChannel@WOL@@PAUUser@3@PBD@Z,src/recovered/wonline.cpp,not compiled in this port (wonline left out)
 no_draft,_rtti,0040db40,23,_$E41,_$E41,src/recovered/_rtti.cpp,"compiler-generated, template or glue (mpu: glue/mpu_native.inc)"
 no_draft,bitfont,00432270,23,?get@Leaf_432270@@QAEXXZ,?get@Leaf_432270@@QAEXXZ,src/recovered/bittext.cpp,"compiler-generated, template or glue (mpu: glue/mpu_native.inc)"
 no_draft,bullet,004642a0,33,??Y?$TVelocity3D@N@@QAEAAU0@ABU0@@Z,??Y?$TVelocity3D@N@@QAEAAU0@ABU0@@Z,src/recovered/bullet.cpp,"compiler-generated, template or glue (mpu: glue/mpu_native.inc)"
@@ -159,8 +159,8 @@ no_draft,sidebar,00681690,25,?Unknown_00681690@SelectClass@StripClass@SidebarCla
 no_draft,sidebar,00682520,29,?get@Leaf_682520@@QAEIXZ,?get@Leaf_682520@@QAEIXZ,src/recovered/sidebar.cpp,"compiler-generated, template or glue (mpu: glue/mpu_native.inc)"
 no_draft,tactical,006ac7a0,1,?unknown_empty_006ac7a0@seed_006ac7a0@@YAXXZ,?unknown_empty_006ac7a0@seed_006ac7a0@@YAXXZ,src/recovered/tactical.cpp,"compiler-generated, template or glue (mpu: glue/mpu_native.inc)"
 no_draft,wdtconflict,00727cc0,36,??_G?$rc_ptr@VConflict@WorldDominationTour@@@@UAEPAXI@Z,??_G?$rc_ptr@VConflict@WorldDominationTour@@@@UAEPAXI@Z,src/recovered/wdtconflict.cpp,World Domination Tour: not reached
-no_draft,wonline,00766dc0,150,?Shrink_00766dc0@WolChannelArray@@QAE_NXZ,?Shrink_00766dc0@WolChannelArray@@QAE_NXZ,src/recovered/wonline.cpp,not compiled in the trial (wonline left out)
-no_draft,wonline,00767d60,684,?Remove_00767d60@WolChannelDictionary@@QAE_NABVWstring@@PAUChannel@WOL@@@Z,?Remove_00767d60@WolChannelDictionary@@QAE_NABVWstring@@PAUChannel@WOL@@@Z,src/recovered/wonline.cpp,not compiled in the trial (wonline left out)
+no_draft,wonline,00766dc0,150,?Shrink_00766dc0@WolChannelArray@@QAE_NXZ,?Shrink_00766dc0@WolChannelArray@@QAE_NXZ,src/recovered/wonline.cpp,not compiled in this port (wonline left out)
+no_draft,wonline,00767d60,684,?Remove_00767d60@WolChannelDictionary@@QAE_NABVWstring@@PAUChannel@WOL@@@Z,?Remove_00767d60@WolChannelDictionary@@QAE_NABVWstring@@PAUChannel@WOL@@@Z,src/recovered/wonline.cpp,not compiled in this port (wonline left out)
 not_emitted,ownrdraw,00601410,21,?get@Leaf_601410@@QAEIXZ,?get@Leaf_601410@@QAEIXZ,src/recovered/ownrdraw.cpp,"compiler-generated, template or glue (mpu: glue/mpu_native.inc)"
 register_order,combat,0047e2c0,4611,?Explosion_Damage@@YIHABVCoord@@HPAVTechnoClass@@PBVWarheadTypeClass@@_N@Z,?Explosion_Damage@@YIHABUCoordStruct@@HPAVTechnoClass@@PAVWarheadTypeClass@@_N@Z,src/recovered/combat.cpp,"A (lane P11, line-compared)"
 register_order,laser,005334f0,1906,?Draw_It@LaserDrawClass@@QAEXXZ,?Draw_It@LaserDrawClass@@QAEXXZ,src/recovered/laser.cpp,"A (lane P10, line-compared)"
@@ -173,16 +173,16 @@ register_order,techno,006d6ed0,1521,?Railgun_Beam_Damage@TechnoClass@@QAE?AVCoor
 register_order,uicmnds,006f7670,58,?Type_Select_Key_Up@@YIXXZ,?Unknown_006F7670@@YIXXZ,src/recovered/uicmnds.cpp,"codegen-only bucket, not line-compared"
 register_order,voxel,00718060,3290,?Init_Voxel_Matrices@@YIXXZ,?Unknown_00718060@@YIXXZ,src/recovered/voxel.cpp,"A (lane P10, line-compared)"
 register_order,wdtmap,0072a880,1652,?WDT_Write_Map_Ini@@YIXABVWstring@@0@Z,?unknown_write_wdtmap_ini_72a880@@YIXABVWstring@@0@Z,src/recovered/wdtmap.cpp,World Domination Tour: not reached
-register_order,wonline,00750330,2520,?Negotiate_Scenario_Transfer@@YIH_N@Z,?Sync_Scenario_With_Guests_00750330@@YIH_N@Z,src/recovered/wonline.cpp,not compiled in the trial (wonline left out)
-register_order,wonline,007513e0,228,?Add_Test_Player_Ol_Cruddy@@YIXXZ,?Unknown_007513e0@@YIXXZ,src/recovered/wonline.cpp,not compiled in the trial (wonline left out)
-register_order,wonline,007514d0,224,?Add_Test_Player_Potato@@YIXXZ,?Unknown_007514d0@@YIXXZ,src/recovered/wonline.cpp,not compiled in the trial (wonline left out)
-register_order,wonline,007515b0,267,?Add_Test_Player_Potato_Too@@YIXXZ,?Unknown_007515b0@@YIXXZ,src/recovered/wonline.cpp,not compiled in the trial (wonline left out)
-register_order,wonline,00753370,2976,?Wonline_Profile_Login_Dialog_Proc@@YGJPAUHWND__@@IIJ@Z,?Wonline_Profile_Login_Dialog_00753370@@YGJPAUHWND__@@IIJ@Z,src/recovered/wonline.cpp,not compiled in the trial (wonline left out)
-register_order,wonline,0075c570,698,?Apply_Endpoint_Map@@YIXPBD@Z,?Apply_Endpoint_Map_0075c570@@YIXPBD@Z,src/recovered/wonline.cpp,not compiled in the trial (wonline left out)
-register_order,wonline,00760c00,2402,?OnUserList@CChatEventSink@@UAGJJPAUChannel@WOL@@PAUUser@3@@Z,?OnUserList@CChatEventSink@@UAGJJPAUChannel@WOL@@PAUUser@3@@Z,src/recovered/wonline.cpp,not compiled in the trial (wonline left out)
+register_order,wonline,00750330,2520,?Negotiate_Scenario_Transfer@@YIH_N@Z,?Sync_Scenario_With_Guests_00750330@@YIH_N@Z,src/recovered/wonline.cpp,not compiled in this port (wonline left out)
+register_order,wonline,007513e0,228,?Add_Test_Player_Ol_Cruddy@@YIXXZ,?Unknown_007513e0@@YIXXZ,src/recovered/wonline.cpp,not compiled in this port (wonline left out)
+register_order,wonline,007514d0,224,?Add_Test_Player_Potato@@YIXXZ,?Unknown_007514d0@@YIXXZ,src/recovered/wonline.cpp,not compiled in this port (wonline left out)
+register_order,wonline,007515b0,267,?Add_Test_Player_Potato_Too@@YIXXZ,?Unknown_007515b0@@YIXXZ,src/recovered/wonline.cpp,not compiled in this port (wonline left out)
+register_order,wonline,00753370,2976,?Wonline_Profile_Login_Dialog_Proc@@YGJPAUHWND__@@IIJ@Z,?Wonline_Profile_Login_Dialog_00753370@@YGJPAUHWND__@@IIJ@Z,src/recovered/wonline.cpp,not compiled in this port (wonline left out)
+register_order,wonline,0075c570,698,?Apply_Endpoint_Map@@YIXPBD@Z,?Apply_Endpoint_Map_0075c570@@YIXPBD@Z,src/recovered/wonline.cpp,not compiled in this port (wonline left out)
+register_order,wonline,00760c00,2402,?OnUserList@CChatEventSink@@UAGJJPAUChannel@WOL@@PAUUser@3@@Z,?OnUserList@CChatEventSink@@UAGJJPAUChannel@WOL@@PAUUser@3@@Z,src/recovered/wonline.cpp,not compiled in this port (wonline left out)
 stack_layout,builtype,0045e290,1189,?Get_Draw_Rect@BuildingTypeClass@@QAE?AV?$TRect@H@@XZ,?Get_Draw_Rect@BuildingTypeClass@@QAE?AVRect@@XZ,src/recovered/builtype.cpp,"codegen-only bucket, not line-compared"
 stack_layout,map,0054f250,1386,?Zone_Span@MapClass@@QAEHPAUCellZoneStruct@@HAAH@Z,?Unknown_0054F250@MapClass@@QAEHPAUUnknownMapElem4@@HAAH@Z,src/recovered/map.cpp,"A (lane P10, line-compared)"
-stack_layout,wonline,0073ccb0,797,?Encode_Game_Options@@YIXPAD@Z,?Encode_Game_Options_0073ccb0@@YIXPAD@Z,src/recovered/wonline.cpp,not compiled in the trial (wonline left out)
+stack_layout,wonline,0073ccb0,797,?Encode_Game_Options@@YIXPAD@Z,?Encode_Game_Options_0073ccb0@@YIXPAD@Z,src/recovered/wonline.cpp,not compiled in this port (wonline left out)
 text_if0,ldprgmgr,00536c70,177,?Shade_Text_Area@@YIXPBGPAVSurface@@HHHH_N@Z,?Unknown_00536c70@@YIXPBGPAVSurface@@HHHH_N@Z,src/recovered/ldprgmgr.cpp,"A (lane P11, line-compared)"
 unbound,foot,004cbb40,1467,?Search_For_Tiberium_Weighted@FootClass@@QAE?AVCell@@H@Z,?unknown_4cbb40@FootClass@@QAE?AVCell@@H@Z,src/recovered/foot.cpp,"A (lane P11, line-compared)"
 unbound,map,0056c870,73,??_G?$VectorClass@W4PassabilityType@@@@UAEPAXI@Z,?get@Leaf_56c870@@QAEPAXI@Z,src/recovered/map.cpp,"compiler-generated, template or glue (mpu: glue/mpu_native.inc)"

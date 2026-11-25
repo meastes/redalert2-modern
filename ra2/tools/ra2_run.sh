@@ -3,15 +3,15 @@
 # Run the Mac game binary to a milestone with the user's installed game read at run time: nothing is copied;
 # the game writes only to a scratch folder.
 #
-#   ra2/tools/rb_run.sh [--bin <binary>] [milestone, default menu] [seconds, default 60] [extra host args...]
+#   ra2/tools/ra2_run.sh [--bin <binary>] [milestone, default menu] [seconds, default 60] [extra host args...]
 #
-# --bin: the binary (default build/mac/rb-native-trial, ./build.sh mac's).
+# --bin: the binary (default build/mac/ra2-native, ./build.sh mac's).
 # RA2_DATA_DIR: the installation (read only; required). RA2_GAME_EXE: the game.exe whose stored data is read
 # (default the one in RA2_DATA_DIR; a supported build, port/include/ra2port/game_builds.hpp).
 # RB_WRITE_DIR: where the game writes (default build/run).
 HERE=${0:A:h}
 ROOT=${HERE:h:h}
-BIN=$ROOT/build/mac/rb-native-trial
+BIN=$ROOT/build/mac/ra2-native
 if [[ $1 == --bin ]]; then BIN=${2:A}; shift 2; fi
 TARGET=${1:-menu}; SECONDS_=${2:-60}; shift 2 2>/dev/null
 DATA=${RA2_DATA_DIR:?set RA2_DATA_DIR to the installed game folder}

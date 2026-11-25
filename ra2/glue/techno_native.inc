@@ -5,7 +5,7 @@
 //
 // TechnoClass::Is_Weapon_Valid (techno.h, 0x006D8640) and this unit's Is_Weapon_Present are one
 // function: the callers pass the weapon with this in ecx, which the __stdcall body never reads. The
-// member forwards to it (rb_aliases.py binds only same-shape names; this one adds this).
+// member forwards to it (ra2_aliases.py binds only same-shape names; this one adds this).
 // ---------------------------------------------------------------------------------------------
 bool TechnoClass::Is_Weapon_Valid(WeaponDataStruct const * weapon) const
 {

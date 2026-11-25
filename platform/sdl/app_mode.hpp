@@ -708,7 +708,7 @@ bool setup_imported(void *native_window, bool force, std::string &data_dir, std:
 // iPhones in landscape stay under 450) and the aspect at most 1.75:1 (a wider screen of
 // that size shows the map at 600 lines). Never narrower than 800 (the game keeps its
 // 800x600 menus on the same primary surface, and a smaller one cut them off: Scout1248, a
-// 656x480 trial); a squarer screen than 4:3 keeps 800 wide and grows taller instead.
+// 656x480 try); a squarer screen than 4:3 keeps 800 wide and grows taller instead.
 // Examples: the Duo Simulator's 678x466 points 872x600; the Duo unfolded (944x634) 1072x720;
 // a 1180x820 iPad 1040x720, a 1024x768 iPad 960x720.
 constexpr double kLargeScreenPoints = 600;

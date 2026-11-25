@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// The RA2 game's hooks the shared host calls (native/platform/sdl/main.cpp), for the trial game
-// on the rebuild tree (lane P2, branch ports-on-rebuild). Compiled by native/rb/tools/rb_trial.sh
-// and native/rb/CMakeLists.txt beside the generated units; not appended to any unit.
+// The RA2 game's hooks the shared host calls (platform/sdl/main.cpp), for the game
+// on the rebuild tree (from redalert2-decomp's branch ports-on-rebuild, lane P2). Compiled by ra2/ra2.cmake
+// beside the generated units; not appended to any unit.
 //
 // After the port has filled the initialised globals from game.exe (main.cpp, before WinMain): the
 // units' static initialisers, which native/yr/tools/defer_initializers.py moved out of dyld's list
@@ -30,7 +30,7 @@ void ra2_native_original_records()
             ++count;
         }
     }
-    fprintf(stderr, "rb-native: %lu static initialisers run after the original data\n", count);
+    fprintf(stderr, "ra2-native: %lu static initialisers run after the original data\n", count);
 }
 #else
 #include <dlfcn.h>
@@ -51,10 +51,10 @@ void ra2_native_original_records()
         if (trace) {
             Dl_info at = {};
             dladdr((const void *)list[i], &at);
-            fprintf(stderr, "rb-native: initialiser %lu %s\n", i, at.dli_sname ? at.dli_sname : "?");
+            fprintf(stderr, "ra2-native: initialiser %lu %s\n", i, at.dli_sname ? at.dli_sname : "?");
         }
         list[i]();
     }
-    fprintf(stderr, "rb-native: %lu static initialisers run after the original data\n", count);
+    fprintf(stderr, "ra2-native: %lu static initialisers run after the original data\n", count);
 }
 #endif

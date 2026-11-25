@@ -5,7 +5,7 @@
 #   ./build.sh mac                    Red Alert 2 for the Mac:                   build/mac/RA2.app
 #   ./build.sh mac-one                Red Alert 2 + Yuri's Revenge for the Mac:  build/mac/RA2YR.app
 #   ./build.sh ios [simulator|device] the iPhone/iPad app, both games:           build/ios-<platform>/RA2YR.app
-#   ./build.sh ios [simulator|device] --ra2   Red Alert 2 alone:                 build/ios-<platform>/RBTrial.app
+#   ./build.sh ios [simulator|device] --ra2   Red Alert 2 alone:                 build/ios-<platform>/RA2.app
 #   ./build.sh windows                Red Alert 2 for Windows (x86_64):          build/windows/RA2Native.exe
 #   ./build.sh yr-windows             Yuri's Revenge for Windows (x86_64):       build/windows/YRNative.exe
 #   ./build.sh windows-one            both games for Windows:                    build/windows-one/RA2YRNative/
@@ -67,8 +67,8 @@ build_mac() {
   local mingw; mingw=$(llvm_mingw)
   local b="${RA2_BUILD_DIR:-build/mac}"
   RA2_LLVM_MINGW="$mingw" cmake -S . -B "$b" -G Ninja -DCMAKE_BUILD_TYPE=Release "$@"
-  RA2_LLVM_MINGW="$mingw" cmake --build "$b" --target rb-native-trial
-  RA2_APP_ID="${RA2_APP_ID:-io.github.ra2native.RA2Modern}" sh packaging/make_app.sh "$b/rb-native-trial" "$b"
+  RA2_LLVM_MINGW="$mingw" cmake --build "$b" --target ra2-native
+  RA2_APP_ID="${RA2_APP_ID:-io.github.ra2native.RA2Modern}" sh packaging/make_app.sh "$b/ra2-native" "$b"
   echo "Built: $b/RA2.app"
 }
 
@@ -112,7 +112,7 @@ build_ios() {
   RA2_LLVM_MINGW="$mingw" cmake -S . -B "$b" -G Ninja -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_SYSROOT="$sdk" \
         -DCMAKE_OSX_ARCHITECTURES=arm64 -DCMAKE_OSX_DEPLOYMENT_TARGET="${RA2_IOS_MIN:-17.0}" -DRA2_SDL_SOURCE="$sdl" \
         -DCMAKE_C_FLAGS="$opt" -DCMAKE_CXX_FLAGS="$opt" -DCMAKE_OBJCXX_FLAGS="$opt" ${game_opts[@]+"${game_opts[@]}"} "$@"
-  local target=rb-native-trial exe=RBTrial bundle_id=io.github.ra2native.RBTrial
+  local target=ra2-native exe=RA2 bundle_id=io.github.ra2native.RA2Single
   if [[ $one == 1 ]]; then
     target=ra2yr-one exe=RA2YR
     bundle_id=$(sed -n 's/^RA2_ONE_BUNDLE_ID:STRING=//p' "$b/CMakeCache.txt")
@@ -123,7 +123,7 @@ build_ios() {
     codesign --force --sign - --timestamp=none "$app"
   elif [[ -n "${RA2_IOS_TEAM:-}" ]]; then
     # Your team id and a development profile Xcode has already made for the bundle id (the team wildcard profile
-    # covers io.github.ra2native.RBTrial; RA2YR.app has the played app's id unless RA2_ONE_BUNDLE_ID names another);
+    # covers io.github.ra2native.RA2Single; RA2YR.app has the old app's id unless RA2_ONE_BUNDLE_ID names another);
     # the team id comes from the environment, never from Git.
     python3 -I packaging/ios_sign.py "$app" --team "$RA2_IOS_TEAM" ${RA2_IOS_PROFILE:+--profile "$RA2_IOS_PROFILE"}
   else
@@ -147,7 +147,7 @@ build_windows() {
   local b="${RA2_BUILD_DIR:-build/windows}"
   common_checks; local mingw; mingw=$(llvm_mingw)
   windows_configure "$b" "$mingw" "$@"
-  RA2_LLVM_MINGW="$mingw" cmake --build "$b" --target RA2Native rb-native-trial   # ra2-native.exe: the console build
+  RA2_LLVM_MINGW="$mingw" cmake --build "$b" --target RA2Native ra2-native   # ra2-native.exe: the console build
   echo "Built: $b/RA2Native.exe (self-contained: copy it to the Windows PC on its own)"
 }
 

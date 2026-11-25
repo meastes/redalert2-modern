@@ -6,7 +6,7 @@
 // generator functions only it reaches. Written from gamemd.exe's instructions (yr_dis.py) in the
 // shape of Red Alert 2's twins: each YR body was compared with RA2's (game.exe) and has the same
 // size and the same calls except where noted. The text is the rebuild tree's mapgen.cpp
-// (rebuild-trial; TibSun archive / OpenTS / ra2-decomp text, GPL-3.0-or-later, EA's GPL section 7
+// (TibSun archive / OpenTS / ra2-decomp text, GPL-3.0-or-later, EA's GPL section 7
 // terms; THIRD_PARTY.md) and main's src/recovered/mapgen.cpp, under the YR tree's names.
 //   gamemd.exe   bytes  RA2 twin (game.exe)            function
 //   0x0058C800   1678   0x0056E100 (same size)         MapRegionClass::Create_Region_From_Cell

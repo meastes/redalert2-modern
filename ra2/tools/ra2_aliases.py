@@ -18,7 +18,7 @@ not: a placeholder declaration that passes integers where the definition takes p
 trap). A member and a free function of one address with that shape are the same code, as VC6's
 identical-code folding or the rebuild's two names left them. The rest stay traps.
 
-    python3 ra2/tools/rb_aliases.py --gen build/rb-native/gen --undefined U.txt --inputs link_inputs.txt
+    python3 ra2/tools/ra2_aliases.py --gen build/mac/gen --undefined U.txt --inputs link_inputs.txt
         [--extra rb_bss_aliases.tsv] --out rb_aliases.tsv
 """
 import argparse
@@ -33,7 +33,7 @@ sys.path.insert(0, str(ROOT / 'tools/original_target'))
 sys.path.insert(0, str(ROOT / 'tools'))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import data_globals  # noqa: E402
-import rb_data       # noqa: E402
+import ra2_data       # noqa: E402
 
 
 def split_params(text):
@@ -136,7 +136,7 @@ def main():
     ap.add_argument('--out', type=Path, required=True)
     a = ap.parse_args()
 
-    cat, refs, _users = rb_data.load_catalog(a.gen)
+    cat, refs, _users = ra2_data.load_catalog(a.gen)
     classes = class_names(a.gen)
     by_name = defaultdict(set)
     decorated = defaultdict(set)
@@ -151,7 +151,7 @@ def main():
 
     undefined = [s for s in a.undefined.read_text().split('\n') if s]
     inputs = [l for l in a.inputs.read_text().split('\n') if l]
-    defined = rb_data.nm_defined(inputs)
+    defined = ra2_data.nm_defined(inputs)
     dem_defined = data_globals.demangle([s[1:] if s.startswith('_') else s for s in defined])
     by_qual = defaultdict(list)
     for sym, dem in zip(defined, dem_defined):
@@ -199,7 +199,7 @@ def main():
     for sym, target, addr, q, tq in rows:
         lines.append('%s\t%s\t0x%08X\tfunction\tsame address in the rebuild catalog (%s = %s)' % (sym, target, addr, q, tq))
     a.out.write_text('\n'.join(lines) + '\n')
-    print('rb_aliases: %d function aliases by address (%s)' % (
+    print('ra2_aliases: %d function aliases by address (%s)' % (
         len(rows), ', '.join('%d %s' % (v, k) for k, v in sorted(skipped.items()))))
 
 

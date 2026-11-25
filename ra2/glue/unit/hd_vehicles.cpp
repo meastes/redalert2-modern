@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // NATIVE (lane P8, branch ports-on-rebuild): compiled as one more unit with the units' flags (CMakeLists.txt, glue/unit/). NOT original
-// code; never part of an exact build. HD vehicles on the rebuild trial: the YR port's glue/yr_hd_vehicles.cpp (lane N19) under the
+// code; never part of an exact build. HD vehicles on this port: the YR port's glue/yr_hd_vehicles.cpp (lane N19) under the
 // rebuild's names, which are its tree's (TibSun's) names here too (VoxelDrawBuffer, ZBuffer::Get_Buffer_Offset/Wrap_Overflow,
 // Blit_Clip, VoxelDrawSystem's _Render); Red Alert 2's Bit_Blit has no tint argument, so the tinted copy is gone. Its notes follow.
 //

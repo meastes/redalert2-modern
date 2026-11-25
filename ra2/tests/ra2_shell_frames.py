@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""Lane P12: the shell screens of the trial against the played port's, picture by picture.
+"""Lane P12: the shell screens of this port against the old port's, picture by picture.
 
-Both binaries (--src: redalert2-decomp's src-based ra2-native, the port the user has played; --trial: this
+Both binaries (--src: redalert2-decomp's src-based ra2-native, the old port; --rb: this
 repository's) are driven through the same tour of the shell with the same scripted clicks, each in a fresh
 settings folder (HOME) and write folder, and the window is written at each settled screen (the input script's
 "dump" lines, RA2_NATIVE_WINDOW_DUMP, logged with RA2_NATIVE_WINDOW_DUMP_LOG). The pictures of each screen are
@@ -17,12 +17,12 @@ with its reason) and at most SLACK of the remaining tiles differ.
 The tour (dialog numbers as the shell shows them; each click waits for its dialog's slide-in, "sN+ms"):
 main menu, Options, Enhancements, Options' Keyboard, Options' Network, Single Player, Load, Skirmish setup.
 The campaign briefing and the score screen are not in the tour (they need a game started through movies or a
-forced end: the rb-main-zoom-score check covers the score screen's layout).
+forced end: the ra2-main-zoom-score check covers the score screen's layout).
 
 Exit 0 when every screen passes, 1 when one fails, 77 without the game or the reference binary. The pictures
 and a per-screen difference map (diff-<screen>.bmp: differing tiles white, allowed ones grey) stay in --work.
 
-  rb_shell_frames.py --src <ra2-native> --trial <rb-native-trial> --data-dir <game folder> --game-exe <game.exe>
+  ra2_shell_frames.py --src <ra2-native> --rb <ra2-native> --data-dir <game folder> --game-exe <game.exe>
                      --work <dir> --size mac|iphone
 """
 import argparse
@@ -72,8 +72,8 @@ ALLOWED = {
         ((0.72, 0.36, 0.17, 0.56), 'the column buttons light on a wall clock'),
     ],
     'enhancements': [
-        # The dropdowns' rows: the trial follows the original's item heights (Combo_Proc's OD_SUBCLASSED: the field
-        # LineHeight + 2, the rows LineHeight + 6); a played port built before main's lane N33 keeps user32's 16.
+        # The dropdowns' rows: this port follows the original's item heights (Combo_Proc's OD_SUBCLASSED: the field
+        # LineHeight + 2, the rows LineHeight + 6); an old port built before main's lane N33 keeps user32's 16.
         ((0.38, 0.22, 0.24, 0.60), 'dropdown heights follow the original (deliberate; main lane N33)'),
     ],
     'options': [
@@ -84,12 +84,12 @@ ALLOWED = {
     ],
     'keyboard': [
         # List_Proc's OD_SUBCLASSED sets the rows to LineHeight + 2 (LB_SETITEMHEIGHT -1: 0x005F6B34-0x005F6B53); main's
-        # behaviour row keeps user32's height, so the commands list's rows sit a little further apart in the trial.
+        # behaviour row keeps user32's height, so the commands list's rows sit a little further apart in this port.
         ((0.36, 0.25, 0.30, 0.27), 'list rows follow the original item height (0x005F6B4D); main keeps user32\'s'),
     ],
     'load': [
         # The same row height; the original fills the selected row (AlternateSurface Fill_Rect after LB_GETSEL,
-        # 0x005F6DA6-0x005F6E08) where main's behaviour row outlines it; and the trial draws the date and time
+        # 0x005F6DA6-0x005F6E08) where main's behaviour row outlines it; and this port draws the date and time
         # columns Fill_List sets (OD_SETCELL at 255 and 315), which main's row does not draw.
         ((0.20, 0.27, 0.44, 0.45), 'the load list: original row height, selection fill, date/time columns'),
     ],
@@ -214,7 +214,7 @@ def run(a, tag, binary):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('--src', default='')
-    ap.add_argument('--trial', required=True)
+    ap.add_argument('--rb', required=True)
     ap.add_argument('--data-dir', default='')
     ap.add_argument('--game-exe', default='')
     ap.add_argument('--work', required=True)
@@ -222,31 +222,31 @@ def main():
     ap.add_argument('--seconds', type=int, default=240)
     a = ap.parse_args()
     if not a.data_dir or not os.path.isdir(a.data_dir):
-        print('rb-shell-frames: no installed game given; skipped')
+        print('ra2-shell-frames: no installed game given; skipped')
         return SKIP
     if not a.game_exe:
         a.game_exe = os.path.join(a.data_dir, 'game.exe')
     if not a.src or not os.path.isfile(a.src):
-        print('rb-shell-frames: no reference binary (--src); skipped')
+        print('ra2-shell-frames: no reference binary (--src); skipped')
         return SKIP
     a.work = os.path.abspath(a.work)
     src, src_log = run(a, 'src', a.src)
-    trial, trial_log = run(a, 'trial', a.trial)
+    rb, rb_log = run(a, 'rb', a.rb)
     failed = []
     for name in [n for n, _, _, _ in TOUR if n]:
-        if name not in src or name not in trial:
+        if name not in src or name not in rb:
             failed.append(name)
-            print('rb-shell-frames: %-14s FAILED: not reached (src %s, trial %s)' % (name, name in src, name in trial))
+            print('ra2-shell-frames: %-14s FAILED: not reached (src %s, rb %s)' % (name, name in src, name in rb))
             continue
-        ok, what = compare(name, src[name], trial[name], os.path.join(a.work, 'diff-%s.bmp' % name))
-        print('rb-shell-frames: %-14s %s: %s' % (name, 'ok' if ok else 'FAILED', what))
+        ok, what = compare(name, src[name], rb[name], os.path.join(a.work, 'diff-%s.bmp' % name))
+        print('ra2-shell-frames: %-14s %s: %s' % (name, 'ok' if ok else 'FAILED', what))
         if not ok:
             failed.append(name)
-    for tag, log in (('src', src_log), ('trial', trial_log)):
+    for tag, log in (('src', src_log), ('rb', rb_log)):
         if re.search(r'signal \d+|SIG(SEGV|BUS|ILL|ABRT)|crash:', log):
             failed.append(tag + ' fault')
-            print('rb-shell-frames: a fault in the %s run' % tag)
-    print('rb-shell-frames (%s): %s (pictures in %s)' % (a.size, 'ok' if not failed else 'FAILED: ' + ', '.join(failed), a.work))
+            print('ra2-shell-frames: a fault in the %s run' % tag)
+    print('ra2-shell-frames (%s): %s (pictures in %s)' % (a.size, 'ok' if not failed else 'FAILED: ' + ', '.join(failed), a.work))
     return 1 if failed else 0
 
 

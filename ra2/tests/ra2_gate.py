@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""Differential gate (lane P14): the rebuild-based port against redalert2-decomp's src-based played port.
+"""Differential gate (lane P14): the rebuild-based port against redalert2-decomp's old src-based port.
 
 Both binaries run the same route with the same seed, the same harness orders and the same scripted input, each in a
 fresh write folder, the user's installed game read at run time, and main's mission-soak digest (every techno's type,
@@ -17,7 +17,7 @@ the trigger lines (soak-trigger), timers and defeated houses. The report names e
   cross     a harness save made by --maker (src or rb) on a skirmish or mission route at loop frame --save-at, then
             loaded by both binaries and played on (the save's own digests compared too).
 
-  rb_gate.py <mode> --src <ra2-native> --rb <rb-native-trial> --data-dir <game> --game-exe <game.exe> --work <dir> ...
+  ra2_gate.py <mode> --src <ra2-native> --rb <ra2-native> --data-dir <game> --game-exe <game.exe> --work <dir> ...
 
 Exit 0 when every compared digest and trigger line is the same, 1 on a difference, a fault or a run that did not
 reach its scenario; 77 without the installed game.

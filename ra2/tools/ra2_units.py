@@ -20,7 +20,7 @@ closing brace (the rebuild carries no per-function markers), {file, prepend: tex
 the unit) and {file, after_includes: text} (after the unit's last #include line: declarations of
 explicit specialisations a unit defines after their first use, which ISO C++ requires first).
 
-    python3 ra2/tools/rb_units.py --out build/rb-native/gen
+    python3 ra2/tools/ra2_units.py --out build/mac/gen
 """
 import argparse
 import json
@@ -180,7 +180,7 @@ def main():
     unused = [r.get('old', r.get('cut_function', r['file'])) for r in fixups
               if not r['hits'] and (not only or r['file'] == '*' or r['file'].startswith('hdr/'))]
     if unused:
-        raise SystemExit('rb_units: fixups that match nothing: %s' % unused)
+        raise SystemExit('ra2_units: fixups that match nothing: %s' % unused)
     for stale in ([] if only else (out / "units").glob("*.cpp")):   # units left out since the last run
         if stale not in units:
             stale.unlink()
@@ -199,7 +199,7 @@ def main():
     emit(out / 'units.cmake', 'set(RB_NATIVE_UNITS\n%s)\n' % ''.join('  "%s"\n' % u for u in units))
     emit(out / 'report.json', json.dumps({'pin': pin, 'headers': len(headers), 'units': len(units),
                                           'skipped': skipped}, indent=1) + '\n')
-    print('rb_units: pin %s, %d headers, %d units (%d left out) -> %s' % (pin[:10], len(headers), len(units), len(skipped), out))
+    print('ra2_units: pin %s, %d headers, %d units (%d left out) -> %s' % (pin[:10], len(headers), len(units), len(skipped), out))
 
 
 if __name__ == '__main__':

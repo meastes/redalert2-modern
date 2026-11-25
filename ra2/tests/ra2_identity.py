@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""Frame identity between the src-based port and the rebuild trial (lane P8, branch ports-on-rebuild).
+"""Frame identity between the old src-based port and this port (lane P8, branch ports-on-rebuild).
 
 One mission is started the same way in both binaries, with the same seed and the same orders, and the
 mission soak's per-period digests are compared (main's native/link/harness_soak.cpp in the src-based port,
-glue/harness_input_native.inc in the trial: the same hash over every techno's type, house, coordinate,
+glue/harness_input_native.inc in this port: the same hash over every techno's type, house, coordinate,
 strength and mission, every house's money and the scenario's random generator, in the same order):
 
   campaign  Single Player, New Campaign, the side's emblem (main's tests/mission_soak.py and campaign_chain.py
             route): the side's first mission (Allied 1 or Soviet 1) is played (no forced end).
-  skirmish  Single Player, Skirmish, Start Game (rb_routes.py's START), the sides and colours fixed in RA2.INI (lane P10).
+  skirmish  Single Player, Skirmish, Start Game (ra2_routes.py's START), the sides and colours fixed in RA2.INI (lane P10).
 
 Both run with RA2_NATIVE_SOAK=<period>, RA2_NATIVE_SOAK_SEED (CustomSeed for Init_Random), RA2_NATIVE_SOAK_SPEED=0
 (as fast as the machine draws), RA2_NATIVE_SOAK_END=<frames>@1 (--run-to=soak-end), each in a fresh write folder,
@@ -17,7 +17,7 @@ the user's installed game read at run time. The report names the first digest th
 lines) and, with --dump, both runs' soak-techno lines at that frame (RA2_NATIVE_SOAK_DUMP) and the first techno
 that differs.
 
-  rb_identity.py --src <ra2-native> --trial <rb-native-trial> --data-dir <game folder> --game-exe <game.exe>
+  ra2_identity.py --src <ra2-native> --rb <ra2-native> --data-dir <game folder> --game-exe <game.exe>
                  --work <dir> [--route campaign|skirmish] [--side allied|soviet] [--frames 3000] [--period 50]
                  [--orders "<loop frame> <order>; ..."] [--dump]
 
@@ -109,7 +109,7 @@ def digests(out):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('--src', required=True)
-    ap.add_argument('--trial', required=True)
+    ap.add_argument('--rb', required=True)
     ap.add_argument('--data-dir', default='')
     ap.add_argument('--game-exe', default='')
     ap.add_argument('--work', required=True)
@@ -132,7 +132,7 @@ def main():
     work = os.path.abspath(a.work)
     os.makedirs(work, exist_ok=True)
     outs = {}
-    for name, binary in (('src', a.src), ('trial', a.trial)):
+    for name, binary in (('src', a.src), ('rb', a.rb)):
         kept = os.path.join(a.reuse_src, name, 'run.log') if a.reuse_src and name == 'src' else ''
         if kept and os.path.isfile(kept):
             with open(kept, errors='replace') as f:
@@ -144,13 +144,13 @@ def main():
         hits = [l for l in out.splitlines() if BAD.search(l) and not l.startswith('input-script')]
         if hits:
             bad.append('%s: fault or trap: %s' % (name, hits[0][:160]))
-    ds, dt = digests(outs['src']), digests(outs['trial'])
+    ds, dt = digests(outs['src']), digests(outs['rb'])
     if not ds or not dt:
-        bad.append('no digests (src %d, trial %d)' % (len(ds), len(dt)))
+        bad.append('no digests (src %d, rb %d)' % (len(ds), len(dt)))
     common = sorted(set(ds) & set(dt))
     first = next((f for f in common if ds[f].split(' view ')[0] != dt[f].split(' view ')[0]), None)
     view_first = next((f for f in common if ds[f] != dt[f]), None)
-    print('identity: %s %s, %d digests in common (src %d, trial %d), last common frame %s' %
+    print('identity: %s %s, %d digests in common (src %d, rb %d), last common frame %s' %
           (a.route, a.side if a.route == 'campaign' else '', len(common), len(ds), len(dt), common[-1] if common else '-'))
     if first is None:
         print('identity: every common digest is the same (state)%s' %
@@ -158,7 +158,7 @@ def main():
     else:
         print('identity: first divergence at frame %d' % first)
         print('  src:   %s' % ds[first])
-        print('  trial: %s' % dt[first])
+        print('  rb:    %s' % dt[first])
         prev = [f for f in common if f < first]
         if prev:
             print('  (same at frame %d)' % prev[-1])
@@ -169,7 +169,7 @@ def main():
             rng = '%d-%d' % (frame, first)
             os.environ['RB_DUMP_FRAMES'] = rng
             dumps = {}
-            for name, binary in (('src', a.src), ('trial', a.trial)):
+            for name, binary in (('src', a.src), ('rb', a.rb)):
                 kept = os.path.join(a.reuse_src, name + '-dump', 'run.log') if a.reuse_src and name == 'src' else ''
                 if kept and os.path.isfile(kept) and ('soak-techno %d ' % frame) in open(kept, errors='replace').read():
                     with open(kept, errors='replace') as f:
@@ -179,10 +179,10 @@ def main():
                 dumps[name] = [l for l in out.splitlines() if l.startswith('soak-techno ')]
             norm = re.compile(r'^(soak-techno \d+ #\d+ \S+ h-?\d+ -?\d+,-?\d+,-?\d+ s-?\d+ m-?\d+)')
             a_lines = [norm.match(l).group(1) for l in dumps['src'] if norm.match(l)]
-            b_lines = [norm.match(l).group(1) for l in dumps['trial'] if norm.match(l)]
+            b_lines = [norm.match(l).group(1) for l in dumps['rb'] if norm.match(l)]
             for x, y in zip(a_lines, b_lines):
                 if x != y:
-                    print('  first techno difference:\n    src:   %s\n    trial: %s' % (x, y))
+                    print('  first techno difference:\n    src:   %s\n    rb:    %s' % (x, y))
                     break
             else:
                 print('  techno dumps the same over %s (%d lines each)' % (rng, min(len(a_lines), len(b_lines))))

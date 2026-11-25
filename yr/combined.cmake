@@ -5,7 +5,7 @@
 # the SDL host compiled again with RA2_NATIVE_ENGINE (main.cpp's main becomes ra2_engine_main) and only that symbol
 # exported, so the two games' identical names stay apart; ra2yr-native is the thin host (combined/one_game.cpp).
 # Red Alert 2's engine is the rebuild-based game (ra2/ra2.cmake: rb_units_objs, rb_data_objs, rb_glue_objs and its
-# link closure; its units' initialisers deferred to __DATA,__rb_init_func by rb-native-trial's PRE_LINK and run by
+# link closure; its units' initialisers deferred to __DATA,__rb_init_func by ra2-native's PRE_LINK and run by
 # ra2/glue/rb_host_glue.cpp after the game.exe load); Yuri's Revenge's is yr-native's (yr/yr.cmake).
 if(NOT RA2_NATIVE_COMBINED)
   return()
@@ -54,7 +54,7 @@ if(WIN32)
   target_link_libraries(ra2-engine PRIVATE SDL3::SDL3 ra2_port)
   target_compile_definitions(ra2-engine PRIVATE RA2_NATIVE_GAME=1)
   ra2_windows_engine_link(ra2-engine)
-  add_dependencies(ra2-engine rb-native-trial)
+  add_dependencies(ra2-engine ra2-native)
   add_library(yr-engine SHARED $<TARGET_OBJECTS:yr_engine_host_objs> $<TARGET_OBJECTS:yr_units_objs>
               $<TARGET_OBJECTS:yr_data_obj> "${RA2_NATIVE_YR_GEN}/link_closure.c")
   target_link_libraries(yr-engine PRIVATE SDL3::SDL3 ra2_port)
@@ -96,7 +96,7 @@ if(WIN32)
 endif()
 
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "iOS")   # bundles: the Mac's (iOS loads no bundle)
-# Red Alert 2: rb-native-trial's objects (weakened and their initialisers deferred by its PRE_LINK: built after it).
+# Red Alert 2: ra2-native's objects (weakened and their initialisers deferred by its PRE_LINK: built after it).
 add_library(ra2-engine MODULE $<TARGET_OBJECTS:ra2_engine_host_objs> ${ra2_engine_hostos} ${ra2_engine_ra2_objects}
             "${ra2_engine_ra2_closure}")
 set_source_files_properties("${ra2_engine_ra2_closure}" PROPERTIES COMPILE_OPTIONS "-O1")
@@ -105,7 +105,7 @@ target_compile_definitions(ra2-engine PRIVATE RA2_NATIVE_GAME=1)
 target_link_options(ra2-engine PRIVATE ${ra2_engine_link_options} "LINKER:-alias_list,${ra2_engine_ra2_alias_list}")
 set_property(TARGET ra2-engine APPEND PROPERTY LINK_DEPENDS "${ra2_engine_ra2_alias_list}")
 set_target_properties(ra2-engine PROPERTIES PREFIX "" SUFFIX ".so")
-add_dependencies(ra2-engine rb-native-trial)
+add_dependencies(ra2-engine ra2-native)
 
 # Yuri's Revenge: yr-native's objects (weakened and their initialisers deferred by its PRE_LINK).
 add_library(yr-engine MODULE $<TARGET_OBJECTS:yr_engine_host_objs> ${ra2_engine_hostos} $<TARGET_OBJECTS:yr_units_objs>
@@ -189,7 +189,7 @@ if(RA2_NATIVE_ONE_EXECUTABLE)
       $<TARGET_OBJECTS:ra2_one_port_objs> $<TARGET_OBJECTS:yr_one_marker_end>)
   set(ra2_one_alias_ra2 "${ra2_engine_ra2_alias_list}")
   set(ra2_one_alias_yr "${RA2_NATIVE_YR_GEN}/alias_list.txt")
-  set(ra2_one_after_ra2 rb-native-trial)
+  set(ra2_one_after_ra2 ra2-native)
   set(ra2_one_after_yr yr-native)
   set(ra2_one_r_target "")
   if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
@@ -228,7 +228,7 @@ if(RA2_NATIVE_ONE_EXECUTABLE)
     # The iOS app (build-ios.command, the default since lane Y9): it replaces the Red Alert 2 app,
     # with its bundle id and name (owner ruling 2026-11-16), so the player's Red Alert 2 saves,
     # settings and imported files carry over; it asks only for Yuri's Revenge's files.
-    # The bundle id is the played app's (io.github.ra2native.RA2) unless RA2_ONE_BUNDLE_ID names another.
+    # The bundle id is the old app's (io.github.ra2native.RA2) unless RA2_ONE_BUNDLE_ID names another.
     set(RA2_ONE_BUNDLE_ID "io.github.ra2native.RA2" CACHE STRING "Bundle id of the iOS combined app (RA2YR.app)")
     ra2_ios_app(ra2yr-one RA2YR "${RA2_ONE_BUNDLE_ID}" "Red Alert 2")
   endif()

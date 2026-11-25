@@ -1010,7 +1010,7 @@ Fixed on the way: YR's exit freed the menu drawers with the vector deleting dest
   (0x005A08D0), Create_Tiberium (0x005A23A0) and Generate_Rural_Roads (0x005A89D0) have the size of their RA2 twins and
   the same calls; Generate_Random_Map (0x00598960, 3,018 bytes against 3,086), Load_Settings (0x005981F0: RMGMD.INI)
   and the start points (0x00594B50: the zone regions inline, the scenario's start points copied at the end, FUN_0058B820)
-  were written from gamemd.exe's code where they differ. The text is the rebuild tree's mapgen.cpp (rebuild-trial) and
+  were written from gamemd.exe's code where they differ. The text is the rebuild tree's mapgen.cpp and
   main's src/recovered/mapgen.cpp (Split_Region: main's behaviour-checked draft, with gamemd.exe's "no new height 0 on
   the inland and mountainous maps"), under the YR tree's names. Also: MapClass::Pick_Random_Tile_Variant (0x0057B440,
   map_native.inc: main's exact RA2 text; gamemd.exe's shore tables 0x0082A7F4 / 0x0082A89C read at run time),
@@ -1759,7 +1759,7 @@ is 37 pixels wide, not 38, and "???" fills its room exactly.
 
 ## Lane P18 (2026-11-24): three faults from the user's Duo run of Allied 1
 
-Reproduced on the Mac from New Campaign (Allied), with logs; all three are in the old played port's text too.
+Reproduced on the Mac from New Campaign (Allied), with logs; all three are in the old port's text too.
 
 * **The IFV kept its missile turret when the opening's engineer boarded it.** The map's Load_Engineer trigger
   makes TEAM_Start_Engineer (an ENGINEER and an FV, script "load onto transport"); the engineer's IFVMode is 1, the

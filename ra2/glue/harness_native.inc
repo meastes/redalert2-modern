@@ -4,7 +4,7 @@
 // (native/rb/fixups.json "append"); called each loop frame from the Main_Loop seam
 // (mainloop_native.inc). Test scaffolding, NOT original code; never part of an exact build.
 //
-// The order harness of the rebuild trial, a small subset of the YR port's (native/yr/glue/yr_harness.cpp)
+// The order harness of this port, a small subset of the YR port's (native/yr/glue/yr_harness.cpp)
 // and main's (native/link/harness_orders.cpp) under the rebuild's names, for the combat check:
 // RA2_NATIVE_ORDERS="<frame> <order>; ..." (loop frames counted by the seam from the first game frame):
 //   spawn <ID> [enemy] [<dx> <dy>]  one of type ID for the player (or the strongest enemy house), at the
