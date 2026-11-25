@@ -872,7 +872,12 @@ def vip_kill(g, team, vid, targets, guard=6, step=30, timeout=1500, avoid=('CTEC
                 t=min(en,key=lambda o:(o.type!='DOG',dist(o,v)))
                 if cur!=t.id: g.team(team); g.attack(t); cur=t.id
             elif cur!=tid:
-                g.team(team); g.attack(byid[tid]); cur=tid
+                g.team(team)
+                if byid[tid].type.startswith('CAMISC'):     # barrels: force fire
+                    g.force_fire(byid[tid])
+                else:
+                    g.attack(byid[tid])
+                cur=tid
             g.adv(step)
         print('vip target',tid,'gone' if tid not in {o.id for o in g.objects('all')} else 'left',g.tick,flush=True)
     return True
