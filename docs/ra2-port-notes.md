@@ -874,3 +874,23 @@ rebuild's row (and `asinf` the same way). Values in range convert as before. The
 a swap said "printed to the terminal": that engine never opened the log, so its own `log_path` was empty; it now
 names the log the first engine opened (`app::adopt_log`). Input scripts take `@unit=<ID>` (the player's first techno
 of that type on the view) for the click.
+
+## Campaign missions played to wins (lane P22, 2026-11-25, same PIN)
+
+Lane P21's step server (ra2/glue/stepserver_native.inc) driven by commander helpers (ra2/tools/ra2_commander.py: clicks
+as raw pointer events, selection by clicks with Shift, Ctrl+<n> teams, attack, attack move through the command bar,
+production and placement), each phase a short script; plans from each mission's own map file read at run time
+(ra2/tools/ra2_mapinfo.py) and text walkthroughs. Each win is a replay (ra2/tests/campaign/<mission>.replay, inputs and
+ticks only), rerun to the same winning tick before its ctest row (ra2-native-campaign-won-<mission>, label
+ra2-campaign-won) was added. A mission is shelved at 3 lane-hours of wall time from its first step.
+
+| Mission | Result | Lane-hours | Notes |
+| --- | --- | --- | --- |
+| Allied 2 (ALL02S, Eagle Dawn) | won at tick 30,335 | 0.5 | Tanya through the pond onto both flak cannons, engineers' drop takes the Academy, rocketeers on the reactors |
+
+Helper findings (the scripted-input path, not the game): a click's selection shows two or three frames after the button
+is released (the game's mouse is read once a frame), so a click is followed by ten frames before the next one; a look
+must be followed by a drawn frame before a click on an object (objects register where they were last drawn); with an
+infantry selected, a left click on another controlled (allied house) infantry is a move, so a selection starts with a
+right click; Escape opens the in-game options menu, whose modal loop runs no Main_Loop frame, so the step server stops
+answering (the run had to be restarted from its recording; the helpers never press Escape).

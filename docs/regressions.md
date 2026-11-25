@@ -161,6 +161,9 @@ final check.
 | --- | --- | --- |
 | Allied 1 (ALL01T): Tanya's C4 on the four Dreadnoughts, the fort taken, a barracks, an engineer into the bridge hut, the three bonus Grizzlies through the Soviet base | won at tick 11,007 (about 12 minutes of game time), 50 inputs | ra2-native-campaign-won-all01 (about a minute) |
 | Soviet 4 (SOV04S): base built and placed through the sidebar, flak, subs against the fleet, Rhinos massed, the Korean base's construction yard first | won at tick 47,420, about 760 inputs (most of them placement attempts) | ra2-native-campaign-won-sov04 |
+| Allied 2 (ALL02S, lane P22): Tanya on the flak cannons, the Academy taken, rocketeers and Grizzlies through the Soviet base | won at tick 30,335 | ra2-native-campaign-won-all02 |
+
+Lane P22's missions, wins and shelved ones, with lane-hours: docs/ra2-port-notes.md, "Campaign missions played to wins".
 
 No crash, hang, trap or assertion in either mission or their replays. What the pilot found, all in the scripted-input
 path rather than the game (fixed for the step server's runs, RA2_NATIVE_SCRIPT_ONLY=1; the older --input-script tests keep
