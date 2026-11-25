@@ -198,6 +198,18 @@ int Yr_Sidebar_Bottom(int view_bottom)
     return bottom;
 }
 
+// The countdowns' corner (Tactical::DrawTimer 0x006D4B50, native fixup; lane P18): the original puts
+// them at the view's bottom right (its width and height, asked in *width and *height). While the view
+// is zoomed it is the part shown rounded up to whole cells and the host shows only the part shown, so
+// the corner answered is the part shown's (show_ox + show_w, show_oy + show_h); else unchanged.
+void Yr_Timer_Corner(int *width, int *height)
+{
+    if (!zoomed) return;
+    int right = (int)(show_ox + show_w), bottom = (int)(show_oy + show_h);
+    if (right < *width) *width = right;
+    if (bottom < *height) *height = bottom;
+}
+
 // CCToolTip's placement (native fixup, after a tip is placed): a tip placed for the map side (its area
 // the view) that does not lie in the view (a command bar button's) is in screen pixels: moved into the
 // view at the same place on screen (divided by the zoom), kept inside it.

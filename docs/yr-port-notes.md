@@ -1757,6 +1757,37 @@ where the original's sit outside it; the closed dropdowns are 20 rows high where
 port's dialog units truncate (x * 6 / 4) where Windows rounds each of x, y, cx, cy (MulDiv), so the Start field
 is 37 pixels wide, not 38, and "???" fills its room exactly.
 
+## Lane P18 (2026-11-24): three faults from the user's Duo run of Allied 1
+
+Reproduced on the Mac from New Campaign (Allied), with logs; all three are in the old played port's text too.
+
+* **The IFV kept its missile turret when the opening's engineer boarded it.** The map's Load_Engineer trigger
+  makes TEAM_Start_Engineer (an ENGINEER and an FV, script "load onto transport"); the engineer's IFVMode is 1, the
+  repair turret. InfantryClass::Per_Cell_Process is a TibSun-text draft (lane Y4) whose boarding put the soldier into
+  the transport's Cargo directly. gamemd.exe 0x0051A3FC-0x0051A47E boards through the transport's AddPassenger
+  (vtable +0x394; FootClass::AddPassenger -> UnitClass::ReceiveGunner -> IFVMode) after dropping the archive target,
+  the weapon stage and any mind control, the open-topped call and `Transporter`, as UnitClass::Per_Cell_Process's
+  matched text does: now the same steps (glue/infantry_native.inc). Harness: `weapon <ID>` logs a techno's weapon,
+  turret and passengers, `enter <ID> <TARGET> own` boards the player's own transport. In Allied 1 the FV goes from
+  w0 t0 to w1 t2 with its engineer; ctest yr-native-standins' new gunner case (an engineer into the player's IFV).
+* **The radar's movie played under "Incoming transmission", and was over by the time the radar opened.** Two
+  faults. Call_Back 0x0048D080 polls IngameVQ[0] through its vtable's third slot (gamemd.exe `call [edx+8]`:
+  MovieHandle::Waiting, which only asks BinkWait); the tree calls a placeholder `V2`, and with a virtual destructor
+  in two slots (Itanium ABI: Mac, iPhone, MinGW) that slot is AdvanceFrame, so every frame decoded the movie from
+  the moment the trigger queued it (fixups.json conquer.cpp rows: the call through MovieHandle). Then port/src/bink.cpp
+  timed frames from BinkOpen, so once the radar asked for frames, the decode loop ran through every overdue frame in
+  one call; the clock now starts at the first decoded frame (Red Alert 2's radar movies share this code). Log of
+  the fixed run: the trigger at frame 390, EVA_IncomingTransmission 391-462, the radar opens, the movie's 45 frames
+  505-595 at 15 per second, then the mission's A01_p01 line at 615 (before: frames 1-55 decoded from frame 390 with
+  the transmission, and none left at 505).
+* **No Psychic Dominator countdown.** One is expected: the map's Confederation owns the Dominator (YAPPET) and its
+  Set_PsyDom_Time trigger sets it to 90% one second in (SetSWChargeLevel, superweapon 7 = PsychicDominatorSpecial,
+  ShowTimer=yes), so 01:00 shows (the Mac draws it). With Pinch zoom on (the iPhone's default, render scale 2)
+  Tactical::DrawTimer put the countdowns at the view's corner, and while zoomed the view is the part shown rounded up
+  to whole cells, which the host does not show (window dump: "Psychic Dominator" with its time cut off at the right).
+  Yr_Timer_Corner (glue/yr_map_zoom.cpp) answers the shown part's corner while zoomed. Red Alert 2's zoom draws its
+  timers the same way (not checked here).
+
 ## Next
 
 0. The Windows builds on a real PC (RA2YRNative.exe with its two DLLs and SDL3.dll is on the user's PC, lane P1;

@@ -11,7 +11,13 @@
 // LastFrameNum, FrameRate, FrameRateDiv); frames advance with
 // BinkNextFrame/BinkGoto, and BinkWait answers from a clock at the header's
 // rate (frame n is due (n - 1) * FrameRateDiv / FrameRate seconds after the
-// start; BinkPause stops it).
+// start; BinkPause stops it). The clock starts when the first frame is decoded,
+// not at BinkOpen: the radar's in-game movies are opened when a trigger queues
+// them and decoded only once the radar has played EVA_IncomingTransmission and
+// opened (RadarClass::Play_Movie 0x006579E0), seconds later; timed from the
+// open, the decode loop (BinkHandle 0x00432E40: `do { BinkDoFrame ... }
+// while (BinkWait() == 0)`) ran through every overdue frame in one call and the
+// movie was over at once (lane P18).
 //
 // Container: a 44-byte header ('BIK' + revision, size - 8, frames, largest
 // frame, -, width, height, rate, rate divisor, video flags, audio tracks), per
@@ -306,6 +312,7 @@ struct NativeBink {
     unsigned reserved[16];   // the SDK handle is larger; nothing reads past +0x1C
     bool held;               // native (RA2_NATIVE_MOVIE_SKIP): the next frame is not due until BinkWait was asked once more
     double start;            // native: clock time of frame 1 (seconds)
+    bool clock_started;      // native: start is set (the first BinkDoFrame or a BinkGoto); before it, frame 1 is due
     double paused_at;        // native: clock time BinkPause stopped it (0 while running)
     // native: the movie
     std::vector<unsigned char> *file;
@@ -539,7 +546,6 @@ void *BinkOpen(const char *name, DWORD flags)
     if (bink->FrameRateDiv == 0) bink->FrameRateDiv = 1;
     if (bink->FrameRate < bink->FrameRateDiv) bink->FrameRate = bink->FrameRateDiv;
     bink->FrameNum = 1;
-    bink->start = now();
     bink->file = data;
     bink->tracks = le32(header + 40);
     std::vector<unsigned char> &f = *data;
@@ -623,6 +629,10 @@ int BinkDoFrame(void *handle)
 {
     NativeBink *bink = (NativeBink *)handle;
     if (bink && bink->full_movie) full_movie_polled = now();
+    if (bink && !bink->clock_started) {
+        bink->start = now() - frame_time(bink, bink->FrameNum);
+        bink->clock_started = true;
+    }
     if (bink && (bink->stream || bink->wav)) decode_sound(bink, bink->FrameNum);
     if (bink && bink->video) decode_video(bink, bink->FrameNum);
     return 0;
@@ -635,6 +645,7 @@ int BinkGoto(void *handle, unsigned frame, int)
         bink->LastFrameNum = bink->FrameNum;
         bink->FrameNum = frame ? frame : 1;
         bink->start = now() - frame_time(bink, bink->FrameNum);
+        bink->clock_started = true;
         if (bink->paused_at) bink->paused_at = now();
     }
     return 0;
@@ -688,6 +699,7 @@ int BinkWait(void *handle)
         return 0;
     }
     if (bink->paused_at) return 1;
+    if (!bink->clock_started) return 0;
     return now() - bink->start < frame_time(bink, bink->FrameNum) ? 1 : 0;
 }
 

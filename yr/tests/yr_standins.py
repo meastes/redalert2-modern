@@ -17,10 +17,14 @@ Player, Skirmish, Start Game; The Alamo against one easy opponent, as yr-native-
               (`thief`: IsThief and IsVehicleThief) and sent, as a thief's click sends it, at an enemy truck
               (TRUCKA, unarmed and not deployable) spawned 3 cells from the thief, away from the enemy's guns: the truck becomes the
               player's and the thief has gone into it (InfantryClass::Theft_AI / Per_Cell_Process; TechnoClass::GotHijacked is gamemd.exe's empty
-              slot).
+              slot);
+  gunner      (lane P18) an Engineer is sent into the player's IFV (FV, Gunner=yes), as a click on it sends it: the IFV
+              takes the engineer's IFVMode (1, the repair turret) as its weapon and turret (InfantryClass::Per_Cell_Process
+              boards through AddPassenger -> UnitClass::ReceiveGunner; the user's report from Allied 1's opening, where
+              the IFV kept its missile turret).
 
 Checks: each order found its units; waves in flight; the targets were destroyed; both superweapons placed; the
-truck hijacked; no link-closure trap or fault for the whole run. Skipped (77) without
+truck hijacked; the IFV on its engineer's weapon; no link-closure trap or fault for the whole run. Skipped (77) without
 the installed game (gamemd.exe in --data-dir).
 
   yr_standins.py --binary <yr-native> --data-dir <game folder> --work <dir> [--seconds 220]
@@ -52,7 +56,9 @@ ORDERS = ['60 spawn TELE', '61 spawn SREF', '62 spawn MGTK', '63 spawn HTNK enem
           '300 owner SPY', '320 super PsychicDominator enemy', '500 super LightningStorm enemy',
           '700 owner SPY', '900 owner HTNK',
           '950 spawn CIV1 3 3', '950 thief CIV1', '951 spawn TRUCKA enemy near CIV1 3 0', '952 owner TRUCKA',
-          '953 enter CIV1 TRUCKA hijack', '1250 owner TRUCKA', '1250 owner CIV1']
+          '953 enter CIV1 TRUCKA hijack',
+          '1000 spawn FV 0 5', '1001 spawn ENGINEER near FV 2 0', '1002 weapon FV', '1003 enter ENGINEER FV own',
+          '1250 owner TRUCKA', '1250 owner CIV1', '1250 weapon FV']  # in frame order: the harness takes them in turn
 BAD = re.compile(r'unrecovered|SIG(SEGV|BUS|ILL|ABRT|FPE)|crash:', re.I)
 
 
@@ -125,6 +131,16 @@ def main():
         failures.append('the enemy truck was not spawned')
     elif not any(x[3] == truck_before[0][3] and x[1] == 'p' for x in truck_after):
         failures.append('the thief did not take the truck')
+    def weapons(frame):
+        block = text.split('harness-order %d weapon FV' % frame)[0].rsplit('harness-order', 1)[-1]
+        return re.findall(r'^harness-weapon FV w(-?\d+) t(-?\d+) cargo (\d+) &(\S+)', block, re.M)
+    ifv_before, ifv_after = weapons(1002), weapons(1250)
+    print('standins gunner: IFV (weapon, turret, cargo) %s at frame 1002, %s at frame 1250'
+          % ([x[:3] for x in ifv_before] or 'none', [x[:3] for x in ifv_after] or 'none'))
+    if not re.search(r'^harness-enter ENGINEER ', text, re.M):
+        failures.append('no IFV or engineer, or no boarding order')
+    elif not any(x[2] == '1' and x[0] == '1' for x in ifv_after):
+        failures.append('the IFV with its engineer is not on weapon 1 (the engineer\'s IFVMode): %s' % (ifv_after or 'none'))
     for name in ('PsychicDominator', 'LightningStorm'):
         if not re.search(r'^harness-super %s\S* @' % name, text, re.M):
             failures.append('%s not placed' % name)
