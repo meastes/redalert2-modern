@@ -167,6 +167,7 @@ final check.
 | Allied 3 (ALL03U, lanes P22 and P23): GIs in the bridge houses, Grizzlies massed at home, walked round the Soviet base in short legs, the beacon force-fired by its cell | won at tick 39,041 | ra2-native-campaign-won-all03 |
 | Allied 4 (ALL04U, lane P23): rocketeers on the grand cannons, the MCV landed and guarded, ten destroyers up the river, the amplifier force-fired | won at tick 32,994 | ra2-native-campaign-won-all04 |
 | Allied 5 (ALL05S, lane P23): Tanya and spies, coils by barrels and C4 during spy power outages, the battle lab spied, both silos C4'd | won at tick 22,647 | ra2-native-campaign-won-all05 |
+| Allied 8 (ALL08U, lane P24): Tanya and the GIs along the elevated highway, the compound's barrels, Tanya's C4 on its reactors and the beacon, a base by the arch, prism tanks by short sieges | won at tick 106,268 | ra2-native-campaign-won-all08 |
 
 Parked by lane P22 for a retry (no crash, hang or assertion in any): Soviet 2, Soviet 5 (Allied 3 won by lane P23). Deferred by lane P23, no port fault: Allied 6, Allied 7, Soviet 7 (docs/ra2-port-notes.md, lane P23). Lane P22's missions, wins and shelved ones, with lane-hours: docs/ra2-port-notes.md, "Campaign missions played to wins".
 

@@ -927,3 +927,13 @@ houses' buildings in reach by force fire, units first, prefer= types first). Fin
 click on an enemy building the player cannot see (outside every unit's sight, though mapped) is taken as a move, as in
 the original (Allied 3's Psychic Beacon, Allied 5's coils: the units walk up to it); the force fire on one of its cells
 attacks it, and once a unit sees it the click attacks (Tanya's C4).
+
+## Campaign missions played to wins (lane P24, 2026-11-25, same PIN)
+
+Lane P23's sweep continued with the same tools and rules (one replay per win in ra2/tests/campaign/, rerun to the same
+winning tick before its ctest row; a mission is shelved at 3 lane-hours of wall time from its first step), the
+not-started missions first.
+
+| Mission | Result | Lane-hours | Notes |
+| --- | --- | --- | --- |
+| Allied 8 (ALL08U, Free Gateway) | won at tick 106,268 | 1.2 | win: every BadGuy1 and BadGuy2 building and unit gone, the beacon within 20 minutes (timer 18,000 frames). Tanya, the GIs and the engineers move to houses with PlayerControl=yes (TanyaLand, GILand, EngineerLand) a few frames after the input opens, and back to the player once the beacon falls (then "player KIA" loses the mission if Tanya dies: P, select all combatants, sent her into the base once). The road south runs past BadGuy1's base; the way is the eastern ramp (86-88,38) onto the elevated highway (x=83), south to its ramp at (83,100) and west along row 104. Dogs kill Tanya in one bite and she shoots only when not walking, so every check shoots dogs within six cells first (vip_kill). The eastern barrel (55,91) chain takes the barracks, a coil, the gate and two reactors; C4 on the two northern reactors puts the compound on low power and the coils go dead, but killing a coil restores the power (Tanya died to the next coil), so the southern reactors came first. Grouping a unit into a second Ctrl group takes it out of the first. The MCV deploys only on a spot with no occupant (the park by the arch is full of trees and lamps: free_spots). A builder stuck on an unplaceable refinery waited 48,000 ticks; power plants were lost to a raid while the army was out; 18 prism tanks then took the base in eight short sieges without a loss of more than six |

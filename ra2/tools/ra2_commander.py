@@ -796,3 +796,119 @@ def siege(g, team, wp, houses, reach=8, types=('DEST',), step=90, ticks=4000, qu
     if not quiet:
         print('siege %s: tick %d, team %d' % (wp, g.tick, len([o for o in g.mine() if o.type in types])))
     return [o for o in g.mine() if o.type in types]
+
+
+# -- lane P24 helpers -------------------------------------------------------------------------------------------------
+def toward(a,b,n):
+    dx=b[0]-a[0]; dy=b[1]-a[1]; d=max(abs(dx),abs(dy))
+    if d<=n: return b
+    return (a[0]+dx*n//d, a[1]+dy*n//d)
+def escort(g, legs, houses, teams, radius=5, leg=3, step=40, prio=('DOG',), timeout=4000, skip=('CTECH',), vip='TANY'):
+    """teams: list of (team number, types). Short legs; every check each team fires at the nearest threat (prio types
+    first) to its own centre; the whole party stops while any threat is in radius."""
+    end=g.tick+timeout
+    for wp in legs:
+        while g.tick<end:
+            objs=g.objects('all')
+            party=[o for o in objs if (o.own or o.house in houses) and o.kind!='bld']
+            if not any(o.type==vip for o in party) and vip: return False
+            en=[o for o in objs if not o.own and not o.ally and o.s>0 and o.kind!='bld' and o.type not in skip and o.seen
+                and not o.house.startswith(('Civ','Neutral','Special'))]
+            fired=False
+            for tm in teams:
+                tn,types=tm[0],tm[1]
+                if len(tm)>2 and tm[2]=='nofire': continue
+                mem=[o for o in party if o.type in types]
+                if not mem: continue
+                cx=sorted(o.x for o in mem)[len(mem)//2]; cy=sorted(o.y for o in mem)[len(mem)//2]
+                near=[o for o in en if dist(o,(cx,cy))<=radius]
+                if near:
+                    t=min(near,key=lambda o:(o.type not in prio, dist(o,(cx,cy))))
+                    g.team(tn); g.attack(t); fired=True
+                    if getattr(g,"dbg",0): print(g.tick,"fire",tn,t,t.house,flush=True)
+            if not fired:
+                mem=[o for o in party if o.type in teams[0][1]]
+                cx=sorted(o.x for o in mem)[len(mem)//2]; cy=sorted(o.y for o in mem)[len(mem)//2]
+                if dist((cx,cy),wp)<=2: break
+                nxt=toward((cx,cy),wp,leg)
+                for tm in teams:
+                    g.team(tm[0]); g.move(nxt)
+            g.adv(step)
+        print('escort',wp,g.tick,' '.join(repr(o) for o in g.objects('all') if (o.own or o.house in houses) and o.kind!='bld'),flush=True)
+    return True
+def cellgrid(g, cx, cy, r):
+    """{(x,y): token} from the step server's cell listing."""
+    out={}
+    for line in g.cmd('cell %d %d %d'%(cx,cy,r)):
+        m=re.match(r'^row (-?\d+): (.*)$',line)
+        if not m: continue
+        y=int(m.group(1)); toks=m.group(2).split()
+        for i,t in enumerate(toks): out[(cx-r+i,y)]=t
+    return out
+def free_spots(g, cx, cy, r, w=4, h=4, pad=1):
+    """Cells whose w x h block (plus pad) is clear flat land with no occupant (no 'o', no letters after the m)."""
+    gr=cellgrid(g,cx,cy,r)
+    def ok(t, h0):
+        return t is not None and t[0] in '.r' and t[1:2]==h0 and 'o' not in t[2:] and not any(ch.isupper() for ch in t[2:])
+    res=[]
+    for (x,y),t in gr.items():
+        h0=t[1:2]
+        if all(ok(gr.get((x+dx,y+dy)),h0) for dx in range(-pad-1,w-1+pad) for dy in range(-pad-1,h-1+pad)):
+            res.append((x,y))
+    res.sort(key=lambda p:max(abs(p[0]-cx),abs(p[1]-cy)))
+    return res
+def vip_kill(g, team, vid, targets, guard=6, step=30, timeout=1500, avoid=('CTECH','HARV','CIV1','CIV2','CIV3')):
+    """A fragile unit (Tanya) sent at each target in turn; every step it first shoots enemy infantry (dogs first)
+    within guard cells. Returns False if it dies."""
+    for tid in targets:
+        end=g.tick+timeout; cur=None
+        while g.tick<end:
+            objs=g.objects('all'); byid={o.id:o for o in objs}
+            v=byid.get(vid)
+            if not v: print('vip dead',g.tick); return False
+            if tid not in byid: break
+            en=[o for o in objs if not o.own and not o.ally and o.kind=='inf' and o.s>0 and dist(o,v)<=guard and o.type not in avoid]
+            if en:
+                t=min(en,key=lambda o:(o.type!='DOG',dist(o,v)))
+                if cur!=t.id: g.team(team); g.attack(t); cur=t.id
+            elif cur!=tid:
+                g.team(team); g.attack(byid[tid]); cur=tid
+            g.adv(step)
+        print('vip target',tid,'gone' if tid not in {o.id for o in g.objects('all')} else 'left',g.tick,flush=True)
+    return True
+SIZE={'GAPOWR':(2,2),'GAREFN':(4,3),'GAPILE':(2,2),'GAWEAP':(5,3),'GATECH':(2,3),'GAAIRC':(3,3),'GAPILL':(1,1),'ATESLA':(1,1),
+      'GAPRIS':(1,1),'GADEPT':(3,3),'GAYARD':(3,3),'NAPOWR':(2,2),'NAREFN':(4,3),'NAHAND':(2,2),'NAWEAP':(5,3),'NARADR':(2,2),
+      'NATECH':(2,3),'NALASR':(1,1),'TESLA':(1,1),'NAFLAK':(1,1),'NAYARD':(3,3),'NANRCT':(4,4),'GASPYS':(2,2),'NADEPT':(3,3),'GAOREP':(2,2),'NAINDP':(2,2)}
+def place_smart(g, name, near, reach=2, tries=10):
+    """A finished building placed on a clear spot near 'near' within reach cells of an own building."""
+    w,h=SIZE.get(name,(3,3))
+    own=[o for o in g.mine() if o.kind=='bld']
+    spots=[p for p in free_spots(g,near[0],near[1],9,w,h,pad=0) if any(dist(p,o)<=reach+max(w,h) for o in own)]
+    if not spots: print('place_smart: no spot for',name); return None
+    return g.place(name, spots[:tries])
+def build_smart(g, name, near, team=None, center=None, radius=12, timeout=4000, step=60, kind='building'):
+    st=g.state(); f=st['factory'].get(kind)
+    if not (f and f[0]==name):
+        if f: print('build_smart: factory busy with',f); return None
+        if not g.queue(name,1,st): print('build_smart: %s not on the sidebar'%name); return None
+    end=g.tick+timeout
+    while g.tick<end:
+        st=g.state(); f=st['factory'].get(kind)
+        if not f or f[1]>=100: break
+        if team: defend_step(g, center, radius, team, st['objs'])
+        g.adv(step)
+    o=place_smart(g,name,near)
+    print('build',name,o,g.tick,flush=True)
+    return o
+def build_def(g, name, near, step=60, timeout=3000, queued=False):
+    """A defence (its factory is not in the state listing): queued, waited for until the credits stop falling, placed."""
+    if not queued and not g.queue(name,1): print('build_def: not on sidebar',name); return None
+    end=g.tick+timeout; last=None; still=0
+    while g.tick<end:
+        g.adv(step); c=g.state()['credits']
+        still = still+1 if c==last else 0
+        last=c
+        if still>=2: break
+    o=place_smart(g,name,near)
+    print('build_def',name,o,g.tick,flush=True)
+    return o
