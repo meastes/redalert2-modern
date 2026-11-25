@@ -887,8 +887,9 @@ ra2-campaign-won) was added. A mission is shelved at 3 lane-hours of wall time f
 | Mission | Result | Lane-hours | Notes |
 | --- | --- | --- | --- |
 | Allied 2 (ALL02S, Eagle Dawn) | won at tick 30,335 | 0.5 | Tanya through the pond onto both flak cannons, engineers' drop takes the Academy, rocketeers on the reactors |
-| Allied 3 (ALL03U, Hail to the Chief) | deferred at 0.2 (resumed later) | 0.2 | the base built; Rhino raids and armed civilians took the power, refinery and barracks while the tanks idled; best point A3BASE1.SAV (tick 7,940, the base before the war factory) |
-| Soviet 1 (SOV01T, Red Dawn) | won at tick 49,448 | 1.1 | engineer repairs the bridge, about 70 conscripts by attack move through both Allied positions, the Pentagon's four parts |
+| Allied 3 (ALL03U, Hail to the Chief) | deferred (to be resumed) | 0.15 | the base built; Rhino raids and armed civilians took the power, refinery and barracks while the tanks idled; best point A3BASE1.SAV (tick 7,940, the base before the war factory) |
+| Soviet 2 (SOV02T, Hostile Shore) | shelved at tick 36,422 (lane P22 stopped early: its context budget, not the cap) | 0.2 | land phase won (the Allied base, Grizzlies, pillboxes and German refineries destroyed; best point S2MID.SAV at tick 24,561 in the first try), but raids killed the harvesters and, with the army away, a lone Grizzly razed the base; six destroyers remain and need a navy (no money left for a naval yard and submarines). Hard to script, no port fault. Resume from S2WEAP.SAV (tick 13,613) with a defence team at home (ra2_commander.war) and a naval yard before the push |
+| Soviet 1 (SOV01T, Red Dawn) | won at tick 49,448 | 0.2 | engineer repairs the bridge, about 70 conscripts by attack move through both Allied positions, the Pentagon's four parts |
 
 Helper findings (the scripted-input path, not the game): a click's selection shows two or three frames after the button
 is released (the game's mouse is read once a frame), so a click is followed by ten frames before the next one; a look

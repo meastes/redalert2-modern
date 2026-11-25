@@ -594,3 +594,70 @@ def band_select(g, objs, team=None):
     if team is not None:
         g.with_key('Left_Ctrl', g.key, str(team))
     return len(g.selected())
+
+
+SELL_BUTTON = '958 180'   # the sidebar's sell ($) button at the 1024x768 screen the runs use
+
+
+def sell(g, o, wait=200):
+    """A building sold through the sidebar's sell button; returns the credits after."""
+    g.look(o.x, o.y)
+    g.raw_click(SELL_BUTTON)
+    g.adv(5)
+    g.raw_click('@^%d' % o.id)
+    g.adv(wait)
+    g.raw_click('428 368', right=True)
+    return g.state()['credits']
+
+
+def war(g, houses, home, home_r, def_team, off_team, near=None, skip=(), ticks=20000, step=120, def_name=None,
+        def_kind='vehicle', def_want=0, off_name=None, off_kind='vehicle', log_every=10):
+    """Defence and offence interleaved: each round the defence team (def_team) is sent at the enemy unit nearest home
+    within home_r (and kept topped up to def_want units of def_name), and the offence team at the houses' object
+    nearest near (or home). Ends when the houses have nothing left (True) or after ticks (False)."""
+    end = g.tick + ticks
+    known = None
+    current = None
+    since = 0
+    banned = {}
+    r = 0
+    while g.tick < end:
+        st = g.state()
+        objs = st['objs']
+        mine = [o for o in objs if o.own]
+        if def_name:
+            have = [o for o in mine if o.type == def_name]
+            if known is None:
+                known = {o.id for o in have}
+            new = [o for o in have if o.id not in known]
+            if new:
+                g.select(new)
+                g.with_key('Left_Ctrl', g.key, str(def_team))
+                known |= {o.id for o in new}
+            if len(have) < def_want and def_kind not in st['factory'] and st.get('credits', 0) >= 300:
+                g.queue(def_name, 1, st)
+        en = [o for o in objs if not o.own and not o.ally and dist(o, home) <= home_r and o.kind != 'bld' and o.s > 0
+              and not o.house.startswith(('Civ', 'Neutral', 'Special'))]
+        if en:
+            g.team(def_team)
+            g.attack(min(en, key=lambda o: dist(o, home)))
+        targets = [o for o in objs if o.house in houses and o.type not in skip and o.s > 0]
+        if not targets:
+            print(g.tick, 'none left')
+            return True
+        ref = near or home
+        pool = [o for o in targets if banned.get(o.id, 0) < g.tick] or targets
+        tgt = min(pool, key=lambda o: dist(o, ref))
+        since = since + 1 if current == tgt.id else 0
+        if current != tgt.id or since % 5 == 4:     # the order renewed now and then (a team can drop it)
+            g.team(off_team)
+            g.attack(tgt)
+            current = tgt.id
+        if since >= 15:                             # out of reach for now: another target first
+            banned[tgt.id] = g.tick + 3000
+            since = 0
+        g.adv(step)
+        r += 1
+        if r % log_every == 0:
+            print(g.tick, 'left', len(targets), 'target', tgt, 'home threats', len(en))
+    return False
