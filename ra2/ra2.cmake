@@ -294,6 +294,16 @@ foreach(rb_save ALL02S.sav ALL03U.sav)
            --work "${CMAKE_CURRENT_BINARY_DIR}/tests/campaign-${rb_save}")
   set_tests_properties(rb-native-campaign-${rb_save} PROPERTIES SKIP_RETURN_CODE 77 RUN_SERIAL TRUE TIMEOUT 600 LABELS rb-campaign)
 endforeach()
+# Lane P16 (the user's Duo report 2026-11-24, Allied 1 lost "in the middle" with Tanya alive): the user's ALL01T.sav with Tanya
+# walked north. allied1: she sinks the four Dreadnoughts (Objective 1 Complete) and the mission is not lost; allied1idle: left
+# idle, the Dreadnoughts escape two minutes after the Statue movie and the map's own failure chain loses it, as in the
+# src-based port (label rb-campaign, about 2.5 minutes each).
+foreach(rb_route allied1 allied1idle)
+  add_test(NAME rb-native-${rb_route} COMMAND "${RB_PYTHON3}" -B "${RB_DIR}/tests/rb_routes.py" --route ${rb_route}
+           --binary $<TARGET_FILE:rb-native-trial> --data-dir "${RB_DATA_DIR}" --game-exe "${RB_GAME_EXE}"
+           --work "${CMAKE_CURRENT_BINARY_DIR}/tests/${rb_route}")
+  set_tests_properties(rb-native-${rb_route} PROPERTIES SKIP_RETURN_CODE 77 RUN_SERIAL TRUE TIMEOUT 600 LABELS rb-campaign)
+endforeach()
 # Lane P5: the resave route over the user's other four saves in the install folder (rb-native-resave is ALL01T);
 # label rb-resaves, not rb-quick (about 2.5 minutes each).
 foreach(rb_save ALL02S.sav ALL03U.sav SAVE397A.SAV SAVE4FBD.SAV)
