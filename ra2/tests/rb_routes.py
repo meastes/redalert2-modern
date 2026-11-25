@@ -264,6 +264,9 @@ def main():
     for k in ('RA2_NATIVE_ORDERS', 'RA2_NATIVE_TRAP_CONTINUE', 'RA2_NATIVE_SAVE_AT', 'RA2_NATIVE_SAVE_LEAVE', 'RA2_NATIVE_ENHANCEMENTS',
               'RA2_NATIVE_TEST_PORT_SAVE'):
         env.pop(k, None)
+    # Lane P14: the routes' menu clicks assume Zoom gestures off, every platform's default until lane P12 turned them on
+    # for iOS (the menus then run at render scale 2); the iOS rows failed at the main menu.
+    env['RA2_NATIVE_ENHANCEMENTS'] = 'zoomgestures=off'
     common = [a.binary, '--data-dir', a.data_dir, '--write-dir=' + write, '--game-args=' + game_args]
     bad = []
     if a.route in ('save', 'resave', 'combatsave'):

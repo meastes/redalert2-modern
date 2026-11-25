@@ -9,7 +9,7 @@ in the game layer. Lane P14 (2026-11-24) wrote this from the code and from the d
 house's money and the random generator every 50 game frames.
 
 Measured by the gate (details in "The gate" at the end): 18 of 24 campaign missions identical for 6,000 frames,
-5 of 6 skirmish set-ups, the order scripts, all five of the user's own saves and the save crossings. The 6 missions
+5 of 6 skirmish set-ups, the order scripts, all five of the user's own saves and 5 of 6 save crossings. The 6 missions
 that part were traced to code that is exact in this port and only a draft in the played port: there this port is
 the one that follows the original game.
 
@@ -91,7 +91,13 @@ the one that follows the original game.
   layouts (`ra2/tools/rb_original_layouts.py`). Fixes carried for 64-bit pointers: LayerClass::Save's 4-byte
   count against Load's pointer, LZO's dictionary, the swizzle ids, `LocomotionClass::Load`'s typed read,
   `ObjectClass::Load`'s swizzle of a 4-byte field (fixups rows 129-157). `Put_All` is a rebuild draft.
-- A save loaded in one port continues the same game in the other (see the gate's save rows).
+- A save loaded in one port continues the same game in the other: the user's five saves, and saves made by either
+  port in Allied 2 and Soviet 3, give the same game for 8,000 to 12,000 frames after the load. **Open:** a skirmish
+  save made by the played port (loop frame 900), loaded by both, is the same through frame 9,650, but at 9,664 the
+  played port declares the human player defeated and this port does not (11 of the player's units still on the map at
+  9,700). With a save made by this port both declare it at 9,664, so this port reads some field of the played port's
+  save differently, outside the digest (the house's counts and flags, which decide a defeat). Look for it if a
+  skirmish loaded from an old save does not end when it should.
 
 ### Multiplayer (LAN)
 

@@ -806,7 +806,7 @@ side under lldb; `build/p14/lldb/rngtrace.py` (every Random2Class call of a fram
 | Skirmish, six set-ups (maps 0, 3, 7, 10, 14, 20; 1 to 4 computer players, nine houses) | 5 identical for 6,000 frames; map 14 (four computers) parts at frame 4,521: an AI engineer's walking step on a slope, `WalkLocomotionClass::Movement_AI`, a draft in both ports (open) |
 | Orders | Allied 1 and Soviet 1 played by clicks (select, band box, move, Ctrl, D key) plus harness hunt, deploy and train: identical for 4,000 frames. A skirmish with harness orders only (MCV deploy, two GIs trained, hunts, two nuclear missiles at the player's base through `super 0 home`): identical for 5,000 frames. Skirmish click scripts (sidebar build and place): **not repeatable in either port** (the input script counts loop frames; a port's second run differs from its first in the frame the placement lands), so they prove nothing either way and are not a ctest row |
 | The user's five saves (ALL01T, ALL02S, ALL03U, SAVE397A, SAVE4FBD) | all identical in both ports for about 11,000 frames after the load |
-| Save crossings (src save loaded by both, rebuild save loaded by both; skirmish, Allied 2, Soviet 3) | 6 of 6 identical for 8,000 to 9,900 frames after the load |
+| Save crossings (src save loaded by both, rebuild save loaded by both; skirmish, Allied 2, Soviet 3) | 5 of 6 identical for 8,000 to 9,900 frames after the load; the src-made skirmish save: identical through 9,650, then the src port declares the player defeated at 9,664 and this port does not (the rebuild-made save: both at 9,664). Open: a field of the src port's save read differently, outside the digest |
 
 The six missions that part, and why (`docs/differences.md`): the played port's `TechnoClass::Evaluate_Object` is a
 non-exact draft (0x006C5570, 91.7%) and turns down targets the original accepts; this port runs the rebuild's exact
@@ -825,3 +825,10 @@ loaded; now pointer words, `rb_original_data.py`), found by main's `menu_movie.p
 
 The user's own bugs against this port: `docs/regressions.md`. What is not the same code, by game area:
 `docs/differences.md`.
+
+**Checks at the lane's head** (worktree build, `ctest -E '^(rb-gate|rb-identity)'`, RB_IOS_UDID set): 64 rows. Mac 53: all
+pass (rb-main-hd-vehicles-3x, the known timing check, on its rerun). iOS Simulator 11: the first run failed 5 at the main
+menu: since lane P12 iOS starts with Zoom gestures on, the menus run at render scale 2 and the routes' and main tests'
+menu clicks missed; `rb_routes.py` and `rb_skirmish_wrap.py` now set `zoomgestures=off` unless a test asks for it. Then
+all 11 pass (3 of them on a rerun after the app ended at start-up once). The rb-gate rows run so far pass (skirmish m10,
+m20, orders-allied1, load-user-saves). Windows (Wine): pending lane P13's targets.
