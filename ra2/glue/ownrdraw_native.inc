@@ -7,13 +7,20 @@
 // while text can be typed: a Win32 edit control has the focus (port/src/user32.cpp), or Westwood's "NewEdit" control
 // (New_Edit_Proc, RA2 0x005F22A0: the skirmish and lobby player-name fields), asked here by its window class.
 // ---------------------------------------------------------------------------------------------
+// Lane P13: the rebuild's player-name fields are the dialog's Edit hidden and replaced by a ListBox whose GWL_USERDATA
+// holds {"NewEdit", style} (Subclass's Edit branch, fixups.json's pointer-sized row; as Yuri's Revenge's, yr_app_hooks.cpp),
+// so the focus is also such a list box (one-game-ios-sim-menus: "the player name field did not raise the keyboard").
+extern "C" intptr_t ra2port_get_window_ptr(const volatile void *window, int index);   // port/src/user32.cpp
 extern "C" int ra2_native_new_edit_focused(void)
 {
 	HWND focus = GetFocus();
 	if (!focus || !IsWindowVisible(focus)) return 0;
 	char name[32];
 	if (!GetClassNameA(focus, name, sizeof(name))) return 0;
-	return strcmp(name, "NewEdit") == 0;
+	if (strcmp(name, "NewEdit") == 0) return 1;
+	if (strcmp(name, "ListBox") != 0) return 0;
+	intptr_t const *link = (intptr_t const *)ra2port_get_window_ptr(focus, -21);   // GWL_USERDATA
+	return link && link[0] && strcmp((char const *)link[0], "NewEdit") == 0;
 }
 
 // ---------------------------------------------------------------------------------------------

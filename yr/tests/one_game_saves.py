@@ -78,6 +78,11 @@ def run(a, name, game, scripts, args, env_extra, seconds):
     return text, left
 
 
+# Records written as they are because their layout is the same in the original and natively (lane P13): the rebuild's
+# Static_Sounds_Save record (voc.cpp: four ints, 16 bytes; the RA2 checks in ra2/tests/rb_routes.py flag only loads).
+RAW_SAME = re.compile(r'original-save: write: no layout for \(unnamed ?at ?\S*voc\.cpp:\d+:\d+\) \(16 bytes\)')
+
+
 def problems(text, left, name):
     out = []
     lines = text.splitlines()
@@ -87,7 +92,7 @@ def problems(text, left, name):
         out.append('%s: a trap or fault: %s %s' % (name, traps, stops))
     for pat, what in ((r'^swizzle: ', 'swizzle failures'), (r'original-save: (write: )?no layout for', 'types without a field map'),
                       (r'original-save: write: no original vtable', 'vtables not found')):
-        hits = [l for l in lines if re.search(pat, l)]
+        hits = [l for l in lines if re.search(pat, l) and not RAW_SAME.search(l)]
         if hits:
             out.append('%s: %s: %s' % (name, what, hits[:3]))
     if left:

@@ -338,7 +338,7 @@ void ra2port_progress(const char *milestone, const char *detail) { ra2port::prog
 
 // --skirmish=<map> [--skirmish-frames=N] (platform/sdl/main.cpp): the test
 // harness that starts a skirmish without the menu dialogs.
-namespace { const char *skirmish_map = nullptr; int skirmish_frames = 1; }
+namespace { const char *skirmish_map = nullptr; int skirmish_frames = 0; }   // 0: not given (ra2port_skirmish_frames)
 void ra2port_set_skirmish(const char *map, int frames)
 {
     skirmish_map = map;
@@ -352,7 +352,14 @@ void ra2port_set_skirmish_order(const char *order) { skirmish_order = order; }
 // Also for a game started from the menus (Scout1121: the hunt order of the
 // menu-to-score loop).
 const char *ra2port_skirmish_order(void) { return skirmish_order; }
-int ra2port_skirmish_frames(void) { return skirmish_frames; }
+// The frame count the harness reports milestone `frames` at (and writes its last harness-view/state lines). Not given
+// (--skirmish-frames, --frames): 1 in a test run (--run-to, as before), else never, so normal play writes no harness
+// lines and no `frames` milestone every frame to the log (lane P13).
+int ra2port_skirmish_frames(void)
+{
+    if (skirmish_frames) return skirmish_frames;
+    return ra2port::state().active ? 1 : 0x7FFFFFFF;
+}
 // Scripted input points (platform/sdl/host.cpp): the skirmish harness
 // registers the resolver of "@ID[:n][+dx,dy]" (link/harness_input.cpp).
 namespace { int (*point_resolver)(const char *, int *, int *) = nullptr; }
