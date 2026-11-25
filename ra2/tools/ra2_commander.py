@@ -258,6 +258,11 @@ class Game:
     def force_fire(self, target):
         self.with_key('Left_Ctrl', self.click_obj, target)
 
+    def force_cell(self, cell):
+        """Force fire (Ctrl with a left click) at a cell: a big building whose own click is taken as a move (Allied 3's
+        Psychic Beacon) is attacked through one of its cells (lane P23)."""
+        self.with_key('Left_Ctrl', self.click_cell, cell)
+
     def attack_move(self, cell):
         """An attack move (the game's Can_Force_Order: the force-attack and select keys held, Ctrl+Shift, with a left
         click on the ground). The command bar's AttackMove button is not on the bar in every state."""
@@ -661,3 +666,49 @@ def war(g, houses, home, home_r, def_team, off_team, near=None, skip=(), ticks=2
         if r % log_every == 0:
             print(g.tick, 'left', len(targets), 'target', tgt, 'home threats', len(en))
     return False
+
+
+DEFENCES = ('NALASR', 'NATSLA', 'NAFLAK', 'GAPILL', 'ATESLA', 'GAPRIS', 'NABNKR', 'GTGCAN', 'NAPSIS')
+
+
+def fight_along(g, team, waypoints, radius=8, step=60, ticks_per_leg=3000, ground_defences=('NALASR', 'NATSLA',
+                'GAPILL', 'ATESLA', 'GAPRIS', 'GTGCAN'), types=None, quiet=False):
+    """Team <n> walked along waypoints in short legs (lane P23): at each check the team's living members are counted
+    (types: the unit types that make up the team), and the enemy unit or ground defence nearest the team's centre
+    within radius is focus-fired; when none is near, the team is moved on to the leg's waypoint. A leg ends once most
+    of the team stands within three cells of its waypoint with no threat near. Returns the team's members left."""
+    types = types or ('MTNK',)
+    ids = None
+    for wp in waypoints:
+        end = g.tick + ticks_per_leg
+        moving = False
+        while g.tick < end:
+            objs = g.objects('all')
+            mem = [o for o in objs if o.own and o.type in types and o.kind != 'bld']
+            if ids is None:
+                ids = {o.id for o in mem}
+            mem = [o for o in mem if o.id in ids]
+            if not mem:
+                return []
+            cx = sorted(o.x for o in mem)[len(mem) // 2]
+            cy = sorted(o.y for o in mem)[len(mem) // 2]
+            en = [o for o in objs if not o.own and not o.ally and o.s > 0 and dist(o, (cx, cy)) <= radius
+                  and not o.house.startswith(('Civ', 'Neutral', 'Special'))
+                  and (o.kind != 'bld' or o.type in ground_defences) and o.type not in ('HARV', 'CMIN')]
+            if en:
+                tgt = min(en, key=lambda o: (o.kind == 'bld', dist(o, (cx, cy))))
+                g.team(team)
+                g.attack(tgt)
+                moving = False
+            else:
+                near = [o for o in mem if dist(o, wp) <= 3]
+                if len(near) * 3 >= len(mem) * 2:
+                    break
+                if not moving:
+                    g.team(team)
+                    g.move(wp)
+                    moving = True
+            g.adv(step)
+        if not quiet:
+            print('fight_along %s: tick %d, team %d' % (wp, g.tick, len(mem)))
+    return mem

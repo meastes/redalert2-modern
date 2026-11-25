@@ -904,3 +904,18 @@ back to a plain move; the game's own attack move is Ctrl+Shift with a left click
 uses. Units standing at a barracks' door block its exit: the finished infantry is refunded, not built (the original's
 behaviour), so the helpers walk new units away. The Game object reads the current tick at its start (timeouts counted
 from 0 ended at once).
+
+## Campaign missions played to wins (lane P23, 2026-11-25, same PIN)
+
+Lane P22's sweep continued with the same tools (ra2/tools/ra2_step.py, ra2/tools/ra2_commander.py) and rules: one replay
+per win (ra2/tests/campaign/<mission>.replay), rerun to the same winning tick before its ctest row; a mission is shelved at
+3 lane-hours of wall time from its first step.
+
+| Mission | Result | Lane-hours | Notes |
+| --- | --- | --- | --- |
+| Allied 3 (ALL03U, Hail to the Chief) | won at tick 39,041 | 0.1 | resumed from P22's A3BASE1 (tick 7,940): GIs into two houses by the bridges, barracks, war factory, a pillbox; 22 Grizzlies massed behind ra2_commander.hold (radius 10: a wider one chased across the western bridge into the second Soviet base); a plain push up the eastern road lost them all at the Soviet base's east side; walked instead in short legs with focus fire (fight_along) up the eastern road and round the north of the base, and the beacon force-fired through its cell |
+
+New helpers (ra2/tools/ra2_commander.py): `fight_along` (a team walked along waypoints in short legs, focus-firing the
+enemy unit or ground defence nearest its centre); `Game.force_cell` (Ctrl with a left click on a cell). Finding: a left
+click on Allied 3's Psychic Beacon (NAPSYB) with tanks selected is taken as a move (the units go to guard beside it); the
+force fire on one of its cells attacks it.

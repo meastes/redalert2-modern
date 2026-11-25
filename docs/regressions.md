@@ -164,8 +164,9 @@ final check.
 | Allied 2 (ALL02S, lane P22): Tanya on the flak cannons, the Academy taken, rocketeers and Grizzlies through the Soviet base | won at tick 30,335 | ra2-native-campaign-won-all02 |
 | Soviet 1 (SOV01T, lane P22): the bridge repaired, conscripts massed by attack move, the Pentagon's four parts | won at tick 49,448 | ra2-native-campaign-won-sov01 |
 | Soviet 3 (SOV03T, lane P22): derricks, Rhinos, an engineer into the battle lab, the beacon held | won at tick 54,669 | ra2-native-campaign-won-sov03 |
+| Allied 3 (ALL03U, lanes P22 and P23): GIs in the bridge houses, Grizzlies massed at home, walked round the Soviet base in short legs, the beacon force-fired by its cell | won at tick 39,041 | ra2-native-campaign-won-all03 |
 
-Parked by lane P22 for a retry (no crash, hang or assertion in any): Allied 3, Soviet 2, Soviet 5. Lane P22's missions, wins and shelved ones, with lane-hours: docs/ra2-port-notes.md, "Campaign missions played to wins".
+Parked by lane P22 for a retry (no crash, hang or assertion in any): Soviet 2, Soviet 5 (Allied 3 won by lane P23). Lane P22's missions, wins and shelved ones, with lane-hours: docs/ra2-port-notes.md, "Campaign missions played to wins".
 
 No crash, hang, trap or assertion in either mission or their replays. What the pilot found, all in the scripted-input
 path rather than the game (fixed for the step server's runs, RA2_NATIVE_SCRIPT_ONLY=1; the older --input-script tests keep
