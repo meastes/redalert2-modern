@@ -753,3 +753,46 @@ def base_defended(g, plan, center, team, radius=10, r=6, step=60, timeout=6000):
         print('build %s -> %s at tick %d' % (name, o, g.tick))
         out.append(o)
     return out
+
+
+def siege(g, team, wp, houses, reach=8, types=('DEST',), step=90, ticks=4000, quiet=False, prefer=()):
+    """Team <n> (of types) at waypoint wp shells the houses' buildings within reach of the team's centre, nearest
+    first (prefer: types taken before the rest), by force fire on each building's cell (a building the player cannot see is not clicked; lane P23); enemy
+    units within reach are fired at first. Ends when nothing of the houses is in reach or after ticks."""
+    end = g.tick + ticks
+    g.team(team)
+    g.move(wp)
+    g.adv(step)
+    cur = None
+    while g.tick < end:
+        objs = g.objects('all')
+        mem = [o for o in objs if o.own and o.type in types and dist(o, wp) <= reach + 6]
+        if not mem:     # still on the way (only the members near the waypoint count, not those left at home)
+            g.adv(step)
+            continue
+        cx = sorted(o.x for o in mem)[len(mem) // 2]
+        cy = sorted(o.y for o in mem)[len(mem) // 2]
+        units = [o for o in objs if o.house in houses and o.kind != 'bld' and o.s > 0 and dist(o, (cx, cy)) <= reach]
+        blds = [o for o in objs if o.house in houses and o.kind == 'bld' and o.s > 0 and dist(o, (cx, cy)) <= reach]
+        if units:
+            t = min(units, key=lambda o: dist(o, (cx, cy)))
+            if cur != t.id:
+                g.team(team)
+                g.attack(t)
+                cur = t.id
+        elif blds:
+            t = min(blds, key=lambda o: (o.type not in prefer, dist(o, (cx, cy))))
+            if cur != t.id:
+                g.team(team)
+                g.force_cell(t.cell)
+                cur = t.id
+        elif sum(1 for o in mem if dist(o, wp) <= 3) * 2 >= len(mem):
+            break
+        else:
+            g.team(team)
+            g.move(wp)
+            cur = None
+        g.adv(step)
+    if not quiet:
+        print('siege %s: tick %d, team %d' % (wp, g.tick, len([o for o in g.mine() if o.type in types])))
+    return [o for o in g.mine() if o.type in types]
