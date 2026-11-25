@@ -917,3 +917,30 @@ def build_def(g, name, near, step=60, timeout=3000, queued=False):
     o=place_smart(g,name,near)
     print('build_def',name,o,g.tick,flush=True)
     return o
+
+def guard(g, teams, ticks, houses=(), radius=7, step=40, prio=('DOG','SHK','ENGINEER'), skip=('CTECH','HARV'), vip=None, quiet=False,
+          danger=('TESLA','NALASR'), danger_r=7, center=None):
+    """For the given ticks each team fires at the nearest enemy unit (prio types first) within radius of its own centre;
+    no moves. teams: (team, types[, 'nofire'])."""
+    end=g.tick+ticks
+    while g.tick<end:
+        objs=g.objects('all')
+        party=[o for o in objs if (o.own or o.house in houses) and o.kind!='bld']
+        if vip and not any(o.type==vip for o in party): return False
+        en=[o for o in objs if not o.own and not o.ally and o.s>0 and o.kind!='bld' and o.type not in skip and o.seen
+            and not o.house.startswith(('Civ','Neutral','Special'))]
+        dz=[o for o in objs if o.kind=='bld' and o.type in danger and not o.own and not o.ally and o.s>0]
+        en=[o for o in en if not any(dist(o,d)<=danger_r for d in dz)]
+        for tm in teams:
+            if len(tm)>2: continue
+            mem=[o for o in party if o.type in tm[1]]
+            if not mem: continue
+            cx=sorted(o.x for o in mem)[len(mem)//2]; cy=sorted(o.y for o in mem)[len(mem)//2]
+            ref=center or (cx,cy)
+            near=[o for o in en if dist(o,ref)<=radius]
+            if near:
+                t=min(near,key=lambda o:(o.type not in prio, dist(o,(cx,cy))))
+                g.team(tm[0]); g.attack(t)
+                if not quiet: print(g.tick,'guard',tm[0],t,flush=True)
+        g.adv(step)
+    return True
