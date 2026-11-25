@@ -786,3 +786,49 @@ times larger, menus too; the YR Simulator tests' taps assume the unscaled screen
 **build.sh**: mac, mac-one, ios [simulator|device] (RA2YR.app by default; `--ra2` for RBTrial.app), windows, yr-windows,
 windows-one, all: the old native/build.sh list. The iOS combined app has the played app's bundle id (io.github.ra2native.RA2,
 as the old combined app had) unless `-DRA2_ONE_BUNDLE_ID` names another.
+
+## The differential gate (lane P14, 2026-11-24, same PIN, in redalert2-modern)
+
+`ra2/tests/rb_gate.py` runs this port and the src-based played port (redalert2-decomp `build/native-play/ra2-native`,
+built after lane N33; the older `build/release-mac-one` lacks N28-N33 and parts from both on a sidebar placement
+click) on one route with one seed, the same harness orders and the same frame-timed input script, and compares main's
+soak digest every 50 game frames (every techno's type, house, coordinate, strength, mission; the money; the random
+generator) and every trigger, timer and defeat line. Modes: `missions` (mission_soak.py's route to each mission),
+`skirmish` (RA2.INI's [Skirmish] ScenIndex and slots), `load` (a save loaded by both), `cross` (a harness save by one
+port loaded by both), `recheck`. The rebuild's trigger watch counts loop frames and lists a new scenario's triggers at
+its first frame; the gate moves them to game frames and drops the reset lines. Diagnosis: `GATE_WRAP_SRC/RB` run a
+side under lldb; `build/p14/lldb/rngtrace.py` (every Random2Class call of a frame with its caller) and `rettrace.py`
+(a function's calls and results) found the causes below on both release binaries (symbols, no debug info).
+
+| Set | Result |
+| --- | --- |
+| Campaign, every mission, 6,000 frames | 18 of 24 identical (Allied 1-6, 9, 10; Soviet 1, 3-8, 10-12) |
+| Skirmish, six set-ups (maps 0, 3, 7, 10, 14, 20; 1 to 4 computer players, nine houses) | 5 identical for 6,000 frames; map 14 (four computers) parts at frame 4,521: an AI engineer's walking step on a slope, `WalkLocomotionClass::Movement_AI`, a draft in both ports (open) |
+| Orders | Allied 1 and Soviet 1 played by clicks (select, band box, move, Ctrl, D key) plus harness hunt, deploy and train: identical for 4,000 frames. A skirmish with harness orders only (MCV deploy, two GIs trained, hunts, two nuclear missiles at the player's base through `super 0 home`): identical for 5,000 frames. Skirmish click scripts (sidebar build and place): **not repeatable in either port** (the input script counts loop frames; a port's second run differs from its first in the frame the placement lands), so they prove nothing either way and are not a ctest row |
+| The user's five saves (ALL01T, ALL02S, ALL03U, SAVE397A, SAVE4FBD) | all identical in both ports for about 11,000 frames after the load |
+| Save crossings (src save loaded by both, rebuild save loaded by both; skirmish, Allied 2, Soviet 3) | 5 of 6 identical for 8,000 to 9,900 frames after the load; the src-made skirmish save: identical through 9,650, then the src port declares the player defeated at 9,664 and this port does not (the rebuild-made save: both at 9,664). Open: a field of the src port's save read differently, outside the digest |
+
+The six missions that part, and why (`docs/differences.md`): the played port's `TechnoClass::Evaluate_Object` is a
+non-exact draft (0x006C5570, 91.7%) and turns down targets the original accepts; this port runs the rebuild's exact
+text (provenance class a). Seen frame by frame in Allied 8 (299), Allied 12 (262), Soviet 9 (350), the same pattern
+in Allied 7 (1,818) and Allied 11 (3,148). Soviet 2 (2,264): a tank's path differs, the path from
+`AStarClass::Find_Path_Regular`, exact here and a draft (0x00427370) in the played port. No fix toward the played
+port: there it is the played port that is wrong against the original.
+
+Fixed on the way (rows, each with its why): the Movies menu's list was empty and Play Movie did nothing (the movie
+tables `IntroMovieEntry`, `AlliedMovieList`, `SovietMovieList` were zero storage: records with pointers were not
+loaded; now pointer words, `rb_original_data.py`), found by main's `menu_movie.py`, now ctest `rb-main-menu-movie`;
+`PixelFXTypes` loaded (zero before); the harness's `super <i> home` picks main's cell (the first building) and
+`super <i> <x> <y>` is main's; the soak's defeat line prints the house's name as main's. New ctest rows:
+`rb-native-tankdamage` (the user's C22), `rb-main-menu-movie`, and with RB_IDENTITY_SRC the `rb-gate-*` rows
+(label rb-gate: the identical missions, four skirmish set-ups, two order scripts, the user's saves, two crossings).
+
+The user's own bugs against this port: `docs/regressions.md`. What is not the same code, by game area:
+`docs/differences.md`.
+
+**Checks at the lane's head** (worktree build, `ctest -E '^(rb-gate|rb-identity)'`, RB_IOS_UDID set): 64 rows. Mac 53: all
+pass (rb-main-hd-vehicles-3x, the known timing check, on its rerun). iOS Simulator 11: the first run failed 5 at the main
+menu: since lane P12 iOS starts with Zoom gestures on, the menus run at render scale 2 and the routes' and main tests'
+menu clicks missed; `rb_routes.py` and `rb_skirmish_wrap.py` now set `zoomgestures=off` unless a test asks for it. Then
+all 11 pass (3 of them on a rerun after the app ended at start-up once). The rb-gate rows run so far pass (skirmish m10,
+m20, orders-allied1, load-user-saves). Windows (Wine): pending lane P13's targets.

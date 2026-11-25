@@ -86,8 +86,10 @@ cmake -S . -B build/mac -DRB_DATA_DIR=<your game folder> && ctest --test-dir bui
 
 The played checks (labels `rb-quick`, `rb-main`, `rb-campaign`, `rb-resaves`, `rb-chain`; `rb-ios` with
 `-DRB_IOS_UDID=<simulator>`) run the game through its real menus with scripted input and skip (77) without your
-game. Frame identity against the decompilation's src-based port (`rb-identity`) is added only with
-`-DRB_IDENTITY_SRC=<its ra2-native>`. Yuri's Revenge and the combined app (configure with `-DRA2_NATIVE_YR=ON -DRA2_NATIVE_COMBINED=ON`, as `./build.sh mac-one`
+game. Frame identity against the decompilation's src-based port (`rb-identity`, and the differential gate `rb-gate`:
+campaign missions, skirmish set-ups, order scripts, saves both ways; `ra2/tests/rb_gate.py`) is added only with
+`-DRB_IDENTITY_SRC=<its ra2-native>`. What is not the same code as that port, by game area: `docs/differences.md`;
+the user's own bug reports checked here: `docs/regressions.md`. Yuri's Revenge and the combined app (configure with `-DRA2_NATIVE_YR=ON -DRA2_NATIVE_COMBINED=ON`, as `./build.sh mac-one`
 does) add `yr-native-*` (YR alone: skirmishes, saves in gamemd.exe's format, both campaigns, the enhancements, LAN) and
 `one-game-*` (the toggle both ways, saves after a swap, the menus' backdrop); `-DRA2_ONE_IOS_SIM=ON` adds `one-game-ios-*`
 (label `one-ios`: the iOS app in the "RA2 Duo Validation" Simulator). They read the same installation, which needs

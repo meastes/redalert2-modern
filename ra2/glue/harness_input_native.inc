@@ -399,7 +399,7 @@ void RB_Harness_Soak(int loop_frame)
 			if (house == NULL || rb_soak_house_done[i]) continue;
 			if (house->IsDefeated) {
 				rb_soak_house_done[i] = true;
-				fprintf(stderr, "soak-house %d %d:%s defeated\n", frame, i, house->Class->Name());
+				fprintf(stderr, "soak-house %d %d:%s defeated\n", frame, i, (char const *)house->IniName);   // lane P14: the name main's soak prints (the player's, not the house type's)
 			}
 		}
 		if (frame % period == 0) RB_Digest(frame);

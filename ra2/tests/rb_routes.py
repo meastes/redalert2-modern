@@ -144,6 +144,10 @@ COMBAT_ORDERS = ('60 spawn GAPOWR 0 6; 61 spawn GAPOWR 2 6; 62 spawn GAPOWR -2 6
                  '72 spawn ATESLA 4 3; 80 spawn GAGAP -4 -4; 90 select GAGAP; 100 spawn SREF 2 -2; '
                  '200 spawn HTNK enemy 9 1; 201 spawn HTNK enemy 9 4; 202 fire SREF HTNK; 300 draws; '
                  '1200 health; 1200 draws; 2000 draws')
+# Lane P14: the user's C22 report (2026-11-16, a LAN game: tanks never damaged each other while GIs did; the played
+# port's RadiusCount view read 0, so a warhead with a CellSpread found nothing to hit). A Grizzly (105mm, AP, CellSpread
+# 0.3) is sent at an enemy Rhino; the Rhino's strength must drop (harness-watch) and it must die.
+TANK_ORDERS = '100 spawn MTNK 2 -2; 200 spawn HTNK enemy 6 -2; 202 fire MTNK HTNK'
 # Lane P6: the campaign route's saves (one of the user's, read in place), its seconds and the scripted triggers that must
 # fire (`harness-trigger <frame> gone <ID> <name>`; frames seen at the save's game speed, about 30 a second). ALL02S
 # (Allied 2): the Rocketeer movie, the Rocketeers' arrival and their change to the player's house, the first
@@ -171,6 +175,7 @@ ALLIED1_ESCAPE = ['Dreadnought Retreat', 'Enable Failure 3', 'Enable Failure 3b'
 ROUTES = {
     # route: (script, seconds, run-to, game args)
     'skirmish': (START, 75, 'never', '-noaudio -CD.'),
+    'tankdamage': (START, 75, 'never', '-noaudio -CD.'),
     'soak': (START + SELECT + SCORE_CONTINUE, 420, 'never', '-noaudio -CD.'),
     'exit': (START + EXIT, 120, 'never', '-noaudio -CD.'),
     'audio': (START, 75, 'never', '-CD.'),
@@ -259,6 +264,9 @@ def main():
     for k in ('RA2_NATIVE_ORDERS', 'RA2_NATIVE_TRAP_CONTINUE', 'RA2_NATIVE_SAVE_AT', 'RA2_NATIVE_SAVE_LEAVE', 'RA2_NATIVE_ENHANCEMENTS',
               'RA2_NATIVE_TEST_PORT_SAVE'):
         env.pop(k, None)
+    # Lane P14: the routes' menu clicks assume Zoom gestures off, every platform's default until lane P12 turned them on
+    # for iOS (the menus then run at render scale 2); the iOS rows failed at the main menu.
+    env['RA2_NATIVE_ENHANCEMENTS'] = 'zoomgestures=off'
     common = [a.binary, '--data-dir', a.data_dir, '--write-dir=' + write, '--game-args=' + game_args]
     bad = []
     if a.route in ('save', 'resave', 'combatsave'):
@@ -319,6 +327,8 @@ def main():
             env['RA2_NATIVE_ORDERS'] = COMBAT_ORDERS
         if a.route == 'production':
             env['RA2_NATIVE_ORDERS'] = PRODUCTION_ORDERS
+        if a.route == 'tankdamage':
+            env['RA2_NATIVE_ORDERS'] = TANK_ORDERS
         if a.route in ('forcewin', 'forcelose'):
             env['RA2_NATIVE_FORCE_END'] = '300' + (',lose' if a.route == 'forcelose' else '')
         if a.route == 'chain':
@@ -410,6 +420,16 @@ def main():
             bad.append('DSurface::Draw_Depth_Antialiased_Line never ran (no laser or sweep drawn)')
         if not re.search(r'^harness-killed HTNK ', out, re.M):
             bad.append('the Rhino the Prism tank was sent at did not die')
+    if a.route == 'tankdamage':
+        m = re.search(r'^harness-fire MTNK -> HTNK s(\d+)', out, re.M)
+        if not m:
+            bad.append('the Grizzly was not sent at the Rhino')
+        else:
+            seen = [int(x) for x in re.findall(r'^harness-watch s(\d+)', out, re.M)]
+            if not seen or min(seen) >= int(m.group(1)):
+                bad.append('the Rhino took no damage from the Grizzly\'s shells (strengths %s)' % seen[:6])
+        if not re.search(r'^harness-killed HTNK ', out, re.M):
+            bad.append('the Rhino did not die')
     if a.route == 'production':
         for want in ('GAPOWR', 'GAPILE', 'GAWEAP'):
             if not re.search(r'^harness-spawn %s ' % want, out, re.M):
@@ -430,7 +450,7 @@ def main():
             if not seen or min(seen) >= int(m.group(1)):
                 bad.append('the missile\'s target was not damaged (strengths %s)' % seen[:6])
     if a.route in ('skirmish', 'soak', 'audio', 'save', 'resave', 'combatsave', 'original', 'combat', 'campaign', 'production',
-                   'allied1', 'allied1idle', 'forcewin', 'forcelose'):
+                   'allied1', 'allied1idle', 'forcewin', 'forcelose', 'tankdamage'):
         if 'time limit' not in stop:
             bad.append('the run stopped early: %s' % (stop or 'no stop line'))
         if not any('reached frame' in l for l in lines):

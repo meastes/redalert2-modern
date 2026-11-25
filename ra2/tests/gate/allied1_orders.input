@@ -1,0 +1,17 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Lane P14: Allied 1 played by input (Main_Loop frames from the scenario's first frame are not the script's clock:
+# the script counts loop frames from the game's first frame, so these are Allied 1's when it is the first scenario).
+# Tanya and the GIs selected by clicks and a band box, moved by left and right clicks, Tanya's C4 key, the D key.
+400 click @E1
+410 click @E1+3,1
+460 drag 100 100 700 500
+470 click @E1+4,4
+600 click @TANY
+610 click @TANY+5,0
+900 keydown Left_Ctrl
+905 click @E1+2,2
+910 keyup Left_Ctrl
+1200 click @E1
+1210 key D
+1500 drag 100 100 700 500
+1510 rclick @E1+1,1

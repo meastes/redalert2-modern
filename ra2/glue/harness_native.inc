@@ -355,10 +355,15 @@ void RB_Run_Order(char const * text)
 	} else if (!strcmp(word[0], "super") && words >= 3 && !strcmp(word[2], "home")) {
 		// Lane P8: main's `super <index> home [<dx> <dy>]` (lane C17, the HD air-base check's paradrops): the player's
 		// SuperWeapon[index] granted, charged and placed at the player's first techno's cell moved by dx, dy.
+		// Lane P14: as main's, the player's first building, else first vehicle (the differential gate runs both ports on
+		// one script, so the cell must be the same).
 		int index = atoi(word[1]);
 		TechnoClass * home = NULL;
 		for (int i = 0; i < Technos.Count() && home == NULL; ++i) {
-			if (Technos[i] && Technos[i]->House == PlayerPtr) home = Technos[i];
+			if (Technos[i] && Technos[i]->House == PlayerPtr && Technos[i]->Fetch_RTTI() == RTTI_BUILDING) home = Technos[i];
+		}
+		for (int k = 0; k < Technos.Count() && home == NULL; ++k) {   // k: the units are compiled with VC6's for scope
+			if (Technos[k] && Technos[k]->House == PlayerPtr && Technos[k]->Fetch_RTTI() == RTTI_UNIT) home = Technos[k];
 		}
 		if (PlayerPtr == NULL || home == NULL || index < 0 || index >= PlayerPtr->SuperWeapon.Count()) {
 			fprintf(stderr, "harness-super: no super weapon %d or no home\n", index);
@@ -374,6 +379,22 @@ void RB_Run_Order(char const * text)
 		}
 		OutList.Add(EventClass(PlayerPtr->HeapID, EventClass::SPECIAL_PLACE, index, at));
 		fprintf(stderr, "harness-super %d %s @%d,%d home\n", index, super->Class ? super->Class->Name() : "?", (int)at.X, (int)at.Y);
+	} else if (!strcmp(word[0], "super") && words >= 4 && word[2][0] >= '0' && word[2][0] <= '9') {
+		// Lane P14: main's `super <index> <x> <y>` (Scout1170): the player's SuperWeapon[index] granted once, charged and
+		// placed at cell x,y (SPECIAL_PLACE, the armed cameo's map click).
+		int index = atoi(word[1]);
+		if (PlayerPtr == NULL || index < 0 || index >= PlayerPtr->SuperWeapon.Count()) {
+			fprintf(stderr, "harness-super: no super weapon %d\n", index);
+			return;
+		}
+		SuperClass * super = PlayerPtr->SuperWeapon[index];
+		super->Enable(true, false, false);
+		super->Forced_Charge(true);
+		Cell at;
+		at.X = (short)atoi(word[2]);
+		at.Y = (short)atoi(word[3]);
+		OutList.Add(EventClass(PlayerPtr->HeapID, EventClass::SPECIAL_PLACE, index, at));
+		fprintf(stderr, "harness-super %d %s @%d,%d\n", index, super->Class ? super->Class->Name() : "?", (int)at.X, (int)at.Y);
 	} else if (!strcmp(word[0], "deploy") && words >= 2) {
 		// Lane P8: main's `deploy <ID|*>` (lane N25): the player's vehicles of type ID ('*' every one) whose type deploys into
 		// a building (the MCV) unload there (MISSION_UNLOAD, the D key's order).

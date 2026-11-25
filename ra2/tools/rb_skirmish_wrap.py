@@ -43,6 +43,10 @@ def main():
             continue
         out.append(a)
     env = dict(os.environ)
+    # Lane P14: the tests were written for Zoom gestures off, every platform's default until lane P12 turned them on
+    # for iOS (the menus then run at render scale 2 and the menu clicks miss); a test that wants them says so.
+    if 'zoomgestures=' not in env.get('RA2_NATIVE_ENHANCEMENTS', ''):
+        env['RA2_NATIVE_ENHANCEMENTS'] = ','.join(x for x in (env.get('RA2_NATIVE_ENHANCEMENTS', ''), 'zoomgestures=off') if x)
     if skirmish:
         # Main's harness keeps RA2.INI's [Options] GameSpeed (3 in the user's install); the setup dialog stores its slider (0).
         env.setdefault('RA2_NATIVE_SKIRMISH_SPEED', '3')

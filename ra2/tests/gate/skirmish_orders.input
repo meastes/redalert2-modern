@@ -1,0 +1,26 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Lane P14: scripted player input for the differential gate's skirmish order runs (Main_Loop frames, the
+# host's input path; '@ID' points are the human player's objects, '@!ID' the enemy's, '@cameo=ID' and
+# '@tab=N' the sidebar). Select, move, deploy the MCV by clicks, build and place by the sidebar, a band
+# box, the D key, then the harness orders (RA2_NATIVE_ORDERS) train, hunt and the super weapon.
+40 click @AMCV
+60 click @AMCV
+200 click @E1
+215 click @E1+4,2
+260 drag 150 150 750 650
+280 rclick @E1+2,4
+400 click @tab=0
+410 click @cameo=GAPOWR
+900 click @cameo=GAPOWR
+910 click @GACNST+4,0
+930 click @GACNST+4,-3
+1000 click @tab=0
+1010 click @cameo=GAPILE
+1600 click @cameo=GAPILE
+1610 click @GACNST+0,4
+1630 click @GACNST+-4,0
+1700 click @E1
+1710 key D
+2000 click @tab=2
+2010 click @cameo=E1
+2020 click @cameo=E1
