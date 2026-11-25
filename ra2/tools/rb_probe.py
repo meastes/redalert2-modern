@@ -38,6 +38,10 @@ def flags(gen, windows=False):
         del out[i:i + 2]
         i = out.index('-idirafter')
         out[i] = '-isystem'
+        # A function that falls off its end without a return (VC6 left eax as it was) returns as on the Mac, whose
+        # clang has -fno-strict-return by default; mingw's clang trapped there (int3: lane P19, Yuri's Revenge's
+        # TechnoClass::VoiceDeploy at an MCV's deploy click, "Red Alert 2 stopped" on codex1's PC).
+        out.append('-fno-strict-return')
         return out
     return ['-DRA2_NATIVE_YR=1', '-DRA2_NATIVE_RB=1', '-DWIN32', '-D_WIN32', '-D__GNUC_MINOR__=2', '-D__GNUC__=4',
             '-I' + str(ROOT / 'ra2/sdk'), '-I' + str(sdk), '-I' + str(gen / 'hdr'),

@@ -41,6 +41,18 @@ execute_process(
 if(ra2_yr_rc)
   message(FATAL_ERROR "yr_sdk.py failed")
 endif()
+if(WIN32)
+  # The original-layout dumps' i686 side (tools/original_layouts.py) reads the headers as the Mac build rewrites them
+  # (the C library's own headers kept): a second tree beside the Windows build's, as ra2/tools/rb_probe.py makes for
+  # the rebuild (lane P19: without it every YR i686 dump stopped at <sys/types.h> and the Windows game had 7 of 85 maps).
+  execute_process(
+    COMMAND "${Python3_EXECUTABLE}" -B "${CMAKE_CURRENT_SOURCE_DIR}/yr/tools/yr_sdk.py"
+            --mingw "${RA2_NATIVE_YR_MINGW}" --out "${RA2_NATIVE_YR_GEN}/mingw-i686"
+    RESULT_VARIABLE ra2_yr_rc)
+  if(ra2_yr_rc)
+    message(FATAL_ERROR "yr_sdk.py (mingw-i686) failed")
+  endif()
+endif()
 execute_process(
   COMMAND "${Python3_EXECUTABLE}" -B "${CMAKE_CURRENT_SOURCE_DIR}/yr/tools/yr_units.py" --out "${RA2_NATIVE_YR_GEN}"
   RESULT_VARIABLE ra2_yr_rc)
@@ -201,6 +213,19 @@ if(WIN32)
            --work "${CMAKE_CURRENT_BINARY_DIR}/yr-combat"
            --wine-prefix "${CMAKE_CURRENT_BINARY_DIR}/wine/yr-combat" --wine "${RA2_NATIVE_WINE}")
   set_tests_properties(yr-native-combat PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 600)
+  # yr-native-save-wine (lane P19): yr_save_roundtrip.py with yr-native.exe under Wine: a skirmish saved in gamemd.exe's
+  # format, loaded in a fresh process and played 300 frames, saved after the load, loaded again. The Windows build's
+  # YR field maps were once 7 of 85 (every i686 dump stopped at <sys/types.h>), and a save made on a PC failed its load.
+  add_test(NAME yr-native-save-wine COMMAND "${Python3_EXECUTABLE}" -B "${CMAKE_CURRENT_SOURCE_DIR}/yr/tests/yr_save_roundtrip.py"
+           --binary $<TARGET_FILE:yr-native> --data-dir "${RA2_NATIVE_YR_DATA_DIR}"
+           --work "${CMAKE_CURRENT_BINARY_DIR}/yr-save-wine"
+           --wine-prefix "${CMAKE_CURRENT_BINARY_DIR}/wine/yr-save" --wine "${RA2_NATIVE_WINE}")
+  set_tests_properties(yr-native-save-wine PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 1200 RUN_SERIAL TRUE)
+  # yr-native-original-layouts on the Windows build (lane P19): every type has an i686 map paired with the x86_64
+  # Windows (LLP64) layout.
+  add_test(NAME yr-native-original-layouts COMMAND "${Python3_EXECUTABLE}" -B "${CMAKE_CURRENT_SOURCE_DIR}/tools/original_layouts.py"
+           --game yr --build "${CMAKE_CURRENT_BINARY_DIR}" --out "${CMAKE_CURRENT_BINARY_DIR}/yr_original_layouts_check.cpp"
+           ${ra2_original_layouts_target} --check)
   include("${CMAKE_CURRENT_SOURCE_DIR}/yr/combined.cmake")   # lane Y16: RA2YRNative.exe and the engine DLLs
   return()   # the other ctests below run the Mac build
 endif()

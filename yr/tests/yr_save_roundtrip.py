@@ -21,6 +21,9 @@ reaches 300 frames; no trap or fault; no swizzle failure; no type read or writte
 map; no vtable left unwritten. Skipped (77) without the installed game (gamemd.exe in --data-dir).
 
   yr_save_roundtrip.py --binary <yr-native> --data-dir <game folder> --work <dir> [--save-frame 500]
+      [--wine-prefix <dir> [--wine <wine>]]: the Windows build's yr-native.exe under Wine (yr_wine.py), each step
+      a fresh process in the same prefix (ctest yr-native-save-wine, lane P19: a Windows build once wrote and read
+      its YR saves without field maps, "3,333 unmatched fields" and signal 8 at the load)
 """
 import argparse
 import os
@@ -35,6 +38,7 @@ sys.path.insert(0, os.path.join(HERE, '..', '..', 'tests'))
 sys.path.insert(0, os.path.join(HERE, '..', '..', 'tools'))
 import game_process  # noqa: E402  (tests: the game's process group, lane C19)
 import original_save_compare  # noqa: E402  (tools: the compound file's streams)
+import yr_wine  # noqa: E402  (the Windows build under Wine, lane YW)
 
 # 800x600: Single Player, Skirmish, Start Game (as yr_skirmish_long.py).
 SCRIPT = 's1+1000 click 720 220\ns2+1000 click 720 304\ns3+2000 click 720 262\ns3+3000 move 316 300\n'
@@ -62,9 +66,10 @@ def run(a, name, args, env_extra, seconds):
     env.update(env_extra)
     cmd = [a.binary, '--data-dir', a.data_dir, '--run-seconds=%d' % seconds, '--write-dir=' + a.writes,
            '--game-args=-noaudio -CD.'] + args
+    cmd, env = yr_wine.wrap(a.prefix, cmd, env)
     log = os.path.join(a.work, name + '.log')
     with open(log, 'w') as f:
-        game_process.run(cmd, env=env, stdout=f, stderr=subprocess.STDOUT, timeout=seconds + 120)
+        game_process.run(cmd, env=env, stdout=f, stderr=subprocess.STDOUT, timeout=seconds + (240 if a.prefix else 120))
     return open(log, errors='replace').read()
 
 
@@ -100,10 +105,21 @@ def main():
     ap.add_argument('--save-frame', type=int, default=500)
     ap.add_argument('--original-saves', default=os.environ.get('RA2_NATIVE_YR_ORIGINAL_SAVES', ''),
                     help='a folder of saves made by the original Yuri\'s Revenge (default $RA2_NATIVE_YR_ORIGINAL_SAVES)')
+    yr_wine.add_arguments(ap)
     a = ap.parse_args()
     if not a.data_dir or not os.path.exists(os.path.join(a.data_dir, 'gamemd.exe')):
         print('skipped: no Yuri\'s Revenge install (gamemd.exe) in --data-dir')
         return 77
+    a.prefix = yr_wine.open_prefix(a)
+    if a.prefix == yr_wine.SKIP:
+        return 77
+    try:
+        return roundtrip(a)
+    finally:
+        yr_wine.close(a.prefix)
+
+
+def roundtrip(a):
     shutil.rmtree(a.work, ignore_errors=True)
     a.writes = os.path.join(a.work, 'w')
     os.makedirs(a.writes)

@@ -124,6 +124,8 @@ Counts (25): scripted and passing 20, same code (no script) 2, needs his check 3
 | Mirage tank's first camouflage animation corrupted (N12-mirage1) | scripted, passing | yr-native-mirage (first animation against the second) |
 | Oil derrick and power plant animations missing (N4-derrick) | scripted, passing | yr-native-building-anims |
 | Skip button left on the start-up loading screen (Y14-skip) | scripted, passing | one-game-ios-sim-menus (failed once in the full run, passed on the recheck: the check reads the host's touch-control states) |
+| Windows: a Yuri's Revenge save made by the save menu failed its load in a fresh process, 3,333 unmatched fields and signal 8 (codex1's PC check of 3182afe, P19-yrsave) | scripted, passing | yr-native-save-wine (fails on 3182afe's yr-native.exe as on the PC), yr-native-original-layouts on build/windows-one |
+| Windows: Yuri's Revenge stopped ("Red Alert 2 stopped", details "printed to the terminal") in early play after the MCV was selected, speed 2, after a swap from Red Alert 2 (codex1's PC check of 3182afe, P19-yrcrash) | scripted, passing | one-game-yr-play-wine: under Wine the click on the selected MCV trapped in TechnoClass::VoiceDeploy (no return: mingw's clang put int3 there; -fno-strict-return now), and a later fault in fastmath::atan2f (yr/fixups.json); the crash dialog of an engine started by a swap now names the log |
 
 Rows that change with the combined app (the RA2 table above): C23-toggle is **scripted, passing** (one-game-toggle,
 one-game-toggle-wine, one-game-ios-sim), C14-kbd is **scripted, passing** in the Simulator (one-game-ios-sim-menus), and

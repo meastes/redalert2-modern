@@ -1356,6 +1356,24 @@ void Force_End(int frame)
 
 // The mission soak (lane N25): see the file comment; the same lines as RA2's link/harness_soak.cpp.
 } // namespace
+
+// Test scaffolding (lane P19): an input script's point "@unit=<ID>" is the player's first techno of type ID on the
+// tactical view (the `where` order's pixel, in the screen's coordinates as "@node=N"): a click on the unit itself.
+extern "C" int yr_harness_unit_point(char const * id, int * x, int * y)
+{
+	for (int i = 0; i < Technos.Count(); ++i) {
+		TechnoClass * techno = Technos[i];
+		if (techno != NULL && techno->House == PlayerPtr && !techno->IsInLimbo && !strcmp(Type_Name(techno), id)) {
+			Point2D pixel;
+			if (!TacticalMap->Coord_To_Pixel(techno->Center_Coord(), pixel)) break;
+			*x = pixel.X + TacticalRect.X;
+			*y = pixel.Y + TacticalRect.Y;
+			return(1);
+		}
+	}
+	fprintf(stderr, "input-script: no unit of type %s of the player's on the view\n", id);
+	return(0);
+}
 extern "C" void ra2port_progress(const char * milestone, const char * detail);	// port/src/run_progress.cpp
 namespace {
 extern int DAT_00A8ED98;	// init.cpp: the custom seed (Red Alert's CustomSeed)

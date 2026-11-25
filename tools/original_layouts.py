@@ -33,6 +33,7 @@ its MSVC RTTI type descriptor name and the port finds the vtable in gamemd.exe a
 """
 import argparse
 import difflib
+import hashlib
 import json
 import re
 import subprocess
@@ -370,16 +371,29 @@ def ops_for(recs_i, recs_a, name, problems):
 
 
 def dump(build, unit, triple, cache):
-    out = cache / ('%s.%s.txt' % (unit.stem, triple))
-    if out.exists() and out.stat().st_mtime >= unit.stat().st_mtime:
-        return out.read_text(errors='replace')
     if GAME == 'yr':
         args = yr_args(build, unit, triple, cache)
     else:
         args = [CXX[triple]] + TRIPLES[triple] + DIALECT + ['-I', str(build / 'gen/overlay'), '-include', str(PRELUDE), str(unit)]
-    p = subprocess.run(args, capture_output=True, text=True)
+    # The cache is named by the command too, and keeps only a dump that compiled: a dump that stopped at an error
+    # (a missing header: lane P19, the Windows build's YR i686 side) has no records after it and was once kept.
+    key = hashlib.sha1('\0'.join(args).encode()).hexdigest()[:10]
+    out = cache / ('%s.%s.%s.txt' % (unit.stem, triple, key))
+    if out.exists() and out.stat().st_mtime >= unit.stat().st_mtime:
+        return out.read_text(errors='replace')
+    p = subprocess.run(args, capture_output=True, text=True, errors='replace')
+    if p.returncode:
+        error = next((l for l in p.stderr.splitlines() if 'error:' in l), p.stderr.strip()[:200])
+        DUMP_FAILURES.append('%s (%s): the layout dump did not compile: %s' % (unit.name, triple, error))
+        return p.stdout
+    for old in [*cache.glob('%s.%s.*.txt' % (unit.stem, triple)), cache / ('%s.%s.txt' % (unit.stem, triple))]:
+        if old.exists():
+            old.unlink()            # an earlier command's dump (and the unkeyed name of before lane P19)
     out.write_text(p.stdout)
     return p.stdout
+
+
+DUMP_FAILURES = []
 
 
 def read_types(path):
@@ -494,6 +508,13 @@ YR_DEFINES = ['-DRA2_NATIVE_YR=1', '-DWIN32', '-D_WIN32', '-D__GNUC_MINOR__=2', 
 YR_WARNINGS = ['-Wno-error=address-of-temporary', '-Wno-register', '-Wno-c++11-narrowing']
 
 
+def yr_i686_headers(build):
+    """The rewritten mingw-w64 headers the i686 dump reads: the Windows build's own tree leaves out the C library's
+    headers (the toolchain's are used), so it writes a Mac-style second tree, gen-yr/mingw-i686 (yr/yr.cmake, lane P19)."""
+    gen = build / 'gen-yr'
+    return gen / 'mingw-i686' if (gen / 'mingw-i686/windows.h').exists() else gen / 'mingw'
+
+
 def yr_i686_support(build, cache):
     """The i686 dump's own preludes, made from the YR build's: ra2port/prelude.hpp with VC6's
     long (RA2_LONG is long, 4 bytes on i686, so the rewritten mingw-w64 headers' RA2_LONG and
@@ -520,7 +541,7 @@ def yr_i686_support(build, cache):
     yr = yr.replace('#ifndef _WIN64\n#define _WIN64 1\n#endif\n', '')
     yr = yr.replace('#include "yr_crt.h"', '#include "%s"' % (YR_SDK / 'yr_crt.h'))
     put(d / 'yr_prelude_i686.h', yr)
-    mingw = (build / 'gen-yr/mingw/_mingw.h').read_text(encoding='latin-1')
+    mingw = (yr_i686_headers(build) / '_mingw.h').read_text(encoding='latin-1')
     if NATIVE == 'win64' and '#define __LONG32 long\n' in mingw:
         mingw = mingw.replace('#define __LONG32 long\n', '#define __LONG32 RA2_LONG\n', 1)   # (Windows: long kept; lane Y13)
     if '#define __LONG32 RA2_LONG\n' not in mingw:
@@ -537,7 +558,7 @@ def yr_args(build, unit, triple, cache):
         return (['clang++', '-target', 'i686-pc-windows-msvc', '-ffreestanding', '-U_MSC_VER', '-D_X86_=1',
                  '-DRA2PORT_ALLOW_HOST'] + YR_DEFINES + ['-I', str(YR_SDK / 'i686')] + inc + DIALECT + YR_WARNINGS +
                 ['-include', str(d / 'prelude_i686.hpp'), '-include', str(d / 'yr_prelude_i686.h'),
-                 '-idirafter', str(d / 'ov'), '-idirafter', str(gen / 'mingw'), str(unit)])
+                 '-idirafter', str(d / 'ov'), '-idirafter', str(yr_i686_headers(build)), str(unit)])
     if triple == 'win64':
         # The x86_64 Windows build's YR units (yr/yr.cmake, lane Y13): yr_win_first.h before the
         # dialect header, the rewritten Win32 headers ahead of the toolchain's (-isystem).
@@ -747,6 +768,7 @@ def main():
         return u, parse(dump(build, u, 'i686', cache)), parse(dump(build, u, NATIVE, cache))
     with ThreadPoolExecutor(args.j) as ex:
         parsed = {u: (ri, ra) for u, ri, ra in ex.map(both, needed)}
+    problems.extend(sorted(DUMP_FAILURES))
     tables, report = [], {}
     member_recs = {}
     for name, _ in rows:

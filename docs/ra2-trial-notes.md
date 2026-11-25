@@ -842,3 +842,29 @@ Full ctest (109 rows, label soak left out) at efc9665: 102 passed; the 7 failure
 flicker timing check; passed on the rerun), rb-ios-sim-skirmish and -production (Zoom gestures, fixed), yr-native-
 member-aliases and yr-native-save (test setup, fixed), one-game-saves (the voc.cpp record, fixed), one-game-ios-sim-menus
 (the Red Alert 2 name field's keyboard, fixed; the YR Skip check passed on the rerun).
+
+## Windows faults from codex1's PC check of 3182afe (lane P19, 2026-11-25)
+
+codex1's report: `build/win-playtest/codex1-ports-windows-check.md` in redalert2-native. Both failures reproduced under Wine.
+
+**Yuri's Revenge saves** (a save made by the save menu, loaded in a fresh process: "3,333 unmatched fields", signal 8):
+the Windows build had field maps for 7 of YR's 85 saved types. Every i686 layout dump of the YR units stopped at
+`<sys/types.h>`, because the Windows rewrite of the mingw-w64 headers (`gen-yr/mingw`) leaves out the C library's;
+lane P13 had given the rebuild a second, Mac-style tree (`gen/mingw-i686`), not YR. `yr/yr.cmake` now writes
+`gen-yr/mingw-i686` on Windows and `tools/original_layouts.py` reads it for the i686 side (85 types, 0 problems, as the
+Mac). The dumps' cache kept a dump that had stopped at an error, so it now keeps only one that compiled, named by its
+command, and a dump that does not compile is a problem (`--check` fails). Saves written by 3182afe's Windows YR were
+written without maps and cannot be loaded. New ctests on the Windows build: yr-native-save-wine
+(`yr_save_roundtrip.py --wine-prefix`; on 3182afe's yr-native.exe it fails as the PC did) and yr-native-original-layouts.
+
+**Yuri's Revenge stopped after the MCV was selected**: `one_game_yr_play.py` (Red Alert 2, the toggle, a YR skirmish at
+interface 1.25x, map zoom 1.5x, speed 2) found two faults. The click on the selected MCV stopped at once in
+`TechnoClass::VoiceDeploy` (0x00708E00), which the tree has falling off its end with no return (VC6 left eax): the
+Mac's clang returns there (Darwin defaults to -fno-strict-return), mingw's clang puts int3 there. The Windows units
+(the YR dialect in CMakeLists.txt, `rb_probe.py --target windows`) now take `-fno-strict-return`. After 8,190 frames,
+`fastmath::atan2f` (0x004CB3D0) read 8 GB before `atan_tab`: a ratio past `_ftol`'s range is INT_MIN from x86_64's
+cvttss2si, which abs keeps negative; yr/fixups.json converts with `ra2port::x87_ftol` and wraps the index, as the
+rebuild's row (and `asinf` the same way). Values in range convert as before. The crash dialog of an engine started by
+a swap said "printed to the terminal": that engine never opened the log, so its own `log_path` was empty; it now
+names the log the first engine opened (`app::adopt_log`). Input scripts take `@unit=<ID>` (the player's first techno
+of that type on the view) for the click.

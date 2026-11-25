@@ -383,6 +383,8 @@ int main(int argc, char **argv)
         if (!getenv("RA2_NATIVE_LOG_STDERR") && !log_open) {
             fprintf(stderr, "app: logging to %s/ra2-native.log\n", app::log_dir().c_str());
             app::open_log();
+        } else if (log_open && !getenv("RA2_NATIVE_LOG_STDERR")) {
+            app::adopt_log();
         }
         SDL_SetAppMetadata("Red Alert 2", nullptr, "io.github.ra2native.RA2");
         // Control-click stays a left click with Control held: RA2's force fire is Ctrl+click

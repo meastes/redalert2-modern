@@ -84,6 +84,14 @@ if(WIN32)
            --game-exe "${RA2_NATIVE_CENSUS_GAME_EXE}" --work "${CMAKE_CURRENT_BINARY_DIR}/one-game-toggle-wine"
            --wine-prefix "${CMAKE_CURRENT_BINARY_DIR}/wine/one-game" --wine "${RA2_NATIVE_WINE}")
   set_tests_properties(one-game-toggle-wine PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 900)
+  # ctest one-game-yr-play-wine (lane P19): codex1's Windows crash route on ra2yr-native.exe under Wine: Red Alert 2,
+  # the toggle, a Yuri's Revenge skirmish at interface 1.25x, map zoom 1.5x and speed 2, a click on the selected MCV
+  # and seven minutes of mouse play (yr/tests/one_game_yr_play.py).
+  add_test(NAME one-game-yr-play-wine COMMAND "${Python3_EXECUTABLE}" -B "${CMAKE_CURRENT_SOURCE_DIR}/yr/tests/one_game_yr_play.py"
+           --binary $<TARGET_FILE:ra2yr-native> --data-dir "${RA2_NATIVE_YR_DATA_DIR}"
+           --game-exe "${RA2_NATIVE_CENSUS_GAME_EXE}" --work "${CMAKE_CURRENT_BINARY_DIR}/one-game-yr-play-wine"
+           --wine-prefix "${CMAKE_CURRENT_BINARY_DIR}/wine/one-game-yr-play" --wine "${RA2_NATIVE_WINE}")
+  set_tests_properties(one-game-yr-play-wine PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 900 RUN_SERIAL TRUE)
   return()
 endif()
 

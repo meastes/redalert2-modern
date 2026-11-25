@@ -99,6 +99,10 @@ if(RA2_NATIVE_YR)
     # The VC6 dialect on mingw-w64 headers (platform/win/dialect_win.hpp), before the prelude.
     target_compile_options(ra2_dialect BEFORE INTERFACE
       "$<$<COMPILE_LANGUAGE:CXX>:SHELL:-include ${CMAKE_CURRENT_SOURCE_DIR}/platform/win/dialect_win.hpp>")
+    # A function that falls off its end without a return (VC6 left eax as it was) returns as on the Mac, whose clang
+    # has -fno-strict-return by default; mingw's clang put a trap (int3) there (lane P19: Yuri's Revenge's
+    # TechnoClass::VoiceDeploy at an MCV's deploy click, "Red Alert 2 stopped" on codex1's PC).
+    target_compile_options(ra2_dialect INTERFACE "$<$<COMPILE_LANGUAGE:CXX>:-fno-strict-return>")
   endif()
   # The host's Apple frameworks and zlib, and what link_closure.py counts as system.
   if(WIN32)

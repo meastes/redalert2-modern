@@ -799,6 +799,14 @@ char log_path[1024];
 char self_path[1024];
 const void *main_image = nullptr;     // the executable's load address (dladdr's dli_fbase)
 
+// The engine started after a swap (the one-game app) writes to the log the first engine opened: its crash
+// handler and dialog name that log too (lane P19: a Yuri's Revenge crash after a swap on Windows said "printed to
+// the terminal", as this engine's own copy of log_path was empty).
+void adopt_log()
+{
+    snprintf(log_path, sizeof log_path, "%s/ra2-native.log", log_dir().c_str());
+}
+
 // stdout and stderr to ~/Library/Logs/RA2Native/ra2-native.log (Windows:
 // %LOCALAPPDATA%\RA2Native\Logs; the previous session's log kept as
 // ra2-native.previous.log).

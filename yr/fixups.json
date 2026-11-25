@@ -1016,6 +1016,18 @@
    "why": "VC6 converts the voxel span steps (8.8 fixed point) to short through _ftol, which wraps a value past 32767 into the 16-bit step the drawers expect; arm64's float-to-short conversion saturates instead, so the voxel bodies drew nowhere. ra2port::x87_ftol keeps the x87 result (lane Y3)."
   },
   {
+   "file": "src/fastmath.cpp",
+   "old": "\tint i = abs((int)(z / atan_tab[ATAN_TABLE_SIZE + 1]));\n\n\tif (i < ATAN_TABLE_SIZE + 1) {\n\t\tresult = atan_tab[i];",
+   "new": "\tint i = abs(ra2port::x87_ftol(z / atan_tab[ATAN_TABLE_SIZE + 1]));\n\n\tif (i < ATAN_TABLE_SIZE + 1) {\n\t\tresult = atan_tab[i & 0x3FFFFFFF]; /* native: VC6's index*4 + table wraps at 32 bits (abs(INT_MIN) reads entry 0) */",
+   "why": "Lane P19 (codex1's Windows crash, reproduced under Wine after 8,190 frames of a YR skirmish): fastmath::atan2f (0x004CB3D0) converts y/x over the table step with _ftol, which gives a NaN or a ratio past the 64-bit range 0 and wraps one between 2^31 and 2^63; x86_64's cvttss2si gives INT_MIN for all of them, abs keeps it negative, and the bound test let it read 8 GB before atan_tab (a fault; arm64's conversion saturates, so the Mac and iOS reached it less often). ra2port::x87_ftol keeps the x87 result and the index wraps as VC6's 32-bit address arithmetic does, as the rebuild's row (ra2/fixups.json, main's port row 384). Values in range convert as before."
+  },
+  {
+   "file": "src/fastmath.cpp",
+   "old": "\tint i = (int)((f + 1) * (ASIN_TABLE_SIZE / 2));",
+   "new": "\tint i = ra2port::x87_ftol((f + 1) * (ASIN_TABLE_SIZE / 2));",
+   "why": "Lane P19: fastmath::asinf (0x004CB260) through _ftol as the original: a NaN argument reads entry 0 there, natively on x86_64 INT_MIN (8 GB before asin_tab). Values in range convert as before."
+  },
+  {
    "file": "src/txtlabel2.cpp",
    "regex": true,
    "old": "delete \\[\\] (DAT_00B0FB(?:70|68|60|78));",
