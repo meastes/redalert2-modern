@@ -832,3 +832,13 @@ menu: since lane P12 iOS starts with Zoom gestures on, the menus run at render s
 menu clicks missed; `rb_routes.py` and `rb_skirmish_wrap.py` now set `zoomgestures=off` unless a test asks for it. Then
 all 11 pass (3 of them on a rerun after the app ended at start-up once). The rb-gate rows run so far pass (skirmish m10,
 m20, orders-allied1, load-user-saves). Windows (Wine): pending lane P13's targets.
+
+Later in lane P13 (after the full ctest): `ra2_native_new_edit_focused` also takes the rebuild's name fields (a ListBox
+whose GWL_USERDATA is `{"NewEdit", style}`), so the iOS keyboard comes up in Red Alert 2's skirmish name field; without
+`--skirmish-frames`/`--frames` the harness frame count is 1 only in a test run (`--run-to`), so normal play writes no
+harness lines; one_game_saves.py accepts the rebuild's 16-byte voc.cpp record written as is; tools/original_save_compare.py
+imported; yr_member_aliases.py finds llvm-mingw by RA2_LLVM_MINGW. Merged: the icon branch, lanes P14, P15 and P16.
+Full ctest (109 rows, label soak left out) at efc9665: 102 passed; the 7 failures were rb-main-hd-vehicles-3x (the known
+flicker timing check; passed on the rerun), rb-ios-sim-skirmish and -production (Zoom gestures, fixed), yr-native-
+member-aliases and yr-native-save (test setup, fixed), one-game-saves (the voc.cpp record, fixed), one-game-ios-sim-menus
+(the Red Alert 2 name field's keyboard, fixed; the YR Skip check passed on the rerun).

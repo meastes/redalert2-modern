@@ -84,3 +84,47 @@ N5-origload, N3-netcrash, N3-yrkbd, N21-abort, Y14-noise, N4-mirage, N12-mirage1
 | Pinch zoom off on iOS by default (no 0.5x map zoom); the played app's On was the user's saved choice (P12-pinch) | iPhone Duo (new rebuild port, lane P12), display/zoom/HD | fixed | P12 (iOS default on) |
 | Play resolution differs from the played app (976x720 vs 1024x720 at 944x634 points, interface 1.25x); not... (P12-res) | iPhone Duo (new rebuild port, lane P12), display/zoom/HD | needs his check | 976x720 on the Duo against 1024x720 here; the app log line settles it |
 | Home-screen name was 'RA2 Rebuild Trial' (P12-name) | iPhone Duo (new rebuild port, lane P12), iPhone touch | fixed | P12 |
+
+## Yuri's Revenge rows (lane P13, 2026-11-24)
+
+The Yuri's Revenge port here is the played port's (vendor/ra2-decomp at the same pin, yr/fixups.json, yr/glue and the
+shared host copied from redalert2-decomp's native/yr at 887b1a2e11; lane P15's skirmish-screen fix on top), so every row
+is **same code** as the played port; the check column says what ran on this repository. The runs: lane P13's full Mac
+ctest at 23ebd62/efc9665 (every yr-native row passed except member-aliases and save, two test-setup faults fixed in
+79472b1 and passing on the recheck), the recheck after the P15/P16/P14 merges, and the "RA2 Duo Validation" Simulator
+rows of the combined app. The mapping from id to bug follows the played port's notes (docs/yr-port-notes.md lanes Y11 to
+N32); where the notes do not say which check covers a row, it is marked needs his check.
+
+Counts (25): scripted and passing 20, same code (no script) 2, needs his check 3.
+
+| Bug | Status on the new port | Check |
+| --- | --- | --- |
+| Touch pan and zoom gestures during a mission intro's input lock (N32) | scripted, passing | yr-native-locked-input |
+| Allied 1's Guardian GIs did not deploy; deployers on command (N13) | scripted, passing | yr-native-deployers |
+| Campaign dialog's Difficulty label read MISSING (Y15-diff) | same code | yr-native-campaign-allied/-soviet pass through the dialog; the label text is not checked |
+| Immediate defeat in a Yuri's Revenge skirmish (Mac report; a stale build) (N3-mac-defeat) | scripted, passing | yr-native-skirmish-long (ten minutes against three hard AI), -smoke, -score |
+| Unit walk and idle animation glitches (Y13-anim) | needs his check | no script compares the animation frames |
+| A GI could not garrison a civilian house (N4-garrison) | scripted, passing | yr-native-garrison |
+| Internet button live in Yuri's Revenge's main menu (N18-internet) | needs his check | no row clicks it |
+| Main menu slide-in drawn wrong (N18-slide) | same code | one-game-ios-sim-menus walks the menus; the slide-in frames are not compared |
+| Menu list rows (N18-rows) | needs his check | no row compares them |
+| Shell dialogs' backdrop black (Options) or noise (Enhancements) (Y11-backdrop) | scripted, passing | one-game-menu-backdrop, one-game-ios-sim-menus |
+| The toggle and the menu's focus after a swap (Y11-focus) | scripted, passing | one-game-toggle (Mac), one-game-toggle-wine (Windows), one-game-ios-sim |
+| End-of-game banner dark (N21-banner) | scripted, passing | yr-native-end-banner |
+| Command bar thumbs with Zoom gestures on (N27) | scripted, passing | yr-native-command-bar-thumb |
+| Bottom command bar missing (Y14-bar) | scripted, passing | yr-native-graphics |
+| Command bar's TypeSelect did nothing (N3-typesel) | scripted, passing | yr-native-type-select |
+| Save through the Save dialog failed (N3-savedlg) | scripted, passing | yr-native-save-dialog |
+| The user's own original Yuri's Revenge saves (N5-origload) | scripted, passing (partly) | yr-native-save (the installation here has no YR saves: that part is skipped) |
+| Crash on the Network screen (N3-netcrash) | scripted, passing | yr-native-lan-lobby, yr-native-lan-pair |
+| No on-screen keyboard in Yuri's Revenge's name field (N3-yrkbd) | scripted, passing | one-game-ios-sim-menus (both games' name fields; Red Alert 2's fixed by lane P13) |
+| Abort Mission when scaled showed the zoomed map small (N21-abort) | scripted, passing | yr-native-zoom-abort |
+| Noise drawn while the MCV deploys and a Grizzly first moves (Y14-noise) | scripted, passing | yr-native-graphics |
+| Mirage tank camouflage in the wrong colours (N4-mirage) | scripted, passing | yr-native-mirage |
+| Mirage tank's first camouflage animation corrupted (N12-mirage1) | scripted, passing | yr-native-mirage (first animation against the second) |
+| Oil derrick and power plant animations missing (N4-derrick) | scripted, passing | yr-native-building-anims |
+| Skip button left on the start-up loading screen (Y14-skip) | scripted, passing | one-game-ios-sim-menus (failed once in the full run, passed on the recheck: the check reads the host's touch-control states) |
+
+Rows that change with the combined app (the RA2 table above): C23-toggle is **scripted, passing** (one-game-toggle,
+one-game-toggle-wine, one-game-ios-sim), C14-kbd is **scripted, passing** in the Simulator (one-game-ios-sim-menus), and
+W-none has the Windows builds (ctest label rb-wine and the YR and one-game rows on build/windows, build/windows-one).
