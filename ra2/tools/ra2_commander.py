@@ -25,7 +25,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import ra2_step  # noqa: E402
 
-OBJ = re.compile(r'^obj (\d+) (\w+) (\S+) (\S+) @(-?\d+),(-?\d+) s(-?\d+)/(\d+) m(-?\d+)(.*)$')
+OBJ = re.compile(r'^obj (\d+) (\w+) (\S+) (.+?) @(-?\d+),(-?\d+) s(-?\d+)/(\d+) m(-?\d+)(.*)$')
 
 
 class Obj:
@@ -70,9 +70,18 @@ class Game:
         self.news = []
         self.verbose = verbose
         self.lost_mine = []
+        for line in self.cmd('state'):      # the current tick (the scenario line's loop field) and the player's house
+            m = re.match(r'^scenario \S+ loop (\d+)', line)
+            if m:
+                self.tick = int(m.group(1))
+            m = re.match(r'^player (.+?) credits', line)
+            if m:
+                self.player = m.group(1)
 
     # -- transport -------------------------------------------------------------------------------------------------
     def send(self, *commands):
+        if self.over:   # after the end the score screen follows: the server answers no more
+            raise GameOver(self.over)
         replies = ra2_step.send(self.work, list(commands))
         for c, lines in zip(commands, replies):
             if c.startswith('advance'):
@@ -135,7 +144,7 @@ class Game:
             if m:
                 st['objs'].append(Obj(m))
                 continue
-            m = re.match(r'^player (\S+) credits (-?\d+) power (-?\d+) drain (-?\d+) input (\w+)', l)
+            m = re.match(r'^player (.+?) credits (-?\d+) power (-?\d+) drain (-?\d+) input (\w+)', l)
             if m:
                 st['player'] = m.group(1)
                 self.player = m.group(1)
@@ -250,9 +259,14 @@ class Game:
         self.with_key('Left_Ctrl', self.click_obj, target)
 
     def attack_move(self, cell):
-        """The command bar's attack move, then the cell."""
-        self.raw_click('@cmd=AttackMove')
-        self.click_cell(cell)
+        """An attack move (the game's Can_Force_Order: the force-attack and select keys held, Ctrl+Shift, with a left
+        click on the ground). The command bar's AttackMove button is not on the bar in every state."""
+        self.look(*cell)
+        self.send('input keydown Left_Ctrl', 'input keydown Left_Shift')
+        self.adv(1)
+        self.raw_click('@=%d,%d' % cell)
+        self.send('input keyup Left_Shift', 'input keyup Left_Ctrl')
+        self.adv(2)
 
     def deselect(self):
         self.raw_click('428 368', right=True, wait=12)
@@ -343,3 +357,240 @@ def ring(center, r0=0, r1=8, step=1):
                 if max(abs(dx), abs(dy)) == r:
                     out.append((cx + dx, cy + dy))
     return out
+
+
+# -- mission helpers (lane P22) ----------------------------------------------------------------------------------------
+def get(g, oid):
+    """The object with that id now, or None."""
+    for o in g.objects('all'):
+        if o.id == oid:
+            return o
+    return None
+
+
+def go_until(g, oid, cell, r=1, step=60, timeout=3000, show=True):
+    """Advances until the object is within r cells of cell (or gone, or the timeout)."""
+    end = g.tick + timeout
+    o = None
+    while g.tick < end:
+        g.adv(step)
+        o = get(g, oid)
+        if o is None:
+            print('dead', oid, g.tick)
+            return None
+        if dist(o, cell) <= r:
+            break
+    if show:
+        print(g.tick, o, o.m)
+    return o
+
+
+def kill_list(g, team, ids, step=60, timeout=2500, verbose=True):
+    """Team <n> ordered at each target in turn, each waited for until gone (or the timeout)."""
+    for tid in ids:
+        t = get(g, tid)
+        if t is None:
+            continue
+        g.team(team)
+        g.attack(t)
+        end = g.tick + timeout
+        t2 = t
+        while g.tick < end:
+            g.adv(step)
+            t2 = get(g, tid)
+            if t2 is None:
+                break
+        if verbose:
+            print(g.tick, 'target', t, 'gone' if t2 is None else 'left %d' % t2.s)
+
+
+def exterminate(g, houses, teams, step=120, rounds=200, prefer=None, near=None, skip=()):
+    """Each round every team is ordered at the target nearest a point (or the houses' first object), until the houses
+    have nothing left on the map. prefer: types taken first; skip: types left alone."""
+    for r in range(rounds):
+        objs = [o for o in g.objects('all') if o.house in houses and o.type not in skip]
+        if not objs:
+            print(g.tick, 'none left')
+            return True
+        ref = near or (objs[0].x, objs[0].y)
+        if prefer:
+            pref = [o for o in objs if o.type in prefer]
+            if pref:
+                objs = pref
+        tgt = min(objs, key=lambda o: dist(o, ref))
+        for t in teams:
+            g.team(t)
+            g.attack(tgt)
+        end = g.tick + 900
+        while g.tick < end:
+            g.adv(step)
+            if get(g, tgt.id) is None:
+                break
+        if r % 5 == 0:
+            print(g.tick, 'round', r, 'left', len(objs), 'target', tgt)
+    return False
+
+
+def produce(g, kind, name, ticks, step=200, keep=5, want=None, rally=None, door=None):
+    """For the given ticks keeps the factory of kind ('vehicle', 'infantry', ...) building name: whenever it is idle a
+    batch of keep is queued (credits allowing). want: stop once the player has that many of name. rally: new units
+    are walked there (units left at a factory's door block its exit: the next one is refunded instead of built)."""
+    end = g.tick + ticks
+    known = None
+    while g.tick < end:
+        st = g.state()
+        have = [o for o in st['objs'] if o.own and o.type == name]
+        if known is None:
+            known = {o.id for o in have}
+        new = [o for o in have if o.id not in known]
+        if rally and door == 'all':
+            if new:
+                select_all_combat(g)
+                g.move(rally)
+        elif rally and door:
+            idle = [o for o in have if dist(o, door) <= 4]
+            if len(idle) >= 3 and band_select(g, idle):
+                g.move(rally)
+        elif rally and new:
+            g.select(new)
+            g.move(rally)
+        known |= {o.id for o in new}
+        if want is not None and len(have) >= want:
+            break
+        if kind not in st['factory'] and st.get('credits', 0) >= 300:
+            g.queue(name, keep, st)
+        g.adv(step)
+    return len([o for o in g.mine() if o.type == name])
+
+
+def threats(g, center, radius, objs=None):
+    objs = objs if objs is not None else g.enemy()
+    return [o for o in objs if dist(o, center) <= radius and o.kind != 'bld' and o.s > 0]
+
+
+def hold(g, center, radius, team, ticks, step=60, produce_kind=None, produce_name=None, keep=5, want=None,
+         rally=None, log=True):
+    """For the given ticks: whenever an enemy unit comes within radius of center, team <n> is ordered at the nearest
+    one (focus fire); new units of produce_name are added to the team as they appear; the factory kept busy.
+    Returns the losses seen (news lines)."""
+    end = g.tick + ticks
+    known = None
+    lost = []
+    while g.tick < end:
+        st = g.state()
+        objs = st['objs']
+        mine = [o for o in objs if o.own]
+        if produce_name:
+            have = [o for o in mine if o.type == produce_name]
+            if known is None:
+                known = {o.id for o in have}
+            new = [o for o in have if o.id not in known]
+            if new:
+                g.team(team)
+                g.select(new, add=True)
+                g.with_key('Left_Ctrl', g.key, str(team))
+                known |= {o.id for o in new}
+            if (want is None or len(have) < want) and produce_kind not in st['factory'] and st.get('credits', 0) >= 300:
+                g.queue(produce_name, keep, st)
+        en = threats(g, center, radius, [o for o in objs if not o.own and not o.ally])
+        if en:
+            tgt = min(en, key=lambda o: dist(o, center))
+            g.team(team)
+            g.attack(tgt)
+        elif rally:
+            pass
+        g.adv(step)
+        ls = [l for l in g.take_news() if ' lost ' in l and g.player and (' %s ' % g.player) in l]
+        if ls and log:
+            print(g.tick, '; '.join(l.split(' ', 3)[3] for l in ls)[:300])
+        lost += ls
+    return lost
+
+
+def deploy_mcv(g, mcv_type):
+    """The player's MCV selected and deployed where it stands (a click on it, then D)."""
+    m = [o for o in g.mine() if o.type == mcv_type]
+    if not m:
+        return None
+    g.select(m[:1])
+    g.key('D', wait=30)
+    g.adv(120)
+    return [o for o in g.mine() if o.kind == 'bld']
+
+
+def base(g, plan, center, r=6):
+    """Buildings bought and placed in order: plan is a list of (type, (x, y) or None); None places near center."""
+    out = []
+    for name, at in plan:
+        o = g.build(name, ring(at or center, 0, r))
+        out.append(o)
+    return out
+
+
+def select_all_combat(g, team=None):
+    """P (select combatants on the screen), and P again for the whole map, then Ctrl+<team>."""
+    g.deselect()
+    g.key('P', wait=4)
+    g.key('P', wait=4)
+    if team is not None:
+        g.with_key('Left_Ctrl', g.key, str(team))
+    return len(g.selected())
+
+
+def push(g, cell, ticks=1500, step=150, radius=6, regroup=True, quiet=False):
+    """All combat units (or team 1 when regroup is off) attack-moved to cell; waits until no enemy unit or building is
+    left within radius of cell and the units are near, or the ticks run out. Returns the player's unit count."""
+    if regroup:
+        select_all_combat(g, 1)
+    else:
+        g.team(1)
+    g.attack_move(cell)
+    end = g.tick + ticks
+    while g.tick < end:
+        g.adv(step)
+        objs = g.objects('all')
+        en = [o for o in objs if not o.own and not o.ally and dist(o, cell) <= radius and o.s > 0
+              and not o.house.startswith(('Civ', 'Neutral', 'Special'))]
+        near = [o for o in objs if o.own and o.kind != 'bld' and dist(o, cell) <= radius]
+        if not en and near:
+            break
+    units = [o for o in g.mine() if o.kind != 'bld']
+    if not quiet:
+        lost = [l for l in g.take_news() if ' lost ' in l]
+        print('push %s: tick %d, units %d, losses since last %d' % (cell, g.tick, len(units), len(lost)))
+    return len(units)
+
+
+def pixel(g, cell):
+    """The view-relative pixel of a cell's centre now (probe), or None when it is not in the view."""
+    for line in g.cmd('probe %d %d' % tuple(cell)):
+        m = re.match(r'^probe rel (-?\d+),(-?\d+) .* rect (-?\d+),(-?\d+) (\d+)x(\d+)', line)
+        if m:
+            x, y, w, h = int(m.group(1)), int(m.group(2)), int(m.group(5)), int(m.group(6))
+            if 0 <= x < w and 0 <= y < h:
+                return (x + int(m.group(3)), y + int(m.group(4)))
+    return None
+
+
+def band_select(g, objs, team=None):
+    """The player's units among objs selected with one band box over their cells (the view centred on them first);
+    returns the selection count. Only the player's own units are picked up by a band."""
+    if not objs:
+        return 0
+    cx = sum(o.x for o in objs) // len(objs)
+    cy = sum(o.y for o in objs) // len(objs)
+    g.deselect()
+    g.look(cx, cy)
+    pts = [p for p in (pixel(g, o.cell) for o in objs) if p]
+    if not pts:
+        return 0
+    x0 = max(2, min(p[0] for p in pts) - 30)
+    y0 = max(2, min(p[1] for p in pts) - 40)
+    x1 = min(850, max(p[0] for p in pts) + 30)
+    y1 = min(730, max(p[1] for p in pts) + 20)
+    g.send('input move %d %d' % (x0, y0), 'input +2 ldown %d %d' % (x0, y0), 'input +5 move %d %d' % ((x0 + x1) // 2, (y0 + y1) // 2),
+           'input +8 move %d %d' % (x1, y1), 'input +11 lup %d %d' % (x1, y1))
+    g.adv(15)
+    if team is not None:
+        g.with_key('Left_Ctrl', g.key, str(team))
+    return len(g.selected())

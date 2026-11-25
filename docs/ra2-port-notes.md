@@ -887,10 +887,17 @@ ra2-campaign-won) was added. A mission is shelved at 3 lane-hours of wall time f
 | Mission | Result | Lane-hours | Notes |
 | --- | --- | --- | --- |
 | Allied 2 (ALL02S, Eagle Dawn) | won at tick 30,335 | 0.5 | Tanya through the pond onto both flak cannons, engineers' drop takes the Academy, rocketeers on the reactors |
+| Allied 3 (ALL03U, Hail to the Chief) | deferred at 0.2 (resumed later) | 0.2 | the base built; Rhino raids and armed civilians took the power, refinery and barracks while the tanks idled; best point A3BASE1.SAV (tick 7,940, the base before the war factory) |
+| Soviet 1 (SOV01T, Red Dawn) | won at tick 49,448 | 1.1 | engineer repairs the bridge, about 70 conscripts by attack move through both Allied positions, the Pentagon's four parts |
 
 Helper findings (the scripted-input path, not the game): a click's selection shows two or three frames after the button
 is released (the game's mouse is read once a frame), so a click is followed by ten frames before the next one; a look
 must be followed by a drawn frame before a click on an object (objects register where they were last drawn); with an
 infantry selected, a left click on another controlled (allied house) infantry is a move, so a selection starts with a
 right click; Escape opens the in-game options menu, whose modal loop runs no Main_Loop frame, so the step server stops
-answering (the run had to be restarted from its recording; the helpers never press Escape).
+answering (the run had to be restarted from its recording; the helpers never press Escape). The command bar's AttackMove
+button is not on the bar in every state (input-script: no command bar button), so a scripted attack move through it fell
+back to a plain move; the game's own attack move is Ctrl+Shift with a left click (Can_Force_Order), which the helper now
+uses. Units standing at a barracks' door block its exit: the finished infantry is refunded, not built (the original's
+behaviour), so the helpers walk new units away. The Game object reads the current tick at its start (timeouts counted
+from 0 ended at once).
