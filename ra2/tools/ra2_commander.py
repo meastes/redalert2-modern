@@ -712,3 +712,43 @@ def fight_along(g, team, waypoints, radius=8, step=60, ticks_per_leg=3000, groun
         if not quiet:
             print('fight_along %s: tick %d, team %d' % (wp, g.tick, len(mem)))
     return mem
+
+
+def defend_step(g, center, radius, team, objs=None):
+    """One home-defence check (lane P23): team <n> ordered at the enemy unit nearest center within radius (infantry
+    first: an engineer can capture a construction yard). Returns the target or None."""
+    objs = objs if objs is not None else g.objects('all')
+    en = [o for o in objs if not o.own and not o.ally and o.kind != 'bld' and o.s > 0 and dist(o, center) <= radius
+          and not o.house.startswith(('Civ', 'Neutral', 'Special'))]
+    if not en:
+        return None
+    tgt = min(en, key=lambda o: (o.type != 'ENGINEER', dist(o, center)))
+    g.team(team)
+    g.attack(tgt)
+    return tgt
+
+
+def base_defended(g, plan, center, team, radius=10, r=6, step=60, timeout=6000):
+    """base() with a home defence (lane P23): while each building is bought, team <n> answers threats near center
+    (defend_step); then it is placed near its cell. plan: (type, (x, y) or None)."""
+    out = []
+    for name, at in plan:
+        st = g.state()
+        f = st['factory'].get('building')
+        if not (f and f[0] == name):
+            if not g.queue(name, 1, st):
+                print('base_defended: %s not on the sidebar' % name)
+                out.append(None)
+                continue
+        end = g.tick + timeout
+        while g.tick < end:
+            st = g.state()
+            f = st['factory'].get('building')
+            if not f or (f[0] == name and f[1] >= 100):
+                break
+            defend_step(g, center, radius, team, st['objs'])
+            g.adv(step)
+        o = g.place(name, ring(at or center, 0, r))
+        print('build %s -> %s at tick %d' % (name, o, g.tick))
+        out.append(o)
+    return out

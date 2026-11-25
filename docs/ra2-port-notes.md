@@ -914,8 +914,10 @@ per win (ra2/tests/campaign/<mission>.replay), rerun to the same winning tick be
 | Mission | Result | Lane-hours | Notes |
 | --- | --- | --- | --- |
 | Allied 3 (ALL03U, Hail to the Chief) | won at tick 39,041 | 0.1 | resumed from P22's A3BASE1 (tick 7,940): GIs into two houses by the bridges, barracks, war factory, a pillbox; 22 Grizzlies massed behind ra2_commander.hold (radius 10: a wider one chased across the western bridge into the second Soviet base); a plain push up the eastern road lost them all at the Soviet base's east side; walked instead in short legs with focus fire (fight_along) up the eastern road and round the north of the base, and the beacon force-fired through its cell |
+| Allied 4 (ALL04U, Last Chance) | won at tick 32,994 | 0.2 | the starting rocketeers and transports belong to PlayerAlt2, a house with PlayerControl=yes (the player clicks them; the step server's "own" flag shows only the player's house) until the construction yard is built; rocketeers on both grand cannons, destroyers through the subs, the shore defences and the naval yard, transports unloaded on the beach (82,128), the MCV deployed at (79,126). First try: the Soviet yard sells itself 180 s after ours is built and an engineer from it captured our yard; second: attacking the Soviet yard first woke the shore forces (V3, tesla troopers) and they razed it; third: the infantry kept on the yard (base_defended) and no Soviet building touched. Then a naval yard, ten destroyers up the river (fight_along, sentry guns and subs on the way) and the amplifier force-fired from the water |
 
 New helpers (ra2/tools/ra2_commander.py): `fight_along` (a team walked along waypoints in short legs, focus-firing the
-enemy unit or ground defence nearest its centre); `Game.force_cell` (Ctrl with a left click on a cell). Finding: a left
+enemy unit or ground defence nearest its centre); `Game.force_cell` (Ctrl with a left click on a cell); `defend_step` (one home-defence order, engineers first) and
+`base_defended` (base() with a home defence while each building is bought). Finding: a left
 click on Allied 3's Psychic Beacon (NAPSYB) with tanks selected is taken as a move (the units go to guard beside it); the
 force fire on one of its cells attacks it.
