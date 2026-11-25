@@ -52,6 +52,10 @@ while IFS='=' read -r name _; do
   [[ "$name" == RA2_* ]] && export "SIMCTL_CHILD_$name=${!name}"
 done < <(env)
 export SIMCTL_CHILD_RA2_NATIVE_LOG_STDERR=1 SIMCTL_CHILD_RA2_NATIVE_PROGRESS_LOG=1 SIMCTL_CHILD_RA2_NATIVE_NO_CRASH_DIALOG=1
+# Lane P13: iOS starts with Zoom gestures on (lane P12), which makes the whole screen render scale 2 times larger; the
+# routes' clicks are the Mac's (off by default), so a run that does not name the setting gets it off.
+enh="${RA2_NATIVE_ENHANCEMENTS:-}"
+[[ "$enh" == *zoomgestures=* ]] || export SIMCTL_CHILD_RA2_NATIVE_ENHANCEMENTS="${enh:+$enh,}zoomgestures=off"
 xcrun simctl launch --console-pty --terminate-running-process "$udid" "$bundle" "$@" &
 pid=$!
 trap 'kill $pid 2>/dev/null; xcrun simctl terminate "$udid" "$bundle" >/dev/null 2>&1' TERM INT

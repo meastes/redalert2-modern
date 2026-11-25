@@ -260,6 +260,8 @@ add_test(NAME yr-native-original-layouts COMMAND "${Python3_EXECUTABLE}" -B "${C
 # object, bound to its members) is what this build's layouts and undefined globals give.
 add_test(NAME yr-native-member-aliases COMMAND "${Python3_EXECUTABLE}" -B "${CMAKE_CURRENT_SOURCE_DIR}/yr/tools/yr_member_aliases.py"
          --build "${CMAKE_CURRENT_BINARY_DIR}" --check)
+get_filename_component(ra2_yr_mingw_root "${RA2_NATIVE_YR_MINGW}/../.." ABSOLUTE)   # the Windows column's compiler
+set_tests_properties(yr-native-member-aliases PROPERTIES ENVIRONMENT "RA2_LLVM_MINGW=${ra2_yr_mingw_root}")
 
 # ctest yr-native-save (lane Y10): a skirmish saved in gamemd.exe's format at frame 500, loaded from the
 # menus and played 300 frames, saved again after the load and that loaded and played; a save of the

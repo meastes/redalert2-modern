@@ -152,9 +152,12 @@ def main():
     cache.mkdir(parents=True, exist_ok=True)
     win_cxx = a.win_cxx
     if not win_cxx:
-        tc = ROOT / 'private/toolchains/llvm-mingw-20261020/llvm-mingw-20261020-ucrt-macos-universal/bin'
-        for r in [ROOT] + list(ROOT.parents):
-            c = r / tc.relative_to(ROOT) / 'x86_64-w64-mingw32-clang++'
+        # The Windows column from llvm-mingw's compiler: RA2_LLVM_MINGW, else an extracted release under toolchains/.
+        import glob, os
+        roots = [os.environ['RA2_LLVM_MINGW']] if os.environ.get('RA2_LLVM_MINGW') else sorted(
+            glob.glob(str(ROOT / 'toolchains/llvm-mingw-*')) + glob.glob(str(ROOT / 'toolchains/llvm-mingw-*/llvm-mingw-*')))
+        for r in roots:
+            c = Path(r) / 'bin/x86_64-w64-mingw32-clang++'
             if c.exists():
                 win_cxx = str(c)
                 break
