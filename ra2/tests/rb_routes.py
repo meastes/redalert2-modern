@@ -58,6 +58,15 @@ Modelled on yr/tests/yr_skirmish_smoke.py and tests/exit_route.py.
   combatsave (lane P5) the combat route saved at frame 260 (attack under way), then loaded and played on;
             checks as save. `resave --save <file>` takes any of the user's saves.
 
+  allied1   (lane P16, the user's Duo report 2026-11-24: "a random failure in the middle" of Allied 1 with Tanya alive) the
+            user's ALL01T.sav (Allied 1's start), Tanya walked north (harness `goto TANY 62 80`) and sent at the four
+            Dreadnoughts (`fire TANY DRED`, her C4) with the trigger watch. Checks: Objective 1 Complete fired (every BadGuy2
+            Dreadnought gone); no loss in the run (no Mission Failed, no lose flag, no game-over) past Dreadnought Retreat.
+  allied1idle (lane P16) the same walk north, then Tanya left idle: the map's own failure, as the src-based port and the
+            original play it. Two minutes (1,800 frames) after the Statue movie, Enable Retreat sends the Dreadnoughts out
+            (Dreadnought Retreat), they cross Enable Failure 3's cell line, are deleted at the map edge (Enable Failure 3b:
+            BadGuy2 all destroyed with Objective 1 Complete disabled) and Mission Failed makes the player lose. Checks: the
+            loss comes from that chain in order, after Dreadnought Retreat, and from nothing else.
   forcewin, forcelose  (lane P7) the skirmish start, then RA2_NATIVE_FORCE_END=300[,lose] (glue/mainloop_native.inc,
             main's harness_save.cpp: PlayerWins or PlayerLoses set at loop frame 300, as the house AI sets them), the
             score screen's Continue, the setup's Back and Single Player's Back. Checks: the force-end line; the skirmish
@@ -72,7 +81,7 @@ Every route also fails on a trap (a link-closure function reached), a fault, a c
 blit outside its surface. Skipped (77) without the installed game (game.exe in --data-dir) or the
 pinned target game.exe (--game-exe, the build the rebuild's addresses name).
 
-  rb_routes.py --route skirmish|soak|exit|audio|save|resave|original|combat|combatsave|campaign|production|forcewin|forcelose|chain
+  rb_routes.py --route skirmish|soak|exit|audio|save|resave|original|combat|combatsave|campaign|production|allied1|allied1idle|forcewin|forcelose|chain
                [--side allied|soviet] --binary <rb-native-trial> --data-dir <game folder>
                --game-exe <game.exe> --work <dir> [--seconds N]
 """
@@ -152,6 +161,13 @@ CAMPAIGN = {
 # Lane P6: the production route's orders (glue/harness_native.inc: train, count, super).
 PRODUCTION_ORDERS = ('60 spawn GAPOWR 0 6; 61 spawn GAPOWR 2 6; 70 spawn GAPILE 4 0; 80 spawn GAWEAP -5 0; 290 count E1; '
                      '290 count MTNK; 300 train E1; 301 train MTNK; 400 super 0 enemy; 1500 count E1; 1500 count MTNK; 1500 state')
+# Lane P16: Allied 1's walk (glue/harness_native.inc goto, fire, where; loop frames at the save's speed). Tanya starts at 62,108
+# and walks north past the Initial Paratroopers cell line (row 84); the Dreadnoughts lie at rows 90-91. ALLIED1_SINK sends her at
+# them (the nearest left each time) until all four are gone.
+ALLIED1_WALK = '1 state; 30 goto TANY 62 80; 300 where TANY; 600 where TANY'
+ALLIED1_SINK = ALLIED1_WALK + ''.join('; %d fire TANY DRED' % f for f in range(650, 2650, 200)) + '; 2700 where TANY; 3300 state'
+ALLIED1_IDLE = ALLIED1_WALK + '; 2700 where TANY; 3000 state'
+ALLIED1_ESCAPE = ['Dreadnought Retreat', 'Enable Failure 3', 'Enable Failure 3b', 'Mission Failed']
 ROUTES = {
     # route: (script, seconds, run-to, game args)
     'skirmish': (START, 75, 'never', '-noaudio -CD.'),
@@ -165,6 +181,8 @@ ROUTES = {
     'combatsave': ('', 60, 'never', '-noaudio -CD.'),
     'campaign': ('', 110, 'never', '-noaudio -CD.'),
     'production': (START, 60, 'never', '-noaudio -CD.'),
+    'allied1': ('', 130, 'never', '-noaudio -CD.'),
+    'allied1idle': ('', 130, 'never', '-noaudio -CD.'),
     'forcewin': (START + SCORE_CONTINUE, 50, 'never', '-noaudio -CD.'),
     'forcelose': (START + SCORE_CONTINUE, 50, 'never', '-noaudio -CD.'),
     'chain': ('', 1200, 'seconds', '-noaudio -CD.'),
@@ -282,6 +300,13 @@ def main():
         seconds = a.seconds or CAMPAIGN[a.save][0]
         cmd = common + ['--run-to=' + run_to, '--run-seconds=%d' % seconds, '--load-save=' + a.save]
         env.update(RA2_NATIVE_STG_LOG='1', RA2_NATIVE_TRIGGERS='1', RA2_NATIVE_ORDERS=CAMPAIGN_ORDERS)
+    elif a.route in ('allied1', 'allied1idle'):
+        if not os.path.isfile(os.path.join(a.data_dir, a.save)):
+            print('%s: skipped: no %s in --data-dir' % (a.route, a.save))
+            return SKIP
+        cmd = common + ['--run-to=' + run_to, '--run-seconds=%d' % seconds, '--load-save=' + a.save]
+        env.update(RA2_NATIVE_STG_LOG='1', RA2_NATIVE_TRIGGERS='1', RA2_NATIVE_ORDERS=ALLIED1_SINK if a.route == 'allied1' else ALLIED1_IDLE)
+        env.pop('RA2_NATIVE_FORCE_END', None)
     elif a.route == 'original':
         if not os.path.isfile(os.path.join(a.data_dir, a.save)):
             print('original: skipped: no %s in --data-dir' % a.save)
@@ -326,7 +351,39 @@ def main():
             bad.append('no trigger list watched')
         if not re.search(r'^harness-hunt [1-9]', out, re.M):
             bad.append('the hunt order found none of the player\'s units')
-    if a.route in ('save', 'resave', 'combatsave', 'original', 'campaign'):
+    if a.route in ('allied1', 'allied1idle'):
+        if 'resume: loaded ' + a.save not in out:
+            bad.append('%s was not loaded' % a.save)
+        if not re.search(r'^harness-goto TANY @62,80 1$', out, re.M):
+            bad.append('Tanya was not sent north')
+        gone = [(int(m.group(1)), m.group(2).strip()) for m in re.finditer(r'^harness-trigger (\d+) gone \S+ (.*)$', out, re.M)]
+        names = [n for _, n in gone]
+        lost = re.search(r'^game-over: player loses at frame (\d+)', out, re.M)
+        if a.route == 'allied1':
+            if 'Objective 1 Complete' not in names:
+                bad.append('Objective 1 Complete did not fire (the Dreadnoughts not all sunk: %d harness-killed)'
+                           % len(re.findall(r'^harness-killed DRED ', out, re.M)))
+            for n in ('Enable Failure 3', 'Enable Failure 3b', 'Mission Failed'):
+                if n in names:
+                    bad.append('%s fired' % n)
+            if lost or re.search(r'^harness-house \d+ lose ', out, re.M):
+                bad.append('the player lost (%s)' % (lost.group(0) if lost else 'lose flag set'))
+            if 'Dreadnought Retreat' not in names:
+                bad.append('the run did not reach Dreadnought Retreat (the escape the sinking forestalls)')
+        else:
+            order = [n for n in names if n in ALLIED1_ESCAPE]
+            if order != ALLIED1_ESCAPE:
+                bad.append('the escape chain was %s, not %s' % (order, ALLIED1_ESCAPE))
+            if not lost:
+                bad.append('no loss: the escaped Dreadnoughts must fail the mission')
+            else:
+                retreat = [f for f, n in gone if n == 'Dreadnought Retreat']
+                if not retreat or int(lost.group(1)) <= retreat[0]:
+                    bad.append('lost before Dreadnought Retreat (%s)' % lost.group(0))
+            for n in ('Enable Failure', 'Enable Failure b', 'Enable Failure 2'):
+                if n in names:
+                    bad.append('%s fired (another failure than the escape)' % n)
+    if a.route in ('save', 'resave', 'combatsave', 'original', 'campaign', 'allied1', 'allied1idle'):
         if not any('original save (compound file)' in l for l in lines):
             bad.append('the save was not opened as an original (compound file)')
     if a.route == 'original':
@@ -373,14 +430,14 @@ def main():
             if not seen or min(seen) >= int(m.group(1)):
                 bad.append('the missile\'s target was not damaged (strengths %s)' % seen[:6])
     if a.route in ('skirmish', 'soak', 'audio', 'save', 'resave', 'combatsave', 'original', 'combat', 'campaign', 'production',
-                   'forcewin', 'forcelose'):
+                   'allied1', 'allied1idle', 'forcewin', 'forcelose'):
         if 'time limit' not in stop:
             bad.append('the run stopped early: %s' % (stop or 'no stop line'))
         if not any('reached frame' in l for l in lines):
             bad.append('the game loop was not reached')
         # A loaded game runs at its save's game speed (Sync_Delay waits; about 20 frames a second seen),
         # not the skirmish slider's default 0 the frame floor paces at 62.
-        floor = {'forcewin': 300, 'forcelose': 300, 'soak': 6000, 'save': 900, 'resave': 900, 'combatsave': 900, 'original': 900, 'campaign': 2400}.get(a.route, int(3000 * seconds / 75))
+        floor = {'forcewin': 300, 'forcelose': 300, 'soak': 6000, 'save': 900, 'resave': 900, 'combatsave': 900, 'original': 900, 'campaign': 2400, 'allied1': 3000, 'allied1idle': 3000}.get(a.route, int(3000 * seconds / 75))
         if frames < floor:
             bad.append('%d frames run (at least %d expected)' % (frames, floor))
     if a.route in ('forcewin', 'forcelose'):

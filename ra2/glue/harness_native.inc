@@ -36,6 +36,10 @@
 //                                   watched as fire's target (main's `super <index> enemy`)
 //   supers                          `harness-supers <index>:<type> ...` (the player's list)
 //   state                           `harness-state <scenario> money <n> timer <frames|-> technos <n> win <0|1> lose <0|1>`
+// Lane P16 (Allied 1's walk):
+//   goto <ID|*> <x> <y>             main's order: the player's infantry and vehicles of type ID ('*' all) move to cell x,y
+//                                   (MISSION_MOVE): `harness-goto <ID> @x,y <n>`
+//   where <ID>                      `harness-where <ID> @x,y s<strength> m<mission>` (the player's first ID) or `... gone`
 // RA2_NATIVE_TRIGGERS=1 watches the scenario's triggers each frame (main's harness_soak.cpp): `harness-triggers
 // <scenario> <n>` at the first frame, then `harness-trigger <frame> gone <ID> <name>` (a live trigger left Triggers:
 // a volatile trigger sprung and deleted), `... new <ID> <name>` (one made after the start) and `... tripped <ID>
@@ -385,6 +389,33 @@ void RB_Run_Order(char const * text)
 			++count;
 		}
 		fprintf(stderr, "harness-deploy %s %d\n", word[1], count);
+	} else if (!strcmp(word[0], "goto") && words >= 4) {
+		// Lane P16: main's `goto <ID|*> <x> <y>` (native/link/harness_orders.cpp, Scout1153): the player's infantry and vehicles
+		// of type ID ('*' every one) sent to cell x,y (MISSION_MOVE with the cell as the navigation target, the move click's
+		// order): `harness-goto <ID> @x,y <n>`.
+		Cell to((short)atoi(word[2]), (short)atoi(word[3]));
+		int count = 0;
+		for (int i = 0; i < Technos.Count(); ++i) {
+			TechnoClass * techno = Technos[i];
+			if (techno == NULL || techno->House != PlayerPtr || techno->IsInLimbo) continue;
+			RTTIType rtti = techno->Fetch_RTTI();
+			if (rtti != RTTI_UNIT && rtti != RTTI_INFANTRY) continue;
+			if (strcmp(word[1], "*") && strcmp(RB_Type_Name(techno), word[1])) continue;
+			TargetClass none;
+			TargetClass navcom(to);
+			Queue_Mission(TargetClass(techno), MISSION_MOVE, none, navcom);
+			++count;
+		}
+		fprintf(stderr, "harness-goto %s @%d,%d %d\n", word[1], (int)to.X, (int)to.Y, count);
+	} else if (!strcmp(word[0], "where") && words >= 2) {
+		// Lane P16: `where <ID>`: `harness-where <ID> @x,y s<strength> m<mission>` (the player's first ID), or `gone`.
+		TechnoClass * unit = RB_First_Of(word[1], PlayerPtr);
+		if (unit == NULL) {
+			fprintf(stderr, "harness-where %s gone\n", word[1]);
+			return;
+		}
+		Cell at = unit->Center_Coord().As_Cell();
+		fprintf(stderr, "harness-where %s @%d,%d s%d m%d\n", word[1], (int)at.X, (int)at.Y, unit->Strength, (int)unit->CurrentMission);
 	} else if (!strcmp(word[0], "hunt")) {
 		RB_Hunt();
 	} else if (!strcmp(word[0], "state")) {
