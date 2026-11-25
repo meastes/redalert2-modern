@@ -42,10 +42,14 @@
 //                   near <OTHER> <dx> <dy>` places it from the player's first techno of type OTHER instead (lane N6);
 //   fire <ID> <TARGET>  the player's first unit of type ID attacks the nearest techno of type TARGET (the enemy's,
 //                   else any house's) (MISSION_ATTACK: a force-fire click's order); logs `harness-fire ...`;
-//   enter <ID> <TARGET> [capture|enter|hijack]  the player's first unit of type ID is sent into the nearest techno of
+//   enter <ID> <TARGET> [capture|enter|hijack|own]  the player's first unit of type ID is sent into the nearest techno of
 //                   type TARGET not the player's (MISSION_CAPTURE, a spy's click; or MISSION_ENTER; hijack: MISSION_CAPTURE
-//                   with the vehicle as the destination only, a vehicle thief's click);
+//                   with the vehicle as the destination only, a vehicle thief's click; own: MISSION_ENTER into the player's
+//                   own, a soldier's click on a transport, lane P18);
 //   owner <ID>      logs `harness-owner <ID> h<house> p|e &<addr>` for each techno of type ID (p: the player's);
+//   weapon <ID>     logs `harness-weapon <ID> w<weapon> t<turret> cargo <n> &<addr>` for each techno of type ID: the weapon
+//                   and turret it uses (TechnoClass CurrentWeaponNumber, CurrentTurretNumber; a gunner transport's follow
+//                   its passenger) and its passengers (lane P18);
 //   waves           logs `harness-waves <n> lasers <n>`: the waves (WaveClass::Array) and lasers being drawn;
 //   super <name> enemy  the player's superweapon whose type ID starts with name is granted, charged and placed at
 //                   the cell of the enemy house's first building (SuperClass::Discharged, the map click's event);
@@ -545,15 +549,16 @@ int Run_Order(int frame, char const * text)
 	if ((!strcmp(word[0], "fire") || !strcmp(word[0], "enter")) && words >= 3) {
 		TechnoClass * unit = First_Of(word[1], PlayerPtr);
 		bool enter = word[0][0] == 'e';
+		bool own = enter && words >= 4 && !strcmp(word[3], "own");	// lane P18: into the player's own transport
 		// the nearest techno of type TARGET: the enemy's, else any not the player's, else (fire) the player's own
 		TechnoClass * target = NULL;
 		HouseClass * enemy = Enemy_House();
-		for (int pass = 0; pass < 3 && target == NULL && unit != NULL; ++pass) {
+		for (int pass = own ? 2 : 0; pass < 3 && target == NULL && unit != NULL; ++pass) {
 			int best = 0;
 			for (int i = 0; i < Technos.Count(); ++i) {
 				TechnoClass * techno = Technos[i];
 				if (techno == NULL || techno == unit || techno->IsInLimbo || strcmp(Type_Name(techno), word[2])) continue;
-				if (pass == 0 ? techno->House != enemy : pass == 1 ? techno->House == PlayerPtr : enter) continue;
+				if (pass == 0 ? techno->House != enemy : pass == 1 ? techno->House == PlayerPtr : enter && (!own || techno->House != PlayerPtr)) continue;
 				Coord a = techno->Center_Coord(), b = unit->Center_Coord();
 				int d = abs(a.X - b.X) + abs(a.Y - b.Y);
 				if (target == NULL || d < best) target = techno, best = d;
@@ -563,7 +568,7 @@ int Run_Order(int frame, char const * text)
 			fprintf(stderr, "harness-%s: no %s or no target %s\n", word[0], word[1], word[2]);
 			return(-1);
 		}
-		MissionType mission = !enter ? MISSION_ATTACK : (words >= 4 && !strcmp(word[3], "enter")) ? MISSION_ENTER : MISSION_CAPTURE;
+		MissionType mission = !enter ? MISSION_ATTACK : (own || (words >= 4 && !strcmp(word[3], "enter"))) ? MISSION_ENTER : MISSION_CAPTURE;
 		TargetClass who(unit);
 		// hijack: the capture click's assignment (FootClass::Active_Click_With: MISSION_CAPTURE, no target, the
 		// vehicle as the destination; a target as well would keep it a firing target)
@@ -574,6 +579,18 @@ int Run_Order(int frame, char const * text)
 		fprintf(stderr, "harness-%s %s &%p -> %s h%d &%p\n", word[0], word[1], (void *)unit, word[2],
 			target->House ? target->House->HeapID : -1, (void *)target);
 		return(1);
+	}
+	if (!strcmp(word[0], "weapon") && words >= 2) {
+		int n = 0;
+		for (int i = 0; i < Technos.Count(); ++i) {
+			TechnoClass * techno = Technos[i];
+			if (techno == NULL || strcmp(Type_Name(techno), word[1])) continue;
+			fprintf(stderr, "harness-weapon %s w%d t%d cargo %d &%p\n", word[1], techno->CurrentWeaponNumber, techno->CurrentTurretNumber,
+				techno->Cargo.How_Many(), (void *)techno);
+			++n;
+		}
+		if (!n) fprintf(stderr, "harness-weapon %s none\n", word[1]);
+		return(n ? n : 1);
 	}
 	if (!strcmp(word[0], "owner") && words >= 2) {
 		int n = 0;

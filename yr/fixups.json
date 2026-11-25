@@ -1668,6 +1668,18 @@
    "why": "Native addition (lane N18, Map zoom and Zoom gestures, Red Alert 2's lanes C4/C16 carried to Yuri's Revenge; not original behaviour): declarations for the sidebar's sites below."
   },
   {
+   "file": "src/tactical.cpp",
+   "old": "// FUNCTION: GAMEMD 0x006D4B50\n",
+   "new": "void Yr_Timer_Corner(int *width, int *height);   // NATIVE (lane P18): glue/yr_map_zoom.cpp\n// FUNCTION: GAMEMD 0x006D4B50\n",
+   "why": "Native addition (lane P18, Map zoom and Zoom gestures; not original behaviour): the declaration for the row below."
+  },
+  {
+   "file": "src/tactical.cpp",
+   "old": "\tPoint2D pt1(TacticalRect.Width - width - 3, TacticalRect.Height - (font->field_1C + 2) * (index + 1));\n\tPrint_Timer(buf2, pt1, scheme);\n\n\tPoint2D pt2(TacticalRect.Width - 3, TacticalRect.Height - (font->field_1C + 2) * (index + 1));\n",
+   "new": "\tint corner_w = TacticalRect.Width, corner_h = TacticalRect.Height;\n\tYr_Timer_Corner(&corner_w, &corner_h);   /* NATIVE (lane P18): glue/yr_map_zoom.cpp */\n\tPoint2D pt1(corner_w - width - 3, corner_h - (font->field_1C + 2) * (index + 1));\n\tPrint_Timer(buf2, pt1, scheme);\n\n\tPoint2D pt2(corner_w - 3, corner_h - (font->field_1C + 2) * (index + 1));\n",
+   "why": "Native addition (lane P18, Map zoom and Zoom gestures; not original behaviour): Tactical::DrawTimer 0x006D4B50 puts the countdowns (the mission timer, the superweapons on show, the power blackouts) at the view's bottom right corner (TacticalRect's width and height). While the map is zoomed the view is the part shown rounded up to whole cells, and the host shows only the part shown (glue/yr_map_zoom.cpp Yr_Map_View), so the corner lay outside it: on the iPhone and iPad, where Pinch zoom starts on (render scale 2), the countdowns were cut off or hidden (the user's Duo report, 2026-11-24: no Psychic Dominator countdown in Yuri's Revenge Allied 1). Yr_Timer_Corner answers the shown part's bottom right corner while zoomed; unzoomed (the default on the Mac and Windows, and the Original preset) the view's, as the original."
+  },
+  {
    "file": "src/sidebar.cpp",
    "old": "\t\t\tSidebarRect.X = TacticalRect.X + TacticalRect.Width;\n",
    "new": "\t\t\tSidebarRect.X = Yr_Sidebar_X(TacticalRect.X + TacticalRect.Width);\n",
@@ -1900,6 +1912,18 @@
    "old": "// FUNCTION: GAMEMD 0x0048C8B0\n",
    "new": "void Yr_Dialog_Screen(bool on);   // NATIVE (lane N20): glue/yr_map_zoom.cpp\n// FUNCTION: GAMEMD 0x0048C8B0\n",
    "why": "Native addition (lane N20, Map zoom below 1x, Red Alert 2's lane C16 carried to Yuri's Revenge; not original behaviour): the declaration for the rows above."
+  },
+  {
+   "file": "src/conquer.cpp",
+   "old": "struct CallBackObject { virtual void V0(); virtual void V1(); virtual void V2(); };\n",
+   "new": "#include \"movies.h\"   /* NATIVE (lane P18): MovieHandle, for Call_Back's poll below */\nstruct CallBackObject { virtual void V0(); virtual void V1(); virtual void V2(); };\n",
+   "why": "lane P18: Call_Back 0x0048D080 polls the first in-game movie (IngameVQ[0]) through its vtable's third slot (gamemd.exe: call [edx+8]), which in MSVC's layout is MovieHandle::Waiting (BinkMovieHandle 0x005C0590, BinkHandle::Check_Frame_Ready: only asks BinkWait whether the next frame is due). The tree calls it through a placeholder struct (CallBackObject, V0..V2), and natively a virtual destructor takes two vtable slots (Itanium ABI: Mac, iPhone, the MinGW Windows build) where MSVC's takes one, so V2 landed on AdvanceFrame: every Call_Back decoded and played the radar's movie from the moment a trigger queued it, under the radar's EVA_IncomingTransmission and before the radar opened, and the radar then found it finished (the user's Duo report, 2026-11-24, Yuri's Revenge Allied 1: the transmission voice and the video on top of each other, events running fast). The call is made through the real class, so it reaches Waiting in every ABI."
+  },
+  {
+   "file": "src/conquer.cpp",
+   "old": "\t\tDAT_00B45B5C[0]->V2();\n",
+   "new": "\t\t((MovieHandle *)DAT_00B45B5C[0])->Waiting();   /* NATIVE (lane P18): the vtable's third slot in MSVC's layout (see the row's why) */\n",
+   "why": "lane P18: Call_Back 0x0048D080 polls the first in-game movie (IngameVQ[0]) through its vtable's third slot (gamemd.exe: call [edx+8]), which in MSVC's layout is MovieHandle::Waiting (BinkMovieHandle 0x005C0590, BinkHandle::Check_Frame_Ready: only asks BinkWait whether the next frame is due). The tree calls it through a placeholder struct (CallBackObject, V0..V2), and natively a virtual destructor takes two vtable slots (Itanium ABI: Mac, iPhone, the MinGW Windows build) where MSVC's takes one, so V2 landed on AdvanceFrame: every Call_Back decoded and played the radar's movie from the moment a trigger queued it, under the radar's EVA_IncomingTransmission and before the radar opened, and the radar then found it finished (the user's Duo report, 2026-11-24, Yuri's Revenge Allied 1: the transmission voice and the video on top of each other, events running fast). The call is made through the real class, so it reaches Waiting in every ABI."
   }
  ]
 }

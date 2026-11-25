@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+#include "capmgr.h"   // CaptureManagerClass (Per_Cell_Process's boarding, lane P18)
 
 // ---------------------------------------------------------------------------------------------
 // NON-EXACT NATIVE DRAFT (lane Y4), appended to the infantry unit: InfantryClass::Assign_Destination
@@ -367,9 +368,27 @@ void InfantryClass::Per_Cell_Process(PCPType why)
 			} else {
 				if (Get_Cell() == techno->Get_Cell() && techno == NavCom) {
 					if (Transmit_Message(RADIO_CAN_LOAD, techno) == RADIO_ROGER) {
-						ArchiveTarget = NULL;
+						/*
+						**	YR (lane P18, from gamemd.exe 0x0051A3FC-0x0051A47E, the steps of UnitClass::Per_Cell_Process's
+						**	matched text): the soldier drops its weapon state and any mind control, and boards through the
+						**	transport's AddPassenger (virtual), so a gunner transport (the IFV) takes its weapon and turret
+						**	from the passenger's IFVMode (FootClass::AddPassenger -> UnitClass::ReceiveGunner). TibSun's
+						**	text attached it to the cargo directly: an engineer in an IFV kept the default missile turret.
+						*/
+						Assign_Archive_Target(NULL);
+						IsOnBridge = false;
+						MissionAccumulateTime = 0;
+						sub_70DE00(0);
+						SetCurrentWeaponStage(0);
+						if (MindControlledBy != NULL && MindControlledBy->CaptureManager != NULL) {
+							MindControlledBy->CaptureManager->FreeUnit(this);
+						}
 						Limbo();
-						techno->Cargo.Attach(this);
+						if (techno->Techno_Type_Class()->OpenTopped) {
+							techno->EnteredOpenTopped(this);
+						}
+						Transporter = techno;
+						techno->AddPassenger(this);
 						Hidden();
 					} else {
 						Assign_Destination(NULL);
