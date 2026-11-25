@@ -1,0 +1,773 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Allied 5 (ALL05S, Dark Night) won by lane P23 through the step server (ra2/tools/ra2_step.py, ra2/tools/ra2_commander.py):
+# Tanya (and the spies: houses the player controls) north in short legs with focus fire, the eastern coil's barrels
+# force-fired, a spy into a tesla reactor and Tanya's C4 on the inner coil while the power is out, a spy into the battle
+# lab, Tanya's C4 on the base's three reactors, north past the dead coils, the Yellow base's wall barrels and silo barrels
+# force-fired and the silo C4'd, round the east shore to the Orange base's wall barrels, the last spy walked there into a
+# reactor, and the second silo C4'd during the outage. Replayed by ra2/tests/ra2_campaign.py (missions 1-4 forced won).
+# Inputs and ticks only; no game-event shortcut.
+# ALL05S.MAP: ticks are loop frames from the scenario's first
+1000 input move 428 368
+1000 input +2 rdown 428 368
+1000 input +6 rup 428 368
+1012 look 111 142
+1015 input move @^1027252
+1015 input +2 ldown @^1027252
+1015 input +6 lup @^1027252
+1025 input keydown Left_Ctrl
+1026 input key 1
+1028 input keyup Left_Ctrl
+1030 input key 1
+1032 look 110 136
+1035 input move @=110,136
+1035 input +2 ldown @=110,136
+1035 input +6 lup @=110,136
+1105 input key 1
+1107 look 108 129
+1110 input move @=108,129
+1110 input +2 ldown @=108,129
+1110 input +6 lup @=108,129
+1240 input key 1
+1242 look 104 122
+1245 input move @=104,122
+1245 input +2 ldown @=104,122
+1245 input +6 lup @=104,122
+1285 input key 1
+1287 look 115 124
+1290 input move @^1027262
+1290 input +2 ldown @^1027262
+1290 input +6 lup @^1027262
+1330 input key 1
+1332 look 115 124
+1335 input move @^1027262
+1335 input +2 ldown @^1027262
+1335 input +6 lup @^1027262
+1375 input key 1
+1377 look 104 129
+1380 input move @^1027266
+1380 input +2 ldown @^1027266
+1380 input +6 lup @^1027266
+1420 input key 1
+1422 look 103 121
+1425 input move @^1027589
+1425 input +2 ldown @^1027589
+1425 input +6 lup @^1027589
+1465 input key 1
+1467 look 105 123
+1470 input move @^1027589
+1470 input +2 ldown @^1027589
+1470 input +6 lup @^1027589
+1510 input key 1
+1512 look 106 126
+1515 input move @^1027590
+1515 input +2 ldown @^1027590
+1515 input +6 lup @^1027590
+1555 input key 1
+1557 look 104 122
+1560 input move @=104,122
+1560 input +2 ldown @=104,122
+1560 input +6 lup @=104,122
+1600 input key 1
+1602 look 111 116
+1605 input move @^1027263
+1605 input +2 ldown @^1027263
+1605 input +6 lup @^1027263
+1645 input key 1
+1647 look 111 116
+1650 input move @^1027263
+1650 input +2 ldown @^1027263
+1650 input +6 lup @^1027263
+1690 input key 1
+1692 look 112 115
+1695 input move @^1027265
+1695 input +2 ldown @^1027265
+1695 input +6 lup @^1027265
+1735 input key 1
+1737 look 104 122
+1740 input move @=104,122
+1740 input +2 ldown @=104,122
+1740 input +6 lup @=104,122
+1780 input key 1
+1782 look 104 117
+1785 input move @=104,117
+1785 input +2 ldown @=104,117
+1785 input +6 lup @=104,117
+1855 input key 1
+1857 look 98 113
+1860 input move @^1027595
+1860 input +2 ldown @^1027595
+1860 input +6 lup @^1027595
+1900 input key 1
+1900 input key 1
+1902 look 112 116
+1905 input move @=112,116
+1905 input +2 ldown @=112,116
+1905 input +6 lup @=112,116
+2065 input key 1
+2067 input keydown Left_Ctrl
+2068 look 108 111
+2071 input move @=108,111
+2071 input +2 ldown @=108,111
+2071 input +6 lup @=108,111
+2081 input keyup Left_Ctrl
+2143 input key 1
+2145 look 112 119
+2148 input move @=112,119
+2148 input +2 ldown @=112,119
+2148 input +6 lup @=112,119
+3558 input key 1
+3560 look 108 113
+3563 input move @=108,113
+3563 input +2 ldown @=108,113
+3563 input +6 lup @=108,113
+3663 input move 428 368
+3663 input +2 rdown 428 368
+3663 input +6 rup 428 368
+3675 look 110 140
+3678 input move @^1027630
+3678 input +2 ldown @^1027630
+3678 input +6 lup @^1027630
+3688 input keydown Left_Shift
+3689 look 110 140
+3692 input move @^1027631
+3692 input +2 ldown @^1027631
+3692 input +6 lup @^1027631
+3702 look 110 140
+3705 input move @^1027632
+3705 input +2 ldown @^1027632
+3705 input +6 lup @^1027632
+3715 input keyup Left_Shift
+3717 input keydown Left_Ctrl
+3718 input key 2
+3720 input keyup Left_Ctrl
+3722 input key 2
+3724 look 110 118
+3727 input move @=110,118
+3727 input +2 ldown @=110,118
+3727 input +6 lup @=110,118
+4337 input move 428 368
+4337 input +2 rdown 428 368
+4337 input +6 rup 428 368
+4349 look 110 118
+4352 input move @^1027630
+4352 input +2 ldown @^1027630
+4352 input +6 lup @^1027630
+4362 input keydown Left_Shift
+4363 look 110 118
+4366 input move @^1027631
+4366 input +2 ldown @^1027631
+4366 input +6 lup @^1027631
+4376 look 110 118
+4379 input move @^1027632
+4379 input +2 ldown @^1027632
+4379 input +6 lup @^1027632
+4389 input keyup Left_Shift
+4391 look 103 104
+4394 input move @^1027236
+4394 input +2 ldown @^1027236
+4394 input +6 lup @^1027236
+4584 input move 428 368
+4584 input +2 rdown 428 368
+4584 input +6 rup 428 368
+4596 look 110 118
+4599 input move @^1027630
+4599 input +2 ldown @^1027630
+4599 input +6 lup @^1027630
+4609 look 106 108
+4612 input move @=106,108
+4612 input +2 ldown @=106,108
+4612 input +6 lup @=106,108
+4862 input move 428 368
+4862 input +2 rdown 428 368
+4862 input +6 rup 428 368
+4874 look 107 109
+4877 input move @^1027630
+4877 input +2 ldown @^1027630
+4877 input +6 lup @^1027630
+4887 look 105 103
+4890 input move @^1027294
+4890 input +2 ldown @^1027294
+4890 input +6 lup @^1027294
+5050 input key 1
+5052 look 104 106
+5055 input move @=104,106
+5055 input +2 ldown @=104,106
+5055 input +6 lup @=104,106
+5125 input key 1
+5127 look 102 108
+5130 input move @^1027210
+5130 input +2 ldown @^1027210
+5130 input +6 lup @^1027210
+5170 input key 1
+5172 look 103 107
+5175 input move @^1027210
+5175 input +2 ldown @^1027210
+5175 input +6 lup @^1027210
+5215 input key 1
+5217 look 104 106
+5220 input move @^1027235
+5220 input +2 ldown @^1027235
+5220 input +6 lup @^1027235
+5260 input move 428 368
+5260 input +2 rdown 428 368
+5260 input +6 rup 428 368
+5260 input move 428 368
+5260 input +2 rdown 428 368
+5260 input +6 rup 428 368
+5272 look 107 109
+5275 input move @^1027252
+5275 input +2 ldown @^1027252
+5275 input +6 lup @^1027252
+5285 look 106 98
+5288 input move @=106,98
+5288 input +2 ldown @=106,98
+5288 input +6 lup @=106,98
+5478 look 107 92
+5481 input move @^1027344
+5481 input +2 ldown @^1027344
+5481 input +6 lup @^1027344
+5701 input move 428 368
+5701 input +2 rdown 428 368
+5701 input +6 rup 428 368
+5713 look 106 92
+5716 input move @^1027252
+5716 input +2 ldown @^1027252
+5716 input +6 lup @^1027252
+5726 look 104 98
+5729 input move @=104,98
+5729 input +2 ldown @=104,98
+5729 input +6 lup @=104,98
+5889 input move 428 368
+5889 input +2 rdown 428 368
+5889 input +6 rup 428 368
+5901 look 110 118
+5904 input move @^1027631
+5904 input +2 ldown @^1027631
+5904 input +6 lup @^1027631
+5914 look 101 95
+5917 input move @^1027293
+5917 input +2 ldown @^1027293
+5917 input +6 lup @^1027293
+7127 save A5LAB.SAV
+7427 input move 428 368
+7427 input +2 rdown 428 368
+7427 input +6 rup 428 368
+7439 look 105 97
+7442 input move @^1027252
+7442 input +2 ldown @^1027252
+7442 input +6 lup @^1027252
+7452 input keydown Left_Ctrl
+7453 input key 1
+7455 input keyup Left_Ctrl
+7457 input key 1
+7459 look 112 96
+7462 input move @=112,96
+7462 input +2 ldown @=112,96
+7462 input +6 lup @=112,96
+7562 input key 1
+7564 look 113 84
+7567 input move @=113,84
+7567 input +2 ldown @=113,84
+7567 input +6 lup @=113,84
+7607 input key 1
+7609 look 108 88
+7612 input move @^1027259
+7612 input +2 ldown @^1027259
+7612 input +6 lup @^1027259
+7652 input key 1
+7654 look 108 87
+7657 input move @^1027255
+7657 input +2 ldown @^1027255
+7657 input +6 lup @^1027255
+7697 input key 1
+7699 look 113 84
+7702 input move @=113,84
+7702 input +2 ldown @=113,84
+7702 input +6 lup @=113,84
+7832 input key 1
+7834 look 105 83
+7837 input move @^1027612
+7837 input +2 ldown @^1027612
+7837 input +6 lup @^1027612
+7877 input key 1
+7879 look 106 83
+7882 input move @^1027612
+7882 input +2 ldown @^1027612
+7882 input +6 lup @^1027612
+7922 input key 1
+7924 look 104 83
+7927 input move @^1027612
+7927 input +2 ldown @^1027612
+7927 input +6 lup @^1027612
+7967 input key 1
+7969 look 103 82
+7972 input move @^1027232
+7972 input +2 ldown @^1027232
+7972 input +6 lup @^1027232
+8012 input key 1
+8014 look 103 81
+8017 input move @^1027233
+8017 input +2 ldown @^1027233
+8017 input +6 lup @^1027233
+8057 input key 1
+8059 look 113 84
+8062 input move @=113,84
+8062 input +2 ldown @=113,84
+8062 input +6 lup @=113,84
+8132 input key 1
+8132 input key 1
+8134 look 103 87
+8137 input move @=103,87
+8137 input +2 ldown @=103,87
+8137 input +6 lup @=103,87
+8297 input key 1
+8299 look 101 86
+8302 input move @^1027350
+8302 input +2 ldown @^1027350
+8302 input +6 lup @^1027350
+8372 input key 1
+8374 look 107 103
+8377 input move @=107,103
+8377 input +2 ldown @=107,103
+8377 input +6 lup @=107,103
+8747 input key 1
+8749 look 105 103
+8752 input move @^1027294
+8752 input +2 ldown @^1027294
+8752 input +6 lup @^1027294
+8882 input key 1
+8884 look 99 101
+8887 input move @=99,101
+8887 input +2 ldown @=99,101
+8887 input +6 lup @=99,101
+9197 input key 1
+9199 look 99 103
+9202 input move @^1027297
+9202 input +2 ldown @^1027297
+9202 input +6 lup @^1027297
+9392 save A5POWER.SAV
+9392 input key 1
+9394 look 102 82
+9397 input move @=102,82
+9397 input +2 ldown @=102,82
+9397 input +6 lup @=102,82
+9557 input key 1
+9559 look 105 94
+9562 input move @^1027260
+9562 input +2 ldown @^1027260
+9562 input +6 lup @^1027260
+9602 input key 1
+9604 look 102 82
+9607 input move @=102,82
+9607 input +2 ldown @=102,82
+9607 input +6 lup @=102,82
+9827 input key 1
+9829 look 99 82
+9832 input move @^1027234
+9832 input +2 ldown @^1027234
+9832 input +6 lup @^1027234
+9872 input key 1
+9874 look 101 72
+9877 input move @=101,72
+9877 input +2 ldown @=101,72
+9877 input +6 lup @=101,72
+9917 input key 1
+9919 look 99 82
+9922 input move @^1027234
+9922 input +2 ldown @^1027234
+9922 input +6 lup @^1027234
+9962 input key 1
+9964 look 99 83
+9967 input move @^1027231
+9967 input +2 ldown @^1027231
+9967 input +6 lup @^1027231
+10007 input key 1
+10009 look 101 72
+10012 input move @=101,72
+10012 input +2 ldown @=101,72
+10012 input +6 lup @=101,72
+10202 input key 1
+10204 look 102 74
+10207 input move @^1027613
+10207 input +2 ldown @^1027613
+10207 input +6 lup @^1027613
+10247 input key 1
+10249 look 104 84
+10252 input move @^1027254
+10252 input +2 ldown @^1027254
+10252 input +6 lup @^1027254
+10292 input key 1
+10294 look 103 83
+10297 input move @^1027254
+10297 input +2 ldown @^1027254
+10297 input +6 lup @^1027254
+10337 input key 1
+10339 look 101 72
+10342 input move @=101,72
+10342 input +2 ldown @=101,72
+10342 input +6 lup @=101,72
+10412 input key 1
+10414 look 98 71
+10417 input move @^1027288
+10417 input +2 ldown @^1027288
+10417 input +6 lup @^1027288
+10457 input key 1
+10459 look 90 69
+10462 input move @=90,69
+10462 input +2 ldown @=90,69
+10462 input +6 lup @=90,69
+10622 input key 1
+10624 look 90 73
+10627 input move @^1027286
+10627 input +2 ldown @^1027286
+10627 input +6 lup @^1027286
+10667 input key 1
+10669 look 84 63
+10672 input move @=84,63
+10672 input +2 ldown @=84,63
+10672 input +6 lup @=84,63
+10742 input key 1
+10744 look 85 69
+10747 input move @^1028112
+10747 input +2 ldown @^1028112
+10747 input +6 lup @^1028112
+10787 input key 1
+10789 look 84 63
+10792 input move @=84,63
+10792 input +2 ldown @=84,63
+10792 input +6 lup @=84,63
+10892 input key 1
+10894 look 82 65
+10897 input move @^1028153
+10897 input +2 ldown @^1028153
+10897 input +6 lup @^1028153
+10937 input key 1
+10939 look 82 64
+10942 input move @^1028154
+10942 input +2 ldown @^1028154
+10942 input +6 lup @^1028154
+10982 input key 1
+10984 look 83 56
+10987 input move @=83,56
+10987 input +2 ldown @=83,56
+10987 input +6 lup @=83,56
+11117 input key 1
+11119 look 83 50
+11122 input move @=83,50
+11122 input +2 ldown @=83,50
+11122 input +6 lup @=83,50
+12632 input key 1
+12634 look 80 47
+12637 input move @=80,47
+12637 input +2 ldown @=80,47
+12637 input +6 lup @=80,47
+12707 input key 1
+12709 look 81 50
+12712 input move @^1027204
+12712 input +2 ldown @^1027204
+12712 input +6 lup @^1027204
+12752 input key 1
+12754 look 80 47
+12757 input move @=80,47
+12757 input +2 ldown @=80,47
+12757 input +6 lup @=80,47
+12827 input key 1
+12829 look 71 47
+12832 input move @=71,47
+12832 input +2 ldown @=71,47
+12832 input +6 lup @=71,47
+12872 input key 1
+12874 look 79 43
+12877 input move @^1027201
+12877 input +2 ldown @^1027201
+12877 input +6 lup @^1027201
+12917 input key 1
+12919 look 71 47
+12922 input move @=71,47
+12922 input +2 ldown @=71,47
+12922 input +6 lup @=71,47
+13052 input key 1
+13054 look 69 44
+13057 input move @^1028142
+13057 input +2 ldown @^1028142
+13057 input +6 lup @^1028142
+13097 input key 1
+13099 look 71 47
+13102 input move @=71,47
+13102 input +2 ldown @=71,47
+13102 input +6 lup @=71,47
+13142 input key 1
+13144 look 70 49
+13147 input move @=70,49
+13147 input +2 ldown @=70,49
+13147 input +6 lup @=70,49
+13307 input key 1
+13309 input keydown Left_Ctrl
+13310 look 67 48
+13313 input move @=67,48
+13313 input +2 ldown @=67,48
+13313 input +6 lup @=67,48
+13323 input keyup Left_Ctrl
+13525 input key 1
+13527 look 66 45
+13530 input move @=66,45
+13530 input +2 ldown @=66,45
+13530 input +6 lup @=66,45
+13660 input key 1
+13662 look 66 41
+13665 input move @^1027323
+13665 input +2 ldown @^1027323
+13665 input +6 lup @^1027323
+14275 input key 1
+14277 input keydown Left_Ctrl
+14278 look 63 41
+14281 input move @=63,41
+14281 input +2 ldown @=63,41
+14281 input +6 lup @=63,41
+14291 input keyup Left_Ctrl
+14493 input key 1
+14495 look 66 41
+14498 input move @^1027323
+14498 input +2 ldown @^1027323
+14498 input +6 lup @^1027323
+14718 save A5SILO1.SAV
+14718 input key 1
+14718 input key 1
+14720 look 65 37
+14723 input move @^1028151
+14723 input +2 ldown @^1028151
+14723 input +6 lup @^1028151
+14748 input key 1
+14750 look 65 39
+14753 input move @^1028152
+14753 input +2 ldown @^1028152
+14753 input +6 lup @^1028152
+14778 input key 1
+14780 look 65 36
+14783 input move @^1028146
+14783 input +2 ldown @^1028146
+14783 input +6 lup @^1028146
+14808 input key 1
+14810 look 64 46
+14813 input move @=64,46
+14813 input +2 ldown @=64,46
+14813 input +6 lup @=64,46
+14853 input key 1
+14855 look 64 49
+14858 input move @=64,49
+14858 input +2 ldown @=64,49
+14858 input +6 lup @=64,49
+14913 input key 1
+14915 look 63 52
+14918 input move @=63,52
+14918 input +2 ldown @=63,52
+14918 input +6 lup @=63,52
+14973 input key 1
+14975 look 63 55
+14978 input move @=63,55
+14978 input +2 ldown @=63,55
+14978 input +6 lup @=63,55
+15033 input key 1
+15035 look 64 58
+15038 input move @=64,58
+15038 input +2 ldown @=64,58
+15038 input +6 lup @=64,58
+15108 input key 1
+15110 look 64 61
+15113 input move @=64,61
+15113 input +2 ldown @=64,61
+15113 input +6 lup @=64,61
+15183 input key 1
+15185 look 64 64
+15188 input move @=64,64
+15188 input +2 ldown @=64,64
+15188 input +6 lup @=64,64
+15423 input key 1
+15425 look 59 64
+15428 input move @^1028111
+15428 input +2 ldown @^1028111
+15428 input +6 lup @^1028111
+15453 input key 1
+15455 look 59 64
+15458 input move @^1028110
+15458 input +2 ldown @^1028110
+15458 input +6 lup @^1028110
+15483 input key 1
+15485 look 59 63
+15488 input move @^1028110
+15488 input +2 ldown @^1028110
+15488 input +6 lup @^1028110
+15513 input key 1
+15515 look 65 67
+15518 input move @=65,67
+15518 input +2 ldown @=65,67
+15518 input +6 lup @=65,67
+16413 input key 1
+16415 look 64 70
+16418 input move @=64,70
+16418 input +2 ldown @=64,70
+16418 input +6 lup @=64,70
+17313 input key 1
+17315 look 62 73
+17318 input move @=62,73
+17318 input +2 ldown @=62,73
+17318 input +6 lup @=62,73
+17508 input key 1
+17510 look 59 74
+17513 input move @=59,74
+17513 input +2 ldown @=59,74
+17513 input +6 lup @=59,74
+17583 input key 1
+17585 look 56 74
+17588 input move @=56,74
+17588 input +2 ldown @=56,74
+17588 input +6 lup @=56,74
+17613 input key 1
+17615 look 55 73
+17618 input move @^1027268
+17618 input +2 ldown @^1027268
+17618 input +6 lup @^1027268
+17643 input key 1
+17645 look 55 74
+17648 input move @=55,74
+17648 input +2 ldown @=55,74
+17648 input +6 lup @=55,74
+17673 input key 1
+17675 look 52 74
+17678 input move @=52,74
+17678 input +2 ldown @=52,74
+17678 input +6 lup @=52,74
+17733 input key 1
+17735 look 49 76
+17738 input move @^1027269
+17738 input +2 ldown @^1027269
+17738 input +6 lup @^1027269
+17763 input key 1
+17765 input keydown Left_Ctrl
+17766 look 47 72
+17769 input move @=47,72
+17769 input +2 ldown @=47,72
+17769 input +6 lup @=47,72
+17779 input keyup Left_Ctrl
+17779 input move 428 368
+17779 input +2 rdown 428 368
+17779 input +6 rup 428 368
+17791 look 110 118
+17794 input move @^1027632
+17794 input +2 ldown @^1027632
+17794 input +6 lup @^1027632
+17804 input keydown Left_Ctrl
+17805 input key 2
+17807 input keyup Left_Ctrl
+17809 input key 2
+17811 look 110 100
+17814 input move @=110,100
+17814 input +2 ldown @=110,100
+17814 input +6 lup @=110,100
+18244 input key 2
+18246 look 108 88
+18249 input move @=108,88
+18249 input +2 ldown @=108,88
+18249 input +6 lup @=108,88
+18619 input key 2
+18621 look 102 82
+18624 input move @=102,82
+18624 input +2 ldown @=102,82
+18624 input +6 lup @=102,82
+18814 input key 2
+18816 look 101 72
+18819 input move @=101,72
+18819 input +2 ldown @=101,72
+18819 input +6 lup @=101,72
+19069 input key 2
+19071 look 90 69
+19074 input move @=90,69
+19074 input +2 ldown @=90,69
+19074 input +6 lup @=90,69
+19324 input key 2
+19326 look 84 63
+19329 input move @=84,63
+19329 input +2 ldown @=84,63
+19329 input +6 lup @=84,63
+19579 input key 2
+19581 look 83 56
+19584 input move @=83,56
+19584 input +2 ldown @=83,56
+19584 input +6 lup @=83,56
+19774 input key 2
+19776 look 83 50
+19779 input move @=83,50
+19779 input +2 ldown @=83,50
+19779 input +6 lup @=83,50
+19909 input key 2
+19911 look 80 47
+19914 input move @=80,47
+19914 input +2 ldown @=80,47
+19914 input +6 lup @=80,47
+19984 input key 2
+19986 look 71 47
+19989 input move @=71,47
+19989 input +2 ldown @=71,47
+19989 input +6 lup @=71,47
+20239 input key 2
+20241 look 64 47
+20244 input move @=64,47
+20244 input +2 ldown @=64,47
+20244 input +6 lup @=64,47
+20434 input key 2
+20436 look 64 52
+20439 input move @=64,52
+20439 input +2 ldown @=64,52
+20439 input +6 lup @=64,52
+20569 input key 2
+20571 look 63 55
+20574 input move @=63,55
+20574 input +2 ldown @=63,55
+20574 input +6 lup @=63,55
+20644 input key 2
+20646 look 64 58
+20649 input move @=64,58
+20649 input +2 ldown @=64,58
+20649 input +6 lup @=64,58
+20779 input key 2
+20781 look 64 61
+20784 input move @=64,61
+20784 input +2 ldown @=64,61
+20784 input +6 lup @=64,61
+20854 input key 2
+20856 look 64 64
+20859 input move @=64,64
+20859 input +2 ldown @=64,64
+20859 input +6 lup @=64,64
+20929 input key 2
+20931 look 65 67
+20934 input move @=65,67
+20934 input +2 ldown @=65,67
+20934 input +6 lup @=65,67
+21064 input key 2
+21066 look 64 70
+21069 input move @=64,70
+21069 input +2 ldown @=64,70
+21069 input +6 lup @=64,70
+21139 input key 2
+21141 look 62 73
+21144 input move @=62,73
+21144 input +2 ldown @=62,73
+21144 input +6 lup @=62,73
+21274 input key 2
+21276 look 56 74
+21279 input move @=56,74
+21279 input +2 ldown @=56,74
+21279 input +6 lup @=56,74
+21469 save A5SPY2.SAV
+21469 input key 2
+21471 look 51 69
+21474 input move @^1027335
+21474 input +2 ldown @^1027335
+21474 input +6 lup @^1027335
+21844 input key 1
+21846 look 57 64
+21849 input move @^1027333
+21849 input +2 ldown @^1027333
+21849 input +6 lup @^1027333
+22647 # game over: won

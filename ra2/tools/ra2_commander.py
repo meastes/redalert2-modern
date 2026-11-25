@@ -672,11 +672,12 @@ DEFENCES = ('NALASR', 'NATSLA', 'NAFLAK', 'GAPILL', 'ATESLA', 'GAPRIS', 'NABNKR'
 
 
 def fight_along(g, team, waypoints, radius=8, step=60, ticks_per_leg=3000, ground_defences=('NALASR', 'NATSLA',
-                'GAPILL', 'ATESLA', 'GAPRIS', 'GTGCAN'), types=None, quiet=False):
+                'GAPILL', 'ATESLA', 'GAPRIS', 'GTGCAN'), types=None, quiet=False, houses=()):
     """Team <n> walked along waypoints in short legs (lane P23): at each check the team's living members are counted
     (types: the unit types that make up the team), and the enemy unit or ground defence nearest the team's centre
     within radius is focus-fired; when none is near, the team is moved on to the leg's waypoint. A leg ends once most
-    of the team stands within three cells of its waypoint with no threat near. Returns the team's members left."""
+    of the team stands within three cells of its waypoint with no threat near. houses: other houses whose units the
+    player commands (PlayerControl=yes in the map, as Allied 5's Tanya). Returns the team's members left."""
     types = types or ('MTNK',)
     ids = None
     for wp in waypoints:
@@ -684,7 +685,7 @@ def fight_along(g, team, waypoints, radius=8, step=60, ticks_per_leg=3000, groun
         moving = False
         while g.tick < end:
             objs = g.objects('all')
-            mem = [o for o in objs if o.own and o.type in types and o.kind != 'bld']
+            mem = [o for o in objs if (o.own or o.house in houses) and o.type in types and o.kind != 'bld']
             if ids is None:
                 ids = {o.id for o in mem}
             mem = [o for o in mem if o.id in ids]
