@@ -146,3 +146,31 @@ changes, after buttons slide out and before they slide in"): the toggle was not 
 Enable_Animated_Control rests through the sidebar slide, so a repaint asked during the slide-out drew it alone over
 the emptied column (two presents in Red Alert 2, four in Yuri's Revenge, main menu -> Options); fixed in both games
 (ra2/fixups.json, yr/fixups.json), **scripted, passing**: one-game-toggle-slide (Mac; fails without the rows).
+
+## Lane P21: missions played to a real win through the step server (2026-11-25)
+
+A pilot: the game paused by default and advanced by a requested number of ticks (ra2/glue/stepserver_native.inc, client
+ra2/tools/ra2_step.py), input through the port's SDL input path (clicks on the map, the sidebar's tabs and cameos, keys),
+state as text, plans from each mission's own map file read from the installation at run time (ra2/tools/ra2_mapinfo.py)
+and from text walkthroughs. Each win is a replay of inputs and ticks (ra2/tests/campaign/*.replay), checked by
+`ra2-native-campaign-won-*` (label ra2-campaign-won): the mission's own triggers win it at the recorded tick and its score
+screen shows. One path per mission; it does not stand for the variety of real play, and the user's own play stays the
+final check.
+
+| Mission | Result | Check |
+| --- | --- | --- |
+| Allied 1 (ALL01T): Tanya's C4 on the four Dreadnoughts, the fort taken, a barracks, an engineer into the bridge hut, the three bonus Grizzlies through the Soviet base | won at tick 11,007 (about 12 minutes of game time), 50 inputs | ra2-native-campaign-won-all01 (about a minute) |
+| Soviet 4 (SOV04S): base built and placed through the sidebar, flak, subs against the fleet, Rhinos massed, the Korean base's construction yard first | won at tick 47,420, about 760 inputs (most of them placement attempts) | ra2-native-campaign-won-sov04 |
+
+No crash, hang, trap or assertion in either mission or their replays. What the pilot found, all in the scripted-input
+path rather than the game (fixed for the step server's runs, RA2_NATIVE_SCRIPT_ONLY=1; the older --input-script tests keep
+their behaviour):
+
+| Found | Effect | Status |
+| --- | --- | --- |
+| The host's event pump runs at most once a millisecond (port/src/user32.cpp PeekMessageA) | at the uncapped loop's speed a scripted event reached the game a frame or more later than written, depending on the machine: a recorded run did not replay the same (likely also why "clicks timed by loop frame are not repeatable" for the gate's skirmish rows, ra2/ra2.cmake) | fixed for script-only runs: the frame's events pumped as they play (platform/sdl/host.cpp frame()) |
+| The game's mouse (WWMouseClass) follows the pointer on the mouse thread every 16 ms of wall time | the cursor action a click used could lag the pointer by frames; live (paused) and replayed runs differed | fixed for the step server: the mouse processed once a frame on the game thread (glue/wwmouse_native.inc RB_Process_Mouse_Now) |
+| A one-frame click (the input script's `click`) was read one click late | the selection or order happened at the next click | the step server's click holds the button four frames, as a real click does |
+| The game's pointer starts at 0,0 until the first mouse message (port/src/user32.cpp `cursor`) | a scripted run that had not moved the mouse edge-scrolled the map to the top left | the step server parks the pointer in the view's middle at the start and after each click |
+| `#` starts a comment in input-script lines | an object point written `@#id` became the screen's corner | the object point is `@^id` |
+| A building's listed click point is a corner of its picture; a left click on a cell the selection cannot use deselects (the original's behaviour) | clicks on buildings missed and dropped the selection | `@^id` for a building is its foundation's middle |

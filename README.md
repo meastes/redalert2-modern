@@ -90,12 +90,14 @@ ctest --test-dir build/mac -R ra2-native-original-layouts  # save-format field m
 cmake -S . -B build/mac -DRB_DATA_DIR=<your game folder> && ctest --test-dir build/mac -L ra2-quick
 ```
 
-The played checks (labels `ra2-quick`, `ra2-main`, `ra2-campaign`, `ra2-resaves`, `ra2-chain`; `ra2-ios` with
+The played checks (labels `ra2-quick`, `ra2-main`, `ra2-campaign`, `ra2-campaign-won`, `ra2-resaves`, `ra2-chain`; `ra2-ios` with
 `-DRB_IOS_UDID=<simulator>`) run the game through its real menus with scripted input and skip (77) without your
 game. Frame identity against the decompilation's src-based port (`ra2-identity`, and the differential gate `ra2-gate`:
 campaign missions, skirmish set-ups, order scripts, saves both ways; `ra2/tests/ra2_gate.py`) is added only with
 `-DRB_IDENTITY_SRC=<its ra2-native>`. What is not the same code as that port, by game area: `docs/differences.md`;
-the user's own bug reports checked here: `docs/regressions.md`. Yuri's Revenge and the combined app (configure with `-DRA2_NATIVE_YR=ON -DRA2_NATIVE_COMBINED=ON`, as `./build.sh mac-one`
+the user's own bug reports checked here: `docs/regressions.md`. `ra2-campaign-won` replays campaign missions won through the step server (the game paused and advanced by ticks for a
+scripted or agent player, `ra2/tools/ra2_step.py`, `ra2/glue/stepserver_native.inc`): the recorded inputs and ticks in
+`ra2/tests/campaign/`, the win and score screen as the pass. Yuri's Revenge and the combined app (configure with `-DRA2_NATIVE_YR=ON -DRA2_NATIVE_COMBINED=ON`, as `./build.sh mac-one`
 does) add `yr-native-*` (YR alone, all automated runs rather than played: skirmishes, saves in gamemd.exe's format, the start of both campaigns, the enhancements, LAN) and
 `one-game-*` (the toggle both ways, saves after a swap, the menus' backdrop); `-DRA2_ONE_IOS_SIM=ON` adds `one-game-ios-*`
 (label `one-ios`: the iOS app in the "RA2 Duo Validation" Simulator; any Simulator name works). They read the same installation, which needs
