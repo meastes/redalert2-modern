@@ -21,7 +21,7 @@ bytes, and copies whose data is unchanged, such as the signed 4,489,184-byte no-
 | `vendor/ra2-rebuild/` | the rebuild's `src/` and `include/` at a pinned commit of redalert2-decomp, unchanged, with its `LICENSE.md`, `adopted.csv` (per-file origin), `symbols.tsv` (names and addresses) and `PIN` (commit and SHA-256 of every file) |
 | `ra2/` | the Red Alert 2 build on that tree: the generator (`tools/rb_units.py`), the clang fixups (`fixups.json`, each with its VC6 meaning), native glue for what the rebuild carries neither exact nor as a draft (`glue/`), data binding, the checks (`tests/`) and `ra2.cmake` |
 | `port/` | the platform seams: Win32, DirectDraw, DirectSound, Winsock, OLE and the VC6 C runtime the game imports, on POSIX and SDL3 |
-| `platform/` | the SDL host (window, input, touch, the first-run setup, the Enhancements page); `platform/win` is the Windows host, not built here yet |
+| `platform/` | the SDL host (window, input, touch, the first-run setup, the Enhancements page); `platform/win` is the Windows host (built by `./build.sh windows`, `yr-windows` and `windows-one`; played on Windows 10/11) |
 | `vendor/ra2-decomp/`, `vendor/tibsun/` | the Yuri's Revenge tree (gibbo101/ra2-decomp) and the TibSun headers it falls back on, at pinned commits, unchanged, each with its `PIN` (`tools/update_yr_vendor.sh`) |
 | `yr/` | the Yuri's Revenge port on that tree (`yr.cmake`: generated units, `fixups.json`, `glue/`, data binding, `tests/`), which uses none of Red Alert 2's game code, and the combined app (`combined.cmake`, `combined/`: both games behind one thin host, a toggle in each main menu); also the SDK headers and tools the Red Alert 2 build shares. Notes: `docs/yr-port-notes.md` |
 | `cmake/` | the Windows cross-build (llvm-mingw toolchain file, `windows.cmake`) |
@@ -60,8 +60,8 @@ Prerequisites (the script downloads and installs nothing):
   statically and need only Windows 10 or later. The Windows build's checks (`ctest --test-dir build/windows`, label
   `rb-wine`, and the YR and one-game rows) run the .exe under Wine when `RA2_NATIVE_WINE` names one, else skip.
 - iOS device: your Apple team id in `RA2_IOS_TEAM` (never stored in Git) and a development profile Xcode has made
-  that covers `io.github.ra2native.RBTrial` (your team's wildcard profile does); `packaging/ios_sign.py` signs.
-  Install with `xcrun devicectl device install app --device <udid> build/ios-device/RBTrial.app`.
+  that covers the app's bundle id (`io.github.ra2native.RA2` for the combined app; a wildcard profile covers it);
+  `packaging/ios_sign.py` signs. Install with `xcrun devicectl device install app --device <udid> build/ios-device/RA2YR.app`.
 
 The Mac and Simulator apps are signed ad hoc (this Mac only); nothing is notarised or signed for distribution.
 
@@ -90,9 +90,9 @@ game. Frame identity against the decompilation's src-based port (`rb-identity`, 
 campaign missions, skirmish set-ups, order scripts, saves both ways; `ra2/tests/rb_gate.py`) is added only with
 `-DRB_IDENTITY_SRC=<its ra2-native>`. What is not the same code as that port, by game area: `docs/differences.md`;
 the user's own bug reports checked here: `docs/regressions.md`. Yuri's Revenge and the combined app (configure with `-DRA2_NATIVE_YR=ON -DRA2_NATIVE_COMBINED=ON`, as `./build.sh mac-one`
-does) add `yr-native-*` (YR alone: skirmishes, saves in gamemd.exe's format, both campaigns, the enhancements, LAN) and
+does) add `yr-native-*` (YR alone, all automated runs rather than played: skirmishes, saves in gamemd.exe's format, the start of both campaigns, the enhancements, LAN) and
 `one-game-*` (the toggle both ways, saves after a swap, the menus' backdrop); `-DRA2_ONE_IOS_SIM=ON` adds `one-game-ios-*`
-(label `one-ios`: the iOS app in the "RA2 Duo Validation" Simulator). They read the same installation, which needs
+(label `one-ios`: the iOS app in the "RA2 Duo Validation" Simulator; any Simulator name works). They read the same installation, which needs
 Yuri's Revenge installed. `python3 tools/check_tree.py --game-exe <your game.exe>` also proves that no
 piece of the executable's code or resources is in the tree.
 
