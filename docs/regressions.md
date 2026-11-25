@@ -174,3 +174,9 @@ their behaviour):
 | The game's pointer starts at 0,0 until the first mouse message (port/src/user32.cpp `cursor`) | a scripted run that had not moved the mouse edge-scrolled the map to the top left | the step server parks the pointer in the view's middle at the start and after each click |
 | `#` starts a comment in input-script lines | an object point written `@#id` became the screen's corner | the object point is `@^id` |
 | A building's listed click point is a corner of its picture; a left click on a cell the selection cannot use deselects (the original's behaviour) | clicks on buildings missed and dropped the selection | `@^id` for a building is its foundation's middle |
+
+Other platforms (lane P21): the replays are Mac rows only for now. One try of all01.replay on the Windows build under Wine
+11.18 (ra2/tools/ra2_wine.sh as the binary) did not get past start-up in 1,200 s: the fresh prefix's `wineboot -i`
+hung for seven minutes and, once ended, the game wrote nothing past MoltenVK's start lines, so whether the replay is
+deterministic there is not known yet. The iOS Simulator was not tried (the replay needs no socket, so both rows are a
+matter of running `ra2/tests/ra2_campaign.py` with ra2_wine.sh or ra2_ios_sim.sh as the binary once those start).
