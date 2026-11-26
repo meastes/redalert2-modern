@@ -307,7 +307,7 @@ endforeach()
 # replayed from ra2/tests/campaign/<name>.replay (inputs and ticks only); pass: the mission's own triggers win it at the
 # recorded tick and its score screen shows (ra2/tests/ra2_campaign.py; label ra2-campaign-won, about a minute each).
 # Entries: <name>|<side>|<mission>.
-foreach(rb_won "all01|allied|1" "all02|allied|2" "all03|allied|3" "all04|allied|4" "all05|allied|5" "sov01|soviet|1" "sov03|soviet|3" "sov04|soviet|4" "all08|allied|8" "sov06|soviet|6" "all10|allied|10" "sov09|soviet|9" "sov11|soviet|11" "sov12|soviet|12" "sov02|soviet|2" "sov05|soviet|5" "sov07|soviet|7")
+foreach(rb_won "all01|allied|1" "all02|allied|2" "all03|allied|3" "all04|allied|4" "all05|allied|5" "sov01|soviet|1" "sov03|soviet|3" "sov04|soviet|4" "all08|allied|8" "sov06|soviet|6" "all10|allied|10" "sov09|soviet|9" "sov11|soviet|11" "sov12|soviet|12" "sov02|soviet|2" "sov05|soviet|5" "sov07|soviet|7" "all07|allied|7")
   string(REPLACE "|" ";" rb_won_parts "${rb_won}")
   list(GET rb_won_parts 0 rb_won_name)
   list(GET rb_won_parts 1 rb_won_side)
