@@ -49,7 +49,8 @@
 //   state                    the structured state: scenario, ticks, game over, the game's clock (16 ms ticks), the mission timer, the player's credits,
 //                            power and input lock, the houses (each with its power, drain and credits), the factories (what each builds, %), each sidebar tab's
 //                            build options, the view, every techno (id, kind, type, house, cell, strength/max,
-//                            mission, selected, own/ally, on a cell the player has mapped), the live triggers
+//                            mission, selected, own/ally, on a cell the player has mapped), the live triggers; every house's super weapons
+//                            (lane P36: "super [h<n> ]<name> ready <0/1> charging <0/1> left <frames>", h<n> for another house)
 //   objects [mine|enemy|all] the techno lines alone
 //   triggers                 the live triggers (id, name, enabled, tripped events)
 //   cell <x> <y> [<r>]       the cells around x,y: water/cliff/land, height, mapped by the player, occupant, "+NAME" overlay
@@ -285,6 +286,20 @@ void RB_Step_State(int frame)
 			if (name) n += snprintf(line + n, sizeof(line) - n, " %s", name);
 		}
 		RB_Step_Out("%s", line);
+	}
+	// lane P36: every house's super weapons (Soviet 10's nuke: whether it is charged, the frames left on its timer; Allied
+	// 12: when the enemy's nuke will be ready); the player's lines are "super <name> ...", another house's "super h<n> <name> ..."
+	for (int h = 0; h < Houses.Count(); ++h) {
+		HouseClass * house = Houses[h];
+		if (house == NULL) continue;
+		for (int i = 0; i < house->SuperWeapon.Count(); ++i) {
+			SuperClass * sw = house->SuperWeapon[i];
+			if (sw == NULL || sw->Class == NULL || !sw->Is_Present()) continue;
+			char who[16] = "";
+			if (house != PlayerPtr) snprintf(who, sizeof(who), "h%d ", (int)house->HeapID);
+			RB_Step_Out("super %s%s ready %d charging %d left %d", who, sw->Class->Name(), sw->Is_Ready() ? 1 : 0,
+				sw->Is_Charging() ? 1 : 0, sw->Control.Value());
+		}
 	}
 	Point2D view = TacticalMap ? TacticalMap->Get_Tactical_Position() : Point2D(0, 0);
 	Cell centre(0, 0);
