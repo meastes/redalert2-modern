@@ -1,8 +1,12 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-# Allied 1 (ALL01T, Lone Guardian) won by lane P21 through the step server (ra2/tools/ra2_step.py), replayed by
+# Allied 1 (ALL01T, Lone Guardian) won through the step server (ra2/tools/ra2_step.py), replayed by
 # ra2/tests/ra2_campaign.py. Inputs and ticks only: '<tick> <command>', ticks from the scenario's first loop frame;
 # @^<n> is an object id, @=x,y a cell, @tab/@cameo the sidebar. No game-event shortcut was used.
+# Re-recorded by lane P35 with the frame clock (the MissionControl[MISSION_NONE] row, ra2/fixups.json): lane P21's
+# commands to tick 6,383 (the barracks, GIs, the engineer's capture of the tanks, the bridge), then the three tanks on
+# the V3s and sentry guns, the GIs up in support, and Tanya's C4 on the base. Lane P21's recording won at tick 11,007.
 # ALL01T.MAP: ticks are loop frames from the scenario's first
+# frame clock: the game's clock advances 16 ms a loop frame
 900 look 60 101
 901 input click @^1018554
 926 look 61 91
@@ -42,7 +46,7 @@
 4286 input click @=62,23
 4761 save A1TANKS.SAV
 4761 look 72 44
-4762 input click @^1023826
+4762 input click @^1023817
 4787 look 80 48
 4788 input click @^1018617
 5213 save A1BRIDGE.SAV
@@ -59,42 +63,67 @@
 5758 input click @=82,55
 6383 save A1ACROSS.SAV
 6383 look 77 58
-6386 input click @^1024321
-6486 look 77 63
-6489 input click @^1024416
-6589 look 82 72
-6592 input click @^1018536
-6692 look 84 72
-6695 input click @^1018538
-6795 look 86 72
-6798 input click @^1018540
-6898 look 93 63
-6901 input click @^1018654
-7201 look 95 63
-7204 input click @^1018655
-7404 look 92 56
-7407 input click @^1024126
-7607 look 97 56
-7610 input click @^1024216
-7710 look 90 66
-7713 input click @^1018646
-8013 look 95 69
-8016 input click @^1018641
-8416 look 99 67
-8419 input click @^1018650
-8719 look 99 70
-8722 input click @^1018647
-9022 look 97 76
-9025 input click @^1018829
-9425 look 91 73
-9428 input click @^1018653
-9728 look 92 78
-9731 input click @^1018832
-10031 look 85 78
-10034 input click @^1018700
-10134 look 85 78
-10137 input click @^1018700
-10437 save A1BASE.SAV
-10437 look 85 83
-10440 input click @^1018703
-11007 # game over: won
+6383 look 77 58
+6383 input click @^1024324
+6483 look 77 63
+6483 input click @^1024429
+6633 look 92 56
+6633 input click @^1024122
+6833 look 97 56
+6833 input click @^1024216
+7033 look 93 63
+7033 input click @^1018654
+7283 look 95 63
+7283 input click @^1018655
+7533 look 90 66
+7533 input click @^1018646
+7983 look 71 43
+7983 input drag @=69,40 @=74,46
+7993 input ldown @=69,40
+7993 input +3 move @=71,43
+7993 input +6 move @=74,46
+7993 input +9 lup @=74,46
+8007 input key T
+8017 look 89 61
+8017 input click @=89,61
+8417 look 93 62
+8417 input click @^1018544
+8423 input key T
+8429 input click @=88,57
+8629 look 62 23
+8629 input click @^1018554
+8633 look 88 58
+8633 input click @=88,58
+8933 look 62 23
+8933 input click @^1018554
+8945 look 88 58
+8945 input click @=88,58
+9245 look 62 23
+9245 input click @^1018554
+9257 look 85 55
+9257 input click @=85,55
+9269 look 87 57
+9269 input click @=87,57
+10369 look 95 69
+10369 input click @^1018641
+10769 look 85 78
+10769 input click @^1018700
+11169 look 85 83
+11169 input click @^1018703
+11569 look 85 83
+11569 input click @^1018703
+11869 look 85 78
+11869 input click @^1018700
+12269 look 92 78
+12269 input click @^1018832
+12449 look 97 76
+12449 input click @^1018829
+12929 look 97 76
+12929 input click @^1018829
+12989 look 91 73
+12989 input click @^1018653
+13229 look 99 67
+13229 input click @^1018650
+13529 look 99 70
+13529 input click @^1018647
+13871 # game over: won

@@ -1109,3 +1109,35 @@ replay never waits); a live session made before it may not match its own replay 
 | --- | --- | --- | --- |
 | Soviet 10 (SOV10T, Weathered Alliance) | deferred again | 0.5 + 1.2 | (the lane's hours include the heap fault above, which this mission found.) Ten submarines and four dreadnoughts (the bonus ship found at 150,205 by a submarine) hold home waters once the naval yard is rebuilt (a dolphin raid took the first, tick 45,908). From the water at 150,139 the dreadnoughts' missiles (DMisl 300, CellSpread 1.5) cleared the south beach: the patriot (140,124), both prism towers (142,120, 156,122), three pillboxes, four Grizzlies, a refinery. Shelling BadGuy1's miners sends Grizzlies, as the walkthrough warns. Two amphibious transports took two Apocalypses each and a third one an Apocalypse and an engineer (an Apocalypse is Size=6, the SAPC Passengers=12); they landed on the beach (146-150,124-128) at tick 69,612 (build/p34/saves/sov10/p34d.replay, frame clock: the best point). The four Apocalypses sent north by fight_legs reached (155,112), the compound's south-west corner, and died there within 300 ticks to the chained prism towers (159,105 with 163,101 and 177,110 supporting). Dreadnoughts in the cove at (155-159,125-126) have both compound towers in range (20 and 24 cells; the lab, 27, is out of range, so it cannot be hit by mistake), but the towers are not mapped from there, and the siege only fires on mapped targets. Credits were down to a few hundred by then. Next: map the compound (a scout, or a short landing at 152,116 with the transports kept offshore), shell 159,105 and 163,101 from the cove, then the Apocalypses through the south gate (165-166,113) and the engineer through the north gap (165-166,100) to the lab (164,98); BL Destroyed loses the mission |
 | Allied 12 (ALL12S, Chrono Storm) | deferred again (restarted) | 0.4 + 0.35 | Restarted with the frame clock: one SEAL's C4 on the reactor (65,65) at tick 650, the MCV deployed at (65,64) once the SEAL beside it moved (yard 66,65, tick 3,135), the prisoners freed by an IFV on the pen's tagged cells (the tag 0ABAACBC, "Prisoners 1c": six GIs and two engineers turn the player's at tick 3,835), four derricks (53,67, 68,52, 76,72, 73,75). V3s at (82,73-75) east of the base and (67-68,47) north of it shelled the derricks, a power plant, the war factory and the air force command from tick 13,600 (the tanks killed them at 18,276 and 19,997); the battle lab's first spot (56,63) was refused and dropped. At about tick 18,500 the base was wiped again (yard, power, barracks, refinery: P26's blasts at the same time); this run had no chronosphere by then. Best point: build/p34/saves/all12/p34a.replay (tick 11,210: yard, refinery, barracks, war factory, air force command, two power plants, four derricks, 4 prism tanks, 5 Grizzlies, 9 IFVs, 10 GIs). Next: find what the blast at 18,500 is and where it aims (BadGuy1's nuke is the likely one: the walkthrough says it targets the war factory and selling it at the launch saves the rest); tanks out at the east and north edges from tick 12,000 to stop the V3s; the battle lab and the chronosphere away from the war factory |
+
+## Lane P35 (2026-11-26, same PIN): an AddressSanitizer sweep
+
+An ASan build of the Mac target (`-DRA2_NATIVE_ASAN=ON` in its own folder, build/asan: `-fsanitize=address
+-fsanitize-recover=address -fno-sanitize-address-use-after-scope`) ran every won replay and the ra2-quick, ra2-main,
+ra2-campaign and ra2-resaves groups. Reports: CCINIClass::Get_PipEnum (`_pips[PIP_BLUE]`, one past the table),
+RadarClass::Init_For_House (TooltipColor read as four bytes), RLE_Blit's `_temp_buf` (a 256-byte flat z-shape read for
+every pixel of wider lines), Tactical::Draw_Rally_Points' 8-entry dash pattern stepped through 16 (the original's
+next 8 bytes repeat it), _voxel_draw_shadow sampling the 256x256 compositing surface past its buffer (read as 0 outside
+it). Each has a fixups.json row giving what the original read (docs/regressions.md).
+
+The larger find did not come as a report. Under ASan Allied 1 went another way at frame 2,548. A per-frame digest put
+the first difference there, an lldb watchpoint on the scenario generator showed a GI's shot missing in that frame, and
+the GI had never taken the falling paratrooper as a target. TechnoClass::Evaluate_Object asks
+`object->Current_Mission_Control().IsNoThreat`, and for an object with CurrentMission MISSION_NONE that is
+MissionControl[-1], the 32 bytes before the table. Those bytes were the TibSunFactory pointer's high bytes under ASan
+and an empty vector in the release build, so the answer depended on the linker. In the original they are COORD_NONE's
+Z, zero padding and the Aircraft vector (read from the executable's initialisers at 0x004D2D50 and 0x004D3490). A
+fixups.json row returns that record. Before it, the release build and the build with `-ftrivial-auto-var-init=pattern`
+agreed with each other and MallocPreScribble changed nothing: neither uninitialised stack nor uninitialised heap was
+involved. After it, the ASan and release digests agree at every frame checked (to frame 217,000).
+
+The owner ruled for the original's values (IsRetaliate and IsScatter true; the release build had read false). Under
+them lane P21's all01.replay goes another way at about tick 2,650 (the landed paratroopers), so Allied 1 was
+re-recorded with the frame clock. P21's commands carry over to tick 6,383 (one object id remapped: the engineer). Then
+the three Grizzlies take the four V3s and the two sentry guns, the six GIs come up in support, and Tanya C4s the
+construction yard, both war factories, the radar, the barracks and the power plants. It won at tick 13,871, the same
+on a rerun (the old recording won at 11,007). The other 17 wins hold at their ticks in the release build and under
+ASan.
+
+ctests: `ra2-native-asan-all01` and `-sov06` (label ra2-asan, only in an RA2_NATIVE_ASAN build;
+`ra2_campaign.py --asan` fails on any report).
