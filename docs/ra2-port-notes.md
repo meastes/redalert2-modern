@@ -1197,3 +1197,13 @@ ASan.
 
 ctests: `ra2-native-asan-all01` and `-sov06` (label ra2-asan, only in an RA2_NATIVE_ASAN build;
 `ra2_campaign.py --asan` fails on any report).
+
+Yuri's Revenge under ASan (lane P35, a first look only): an RA2_NATIVE_ASAN=ON build with RA2_NATIVE_YR=ON builds.
+Its one source-level `__yr_init_func` entry (yr/glue/yr_lan.cpp) is now excluded from instrumentation, because ASan's
+redzone put zero pointers in the section that ra2_native_original_records walks, and every run stopped there. After
+that, seven yr-native tests (skirmish-smoke and -long, save, combat, war-factory, garrison, mirage) still fail under
+ASan. ASan stops the game at its first report, so the yr tests' runs probably do not pass ASAN_OPTIONS through. The
+reports name about 20 sites, all global-buffer-overflow: Unit_Blit_Voxel and Unit_Draw_Voxel, TechnoClass::Draw_Voxel,
+Read_Scenario_INI, Select_Game, SpecialClass::Init, TRect::Is_Valid and Union, _makepath, ra2_strncpy,
+WideToCharString, the combo box handler, Bit_Blit_Core_Native, WinMain. They are left for a YR lane. The logs are in
+build/p35/yr-asan (outside the repository).
