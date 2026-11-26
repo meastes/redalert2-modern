@@ -119,6 +119,10 @@ POST = {
 }
 
 
+HOST_LIST_HEAD = ('# The llvm-mingw 20261020 headers the x86_64 Windows build leaves out (the macOS SDK has them: the C library),\n'
+                  '# for a Windows host, which has no macOS SDK. Written by yr/tools/yr_sdk.py --write-host-list;\n'
+                  '# tests/host_paths.py checks it against the Mac SDK. File names only, one per line.\n')
+
 KEEP_ALL_LONG = False   # the Windows build (--host-headers): LLP64's long is VC6's (yr_prelude.h)
 
 
@@ -151,17 +155,32 @@ def main():
     ap.add_argument('--host-headers', default='',
                     help="the x86_64 Windows build (lane Y13): a header folder (the macOS SDK's usr/include) whose "
                          "headers are left out, so the YR units see the rewritten Win32 headers ahead of the "
-                         "toolchain's and the toolchain's own C library headers, as the Mac build does")
+                         "toolchain's and the toolchain's own C library headers, as the Mac build does; or a list "
+                         "of those headers (yr/data/host_c_headers.txt), on a host without the macOS SDK")
+    ap.add_argument('--write-host-list', default='',
+                    help='write the list of the toolchain headers --host-headers (a folder) has, and stop')
     a = ap.parse_args()
     src, out = Path(a.mingw), Path(a.out)
     host = Path(a.host_headers) if a.host_headers else None
+    if a.write_host_list:
+        if host is None or not host.is_dir():
+            raise SystemExit('yr_sdk: --write-host-list needs --host-headers <macOS SDK>/usr/include')
+        names = sorted(f.relative_to(src).as_posix() for f in src.rglob('*') if f.is_file() and (host / f.relative_to(src)).exists())
+        Path(a.write_host_list).write_text(HOST_LIST_HEAD + ''.join(n + '\n' for n in names))
+        print('yr_sdk: %d host headers -> %s' % (len(names), a.write_host_list))
+        return
+    if host is not None and host.is_file():
+        listed = set(l.strip() for l in host.read_text().splitlines() if l.strip() and not l.startswith('#'))
+        left_out = lambda rel: rel.as_posix() in listed   # noqa: E731
+    else:
+        left_out = lambda rel: (host / rel).exists()   # noqa: E731
     global KEEP_ALL_LONG
     KEEP_ALL_LONG = host is not None   # long stays long (32 bits on Win64, as VC6's)
     n = 0
     for f in src.rglob('*'):
         if not f.is_file():
             continue
-        if host is not None and (host / f.relative_to(src)).exists():
+        if host is not None and left_out(f.relative_to(src)):
             continue
         target = out / f.relative_to(src)
         text = rewrite(f.read_text(encoding='latin-1'), f.relative_to(src).as_posix())

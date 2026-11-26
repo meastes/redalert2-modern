@@ -27,12 +27,15 @@ endif()
 # rewritten Win32 headers are searched ahead of them (-isystem) and leave out every header the Mac's
 # SDK has (the C library's: the toolchain's own are used, as the Mac uses its SDK's).
 set(ra2_yr_sdk_args "")
-if(WIN32)
+if(WIN32 AND CMAKE_HOST_APPLE)
   execute_process(COMMAND xcrun --sdk macosx --show-sdk-path OUTPUT_VARIABLE ra2_yr_mac_sdk OUTPUT_STRIP_TRAILING_WHITESPACE)
   if(NOT IS_DIRECTORY "${ra2_yr_mac_sdk}/usr/include")
     message(FATAL_ERROR "RA2_NATIVE_YR (Windows): the macOS SDK (xcrun --sdk macosx) names the C library headers to leave out")
   endif()
   set(ra2_yr_sdk_args --host-headers "${ra2_yr_mac_sdk}/usr/include")
+elseif(WIN32)
+  # A Windows host (lane P42): no macOS SDK, so the tracked list of the headers it would have left out.
+  set(ra2_yr_sdk_args --host-headers "${CMAKE_CURRENT_SOURCE_DIR}/yr/data/host_c_headers.txt")
 endif()
 execute_process(
   COMMAND "${Python3_EXECUTABLE}" -B "${CMAKE_CURRENT_SOURCE_DIR}/yr/tools/yr_sdk.py"

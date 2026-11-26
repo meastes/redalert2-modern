@@ -16,6 +16,10 @@
 # RA2_BUILD_DIR picks another build folder. Nothing is downloaded or installed, and no game file is read or
 # bundled: the apps ask for the player's installed game at run time.
 #
+# The Windows targets (windows, yr-windows, windows-one) also run on a Windows PC under Git Bash or MSYS2, with
+# llvm-mingw's Windows release (llvm-mingw-20261020-ucrt-x86_64) and the SDL source named by RA2_LLVM_MINGW and
+# RA2_SDL_SOURCE, and CMake, Ninja and Python 3 on PATH (README "Building on a Windows PC").
+#
 # Prerequisites: a Mac on Apple silicon; Xcode (the command line tools are enough for mac), CMake 3.24+, Ninja,
 # Python 3 (brew install cmake ninja); for mac, SDL3 from Homebrew (brew install sdl3); for every build the
 # llvm-mingw 20261020 macOS release extracted (its Win32 headers are read at build time, never copied):
@@ -31,8 +35,19 @@ SDL_SHA256=ef39a2e3f9a8a78296c40da701967dd1b0d0d6e267e483863ce70f8a03b4050c
 die() { echo "build.sh: $*" >&2; exit 1; }
 need() { command -v "$1" >/dev/null 2>&1 || die "$1 not found: $2"; }
 
-common_checks() {
-  [[ "$(uname -s)" == Darwin ]] || die "the ports build on macOS"
+windows_host() { case "$(uname -s)" in MINGW*|MSYS*|CYGWIN*) return 0 ;; esac; return 1; }
+
+# A folder as the native tools read it: C:/... under Git Bash or MSYS2 (pwd -W), else as it is.
+native_dir() { (cd "$1" && if windows_host; then pwd -W; else pwd; fi); }
+
+common_checks() {   # [windows]: the Windows targets, which also build on a Windows host
+  if [[ "${1:-}" == windows ]] && windows_host; then
+    need cmake "install CMake 3.24 or later and put it on PATH"
+    need ninja "install Ninja and put it on PATH"
+    command -v python3 >/dev/null 2>&1 || command -v python >/dev/null 2>&1 || die "Python 3 not found: put it on PATH"
+    return
+  fi
+  [[ "$(uname -s)" == Darwin ]] || die "the ports build on macOS (the Windows targets also under Git Bash or MSYS2 on Windows)"
   need cmake "install CMake (brew install cmake)"
   need ninja "install Ninja (brew install ninja)"
   need python3 "install Python 3"
@@ -40,12 +55,13 @@ common_checks() {
 }
 
 llvm_mingw() {
-  local d="${RA2_LLVM_MINGW:-}"
+  local d="${RA2_LLVM_MINGW:-}" release="$LLVM_MINGW_RELEASE"
+  windows_host && release=llvm-mingw-20261020-ucrt-x86_64
   if [[ -z "$d" ]]; then
-    d=$(ls -d toolchains/llvm-mingw-*/"$LLVM_MINGW_RELEASE" toolchains/"$LLVM_MINGW_RELEASE" 2>/dev/null | head -1 || true)
+    d=$(ls -d toolchains/llvm-mingw-*/"$release" toolchains/"$release" 2>/dev/null | head -1 || true)
   fi
-  [[ -n "$d" && -d "$d/generic-w64-mingw32/include" ]] || die "llvm-mingw not found: extract $LLVM_MINGW_RELEASE (github.com/mstorsjo/llvm-mingw, release 20261020) and set RA2_LLVM_MINGW to its folder"
-  (cd "$d" && pwd)
+  [[ -n "$d" && -d "$d/generic-w64-mingw32/include" ]] || die "llvm-mingw not found: extract $release (github.com/mstorsjo/llvm-mingw, release 20261020) and set RA2_LLVM_MINGW to its folder"
+  native_dir "$d"
 }
 
 sdl_source() {
@@ -53,10 +69,10 @@ sdl_source() {
   if [[ ! -f "$d/CMakeLists.txt" ]]; then
     local tarball="toolchains/SDL3-$SDL_VERSION.tar.gz"
     [[ -f "$tarball" ]] || die "no SDL $SDL_VERSION source: put SDL3-$SDL_VERSION.tar.gz (SHA-256 $SDL_SHA256, from libsdl.org) in toolchains/ or set RA2_SDL_SOURCE"
-    [[ "$(shasum -a 256 "$tarball" | awk '{print $1}')" == "$SDL_SHA256" ]] || die "$tarball is not SDL $SDL_VERSION (SHA-256 differs)"
+    [[ "$( { if command -v shasum >/dev/null 2>&1; then shasum -a 256 "$tarball"; else sha256sum "$tarball"; fi; } | awk '{print $1}')" == "$SDL_SHA256" ]] || die "$tarball is not SDL $SDL_VERSION (SHA-256 differs)"
     tar -xzf "$tarball" -C toolchains
   fi
-  (cd "$d" && pwd)
+  native_dir "$d"
 }
 
 build_mac() {
@@ -139,13 +155,17 @@ build_ios() {
 windows_configure() {   # <build folder> <mingw> [CMake options]
   local b="$1" mingw="$2"; shift 2
   local sdl; sdl=$(sdl_source)
-  RA2_LLVM_MINGW="$mingw" cmake -S . -B "$b" -G Ninja -DCMAKE_TOOLCHAIN_FILE="$root/cmake/llvm-mingw-x86_64.cmake" \
+  if windows_host; then
+    # The build's tools run llvm-mingw's clang++, llvm-nm and llvm-cxxfilt (tools/host_tools.py) from its bin.
+    PATH="$(cd "$mingw/bin" && pwd):$PATH"; export PATH
+  fi
+  RA2_LLVM_MINGW="$mingw" cmake -S . -B "$b" -G Ninja -DCMAKE_TOOLCHAIN_FILE="$(native_dir "$root/cmake")/llvm-mingw-x86_64.cmake" \
         -DRA2_LLVM_MINGW="$mingw" -DRA2_SDL_SOURCE="$sdl" "$@"
 }
 
 build_windows() {
   local b="${RA2_BUILD_DIR:-build/windows}"
-  common_checks; local mingw; mingw=$(llvm_mingw)
+  common_checks windows; local mingw; mingw=$(llvm_mingw)
   windows_configure "$b" "$mingw" "$@"
   RA2_LLVM_MINGW="$mingw" cmake --build "$b" --target RA2Native ra2-native   # ra2-native.exe: the console build
   echo "Built: $b/RA2Native.exe (self-contained: copy it to the Windows PC on its own)"
@@ -153,7 +173,7 @@ build_windows() {
 
 build_yr_windows() {
   local b="${RA2_BUILD_DIR:-build/windows}"
-  common_checks; local mingw; mingw=$(llvm_mingw)
+  common_checks windows; local mingw; mingw=$(llvm_mingw)
   windows_configure "$b" "$mingw" -DRA2_NATIVE_YR=ON "$@"
   RA2_LLVM_MINGW="$mingw" cmake --build "$b" --target YRNative yr-native
   echo "Built: $b/YRNative.exe (self-contained: copy it to the Windows PC on its own)"
@@ -163,7 +183,7 @@ build_windows_one() {
   # The thin host RA2YRNative.exe loads ra2-engine.dll or yr-engine.dll from its own folder; all three share SDL3.dll.
   # ra2yr-native.exe is the console host the Wine tests run. RA2YRNative/ holds only what a PC needs.
   local b="${RA2_BUILD_DIR:-build/windows-one}"
-  common_checks; local mingw; mingw=$(llvm_mingw)
+  common_checks windows; local mingw; mingw=$(llvm_mingw)
   windows_configure "$b" "$mingw" -DRA2_NATIVE_YR=ON -DRA2_NATIVE_COMBINED=ON "$@"
   RA2_LLVM_MINGW="$mingw" cmake --build "$b" --target RA2YRNative ra2yr-native ra2-engine yr-engine
   local pkg="$b/RA2YRNative" f

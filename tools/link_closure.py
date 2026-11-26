@@ -39,6 +39,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'tools/original_target'))
+sys.path.insert(0, str(ROOT / 'tools'))
+import host_tools  # noqa: E402
 
 
 NM = 'nm'
@@ -155,7 +157,7 @@ DATA_FROM = 0x79A000   # the first address past the code: RA2's .rdata (yr-nativ
 
 def classify(missing):
     """Rows (symbol, name, cls, kind) of undefined symbols."""
-    demangled = subprocess.run(['c++filt'], input='\n'.join(missing), capture_output=True, text=True).stdout.split('\n')
+    demangled = subprocess.run([host_tools.tool('c++filt')], input='\n'.join(missing), capture_output=True, text=True).stdout.split('\n')
     imports = {i['name'] for i in json.loads((ROOT / 'manifests/imports.json').read_text())['imports']}
     data_names = catalog_data_names()
     rows = []

@@ -199,3 +199,7 @@ endif()
 # tracked, every own source keeps its SPDX line, THIRD_PARTY.md names each vendor folder.
 add_test(NAME repo-hygiene COMMAND "${Python3_EXECUTABLE}" -B "${CMAKE_CURRENT_SOURCE_DIR}/tools/check_tree.py")
 set_tests_properties(repo-hygiene PROPERTIES LABELS "ra2-quick;static")
+# Lane P42: the generated CMake lists and #line paths with a Windows host's spellings, under this cmake -P.
+add_test(NAME host-paths COMMAND "${Python3_EXECUTABLE}" -B "${CMAKE_CURRENT_SOURCE_DIR}/tests/host_paths.py"
+         --cmake "${CMAKE_COMMAND}")
+set_tests_properties(host-paths PROPERTIES LABELS "ra2-quick;static")

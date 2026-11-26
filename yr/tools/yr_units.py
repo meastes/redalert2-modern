@@ -25,6 +25,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'tools'))
+import host_tools  # noqa: E402
 import native_units  # noqa: E402
 
 # Window and dialog procedures (and the handlers they pass their parameters to) take the message
@@ -178,7 +179,7 @@ def main():
     unused = [r.get('old', r.get('cut', r['file'])) for r in fixups if not r['hits'] and (not only or r['file'] == '*' or r['file'].startswith('hdr/'))]
     if unused:
         raise SystemExit('yr_units: fixups that match nothing: %s' % unused)
-    emit(out / 'units.cmake', 'set(YR_NATIVE_UNITS\n%s)\n' % ''.join('  "%s"\n' % u for u in units))
+    emit(out / 'units.cmake', host_tools.cmake_list('YR_NATIVE_UNITS', units))
     emit(out / 'report.json', json.dumps({'headers': len(headers), 'units': len(units), 'skipped': skipped}, indent=1) + '\n')
     print('yr_units: %d headers, %d units (%d left out) -> %s' % (len(headers), len(units), len(skipped), out))
 

@@ -30,6 +30,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'tools'))
+import host_tools  # noqa: E402
 import native_units  # noqa: E402
 
 native_units.WIN64_PARAMS = False   # mingw's WPARAM/LPARAM types (as yr_units.py)
@@ -196,7 +197,7 @@ def main():
             if not e.get('unmapped'):
                 first.setdefault(Path(e['source']).name, e['index'])
         units.sort(key=lambda u: (u.name in first, first.get(u.name, 0)))
-    emit(out / 'units.cmake', 'set(RB_NATIVE_UNITS\n%s)\n' % ''.join('  "%s"\n' % u for u in units))
+    emit(out / 'units.cmake', host_tools.cmake_list('RB_NATIVE_UNITS', units))
     emit(out / 'report.json', json.dumps({'pin': pin, 'headers': len(headers), 'units': len(units),
                                           'skipped': skipped}, indent=1) + '\n')
     print('ra2_units: pin %s, %d headers, %d units (%d left out) -> %s' % (pin[:10], len(headers), len(units), len(skipped), out))

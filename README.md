@@ -71,6 +71,46 @@ Prerequisites (the script downloads and installs nothing):
 
 The Mac and Simulator apps are signed ad hoc (this Mac only); nothing is notarised or signed for distribution.
 
+### Building on a Windows PC
+
+The Windows targets (`windows`, `yr-windows`, `windows-one`) also build on a Windows 10/11 PC (x86_64). The Mac cross
+build above is the one the checks run; a Windows host build makes the same programs. You need:
+
+- llvm-mingw 20261020's Windows release, `llvm-mingw-20261020-ucrt-x86_64` (github.com/mstorsjo/llvm-mingw), extracted;
+- the SDL 3.4.2 source, extracted;
+- CMake 3.24 or later, Ninja and Python 3 on PATH;
+- Git Bash (from Git for Windows) or MSYS2 for `build.sh`; or a plain shell and the CMake commands below.
+- Developer Mode on (Settings, System, For developers), or an administrator shell: one build step (the save-layout
+  dumps, `ra2/tools/ra2_original_layouts.py`) makes symbolic links in the build folder.
+
+No macOS SDK is needed: where the Mac build asks it which C library headers to leave out of the rewritten Win32 headers,
+a Windows host reads the same list from `yr/data/host_c_headers.txt` (`tests/host_paths.py` checks it against the Mac's
+SDK). The build's tools find `llvm-nm`, `llvm-cxxfilt` and `clang++` in llvm-mingw's `bin` (`tools/host_tools.py`;
+`RA2_NM` and `RA2_CXXFILT` name others).
+
+In Git Bash or MSYS2, from the checkout:
+
+```
+export RA2_LLVM_MINGW=C:/ra2/llvm-mingw-20261020-ucrt-x86_64
+export RA2_SDL_SOURCE=C:/ra2/SDL3-3.4.2
+./build.sh windows-one        # build/windows-one/RA2YRNative/
+```
+
+Without bash (PowerShell; the same steps `build.sh windows-one` takes):
+
+```
+$env:RA2_LLVM_MINGW = "C:/ra2/llvm-mingw-20261020-ucrt-x86_64"
+$env:PATH = "$env:RA2_LLVM_MINGW/bin;$env:PATH"
+cmake -S . -B build/windows-one -G Ninja -DCMAKE_TOOLCHAIN_FILE=cmake/llvm-mingw-x86_64.cmake `
+      -DRA2_LLVM_MINGW="$env:RA2_LLVM_MINGW" -DRA2_SDL_SOURCE=C:/ra2/SDL3-3.4.2 -DRA2_NATIVE_YR=ON -DRA2_NATIVE_COMBINED=ON
+cmake --build build/windows-one --target RA2YRNative ra2yr-native ra2-engine yr-engine
+```
+
+The game is `RA2YRNative.exe` with `ra2-engine.dll`, `yr-engine.dll` and `SDL3.dll` beside it in `build/windows-one`
+(`build.sh` also copies the four, and SDL's licence, into `build/windows-one/RA2YRNative/`). For Red Alert 2 alone:
+the same configure without the two `RA2_NATIVE_` options and `--target RA2Native ra2-native` (`build/windows`).
+Use forward slashes in the paths given to CMake. The Wine checks do not apply on Windows.
+
 ## Running from a build folder
 
 ```

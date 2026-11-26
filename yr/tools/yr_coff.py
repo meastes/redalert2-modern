@@ -16,6 +16,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'tools'))
 import coff_asm_labels  # noqa: E402
+import host_tools  # noqa: E402
 
 
 # File-scope assembly written as several string literals (the glue's `.globl` + `=` aliases, one
@@ -47,12 +48,12 @@ def main():
             continue
         copy = a.gen / 'coff' / 'units' / path.name
         copy.parent.mkdir(parents=True, exist_ok=True)
-        new = '#line 1 "%s"\n' % path + coff_text(text)
+        new = host_tools.line_directive(path) + coff_text(text)
         if not copy.exists() or copy.read_text(errors='replace') != new:
             copy.write_text(new)
         names.append(str(copy))
         copies += 1
-    a.out.write_text('set(%s\n%s)\n' % (a.var, ''.join('  "%s"\n' % n for n in names)))
+    a.out.write_text(host_tools.cmake_list(a.var, names))
     print('yr_coff: %d of %d units with COFF labels' % (copies, len(names)))
 
 

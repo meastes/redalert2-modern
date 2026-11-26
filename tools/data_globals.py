@@ -33,6 +33,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'tools/original_target'))
+sys.path.insert(0, str(ROOT / 'tools'))
+import host_tools  # noqa: E402
 try:
     import catalog_io  # noqa: E402  (redalert2-decomp's; only this file's own src-tree entry point uses it)
 except ImportError:
@@ -73,7 +75,7 @@ def msvc_key(msvc):
 
 
 def demangle(symbols):
-    out = subprocess.run(['c++filt'], input='\n'.join(symbols), capture_output=True, text=True, check=True).stdout
+    out = subprocess.run([host_tools.tool('c++filt')], input='\n'.join(symbols), capture_output=True, text=True, check=True).stdout
     return out.split('\n')[:len(symbols)]
 
 

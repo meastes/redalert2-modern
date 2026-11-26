@@ -20,6 +20,8 @@ import struct
 import subprocess
 from pathlib import Path
 
+import host_tools
+
 N_WEAK_DEF = 0x0080
 LC_SYMTAB = 0x2
 MH_MAGIC_64 = 0xFEEDFACF
@@ -30,7 +32,7 @@ def definitions(paths):
     out = {}
     for i in range(0, len(paths), 400):
         batch = paths[i:i + 400]
-        text = subprocess.run(['nm', '-g', '-U'] + batch, capture_output=True, text=True).stdout
+        text = subprocess.run([host_tools.tool('nm'), '-g', '-U'] + batch, capture_output=True, text=True).stdout
         current = batch[0] if len(batch) == 1 else None
         for line in text.splitlines():
             if line.endswith(':') and line[:-1] in batch:

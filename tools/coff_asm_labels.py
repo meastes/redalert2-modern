@@ -25,6 +25,8 @@ import re
 import sys
 from pathlib import Path
 
+import host_tools
+
 LABEL = re.compile(r'__asm__\("_')
 TOP_ASM = re.compile(r'^(__asm__\(")((?:[^"\\]|\\.)*)("\);)', re.M)
 SYMBOL = re.compile(r'(?<![\w.$])_(?=[A-Za-z_])')
@@ -61,7 +63,7 @@ def main():
         sys.exit(__doc__)
     source, copy = Path(args[0]).resolve(), Path(args[1])
     copy.parent.mkdir(parents=True, exist_ok=True)
-    copy.write_text('#line 1 "%s"\n' % source + coff_text(source.read_text()))
+    copy.write_text(host_tools.line_directive(source) + coff_text(source.read_text()))
 
 
 if __name__ == '__main__':

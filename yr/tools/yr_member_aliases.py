@@ -31,6 +31,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'tools'))
+import host_tools  # noqa: E402
 import original_data      # noqa: E402
 import original_layouts as OL   # noqa: E402
 
@@ -38,7 +39,7 @@ GLOBALS = ROOT / 'yr/data/globals.tsv'
 OUT = ROOT / 'yr/data/member_aliases.tsv'
 HEAD = ['symbol', 'name', 'address', 'owner_symbol', 'owner', 'unit', 'offset32', 'offset_arm64', 'offset_win64',
         'member', 'kind']
-CXXFILT = 'c++filt'
+CXXFILT = host_tools.tool('c++filt')
 
 
 def known():
@@ -63,7 +64,7 @@ def unit_data_symbols(objects):
     """{symbol: object} of the data the YR units define."""
     out = {}
     for i in range(0, len(objects), 300):
-        text = subprocess.run(['nm', '-g', '-A'] + objects[i:i + 300], capture_output=True, text=True).stdout
+        text = subprocess.run([host_tools.tool('nm'), '-g', '-A'] + objects[i:i + 300], capture_output=True, text=True).stdout
         for line in text.splitlines():
             path, _, rest = line.rpartition(': ')
             parts = rest.split()

@@ -25,8 +25,12 @@ import argparse
 import csv
 import re
 import subprocess
+import sys
 from collections import defaultdict
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'tools'))
+import host_tools  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[2]
 MANIFEST = ROOT / 'vendor/ra2-decomp/data/manifest.csv'
@@ -57,7 +61,7 @@ def msvc_name(sym):
 
 
 def demangle(names):
-    out = subprocess.run(['c++filt'], input='\n'.join(names), capture_output=True, text=True).stdout.split('\n')
+    out = subprocess.run([host_tools.tool('c++filt')], input='\n'.join(names), capture_output=True, text=True).stdout.split('\n')
     return dict(zip(names, out))
 
 

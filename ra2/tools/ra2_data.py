@@ -31,6 +31,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'tools'))
 import data_globals  # noqa: E402  (sections, msvc_key, demangle: unchanged)
+import host_tools  # noqa: E402
 
 
 SYMBOLS = ROOT / 'vendor/ra2-rebuild/symbols.tsv'
@@ -87,7 +88,7 @@ def is_coff(path):
 def nm_defined(paths):
     """The external names objects define, in the Mach-O spelling (COFF names gain the leading underscore, as
     tools/link_closure.py reads them on Windows)."""
-    out = subprocess.run(['nm', '-g', '--defined-only', '-j'] + paths, capture_output=True, text=True).stdout
+    out = subprocess.run([host_tools.tool('nm'), '-g', '--defined-only', '-j'] + paths, capture_output=True, text=True).stdout
     prefix = '_' if paths and is_coff(paths[0]) else ''
     return sorted({prefix + s for s in out.split('\n') if s and not s.endswith(':')})
 
