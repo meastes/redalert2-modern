@@ -1037,3 +1037,12 @@ the clicks in ra2/tests/regress/walls-sov07.replay) checks the four cells throug
 prints that never fired were not reproduced: in the same replayed run lldb stopped in Place_Object for every placement.
 Also: a debugger attaching made the step server's accept() or read() fail with EINTR, which ended serving (the game ran
 on freely); both now retry (platform/sdl/host.cpp).
+
+Campaign sweep (lane P30): Allied 11 (ALL11T, Fallout) looked at again, 0.1 + 0.1 lane-hours, no try played (the lane's
+context went to the walls). With the wall overlays now drawn by `terrain`, BadGuy2's base on Cuba reads as a walled
+compound (x 171-199, y 180-209; the wall's west side at x 171, the south side at y 209, gates by the roads at about
+(176-178,195-197) and (199,196)), the three silos inside it 30 cells from the west coast (156,195). No battle lab or
+prism tank is on this mission's sidebar (power, refinery, barracks, war factory, air force command, naval yard; walls,
+pillbox, Patriot missile (NASAM), prism tower (ATESLA); GI, engineer, dog, rocketeer, SEAL; Harrier, landing craft, destroyer, Aegis). The
+loss is "_Loss (Game Over)" five seconds after it is enabled; the nukes (BadGuy2's, from the silos) aim by "NUKE
+Targeting 1/2/3+" (710 s, then 720 s each). The plan stays lane P25's.
