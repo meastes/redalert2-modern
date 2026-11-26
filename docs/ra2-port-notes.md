@@ -1176,3 +1176,34 @@ crash, hang or assertion.
 | --- | --- | --- | --- |
 | Allied 12 (ALL12S, Chrono Storm) | shelved | 2.4 + 0.6 | Blocker: no chronosphere lives long enough for its first shot, so the second pair of BadGuy3's compound Apocalypses (1027018 at 122,117, 1027019 at 124,117) is never moved. P39's p39-f3 branch (tick 23,844) has no war factory, and a chronosphere queued there lost its construction yard at 25,171. Two restarts from lane P38's e.replay (11,152) placed the chronosphere first (GACSPH at 60,71, ticks 13,083 and 12,816). In the first, the power plants' spots near (52,69) were refused for 4,000 ticks and power fell below drain (299/360 at 21,022, 865 frames of charge left), and the base was gone by 24,000. In the second, two power plants (65,55; 69,64) kept 1,000/605: at 18,009 the chronosphere had 1,103 frames left (ready about 19,110), but it was destroyed before 21,028, in the window of the nuke's launch (18,039, the war factory sold) and the raids of 18,000-21,000. Credits ran to nothing on legionnaires (21 at 18,009). In both restarts the legionnaires again erased the east reactor (1027226, about 810 ticks from 132,121), timed out on the south one, and erased 1027017 or nothing of the first pair; the mission was lost at 27,307 and 27,505 (the Kremlin is not touched: every building lost). Best points as before: build/p39/saves/p39-f2, p39-f3 and p39-9 (lane P39). This lane's runs: build/p40/saves/p40-lost1.replay, p40-lost2.replay. What is left untried: the chronosphere and two power plants at the map's south-west corner before tick 11,500, with every credit kept for it and the home defence (no legionnaires until it has fired), so that it survives 18,000-19,200 |
 | Allied 6 (ALL06U, Liberty) | deferred again | 1.15 + 0.3 | Restarted with the frame clock: the AMCV (93,162 at tick 1,800) moved to (94,173) and deployed (the yard at 95,174, tick 2,325, a thousand ticks earlier than lane P27's). The base is boxed in by the Pentagon (103-110,166-173) and its walls: free cells are inside the north wall (98-106,158-165), east of the Pentagon (111-116) and over the road at x 119-125 and 131-137 (y 158-168). The south edge (y 176-178) takes no placement click, so a refinery near (98,179) wasted 3,000 ticks. Two bridges lead north, at x 127-129 and x 138-140 (y 140-153). Built by 14,685: two refineries (95,170; 95,167), barracks (91,170), war factory (107,163), air force command (114,163), seven power plants, two more prism towers on the west ramp (97,160; 102,159), three harvesters, five Grizzlies. The three Liberty crates (LCRF at 94,160-168) and two pillboxes were lost to raids from the west ramp by tick 14,345. The enemy count grew from 107 to 134 objects (BadGuy1 80, BadGuy2 54), each house holding 50,000 credits, and the player had 1,208 credits. Checkpoint build/p40/saves/a6-3.replay (tick 14,685, frame clock). Next: the battle lab (GATECH near 121,164) for chrono legionnaires, which erase buildings without fighting through, and the second bridge (138-140) as another way north; the win needs every BadGuy1 and BadGuy2 object gone, harvesters included |
+## Lane P35 (2026-11-26, same PIN): an AddressSanitizer sweep
+
+An ASan build of the Mac target (`-DRA2_NATIVE_ASAN=ON` in its own folder, build/asan: `-fsanitize=address
+-fsanitize-recover=address -fno-sanitize-address-use-after-scope`) ran every won replay and the ra2-quick, ra2-main,
+ra2-campaign and ra2-resaves groups. Reports: CCINIClass::Get_PipEnum (`_pips[PIP_BLUE]`, one past the table),
+RadarClass::Init_For_House (TooltipColor read as four bytes), RLE_Blit's `_temp_buf` (a 256-byte flat z-shape read for
+every pixel of wider lines), Tactical::Draw_Rally_Points' 8-entry dash pattern stepped through 16 (the original's
+next 8 bytes repeat it), _voxel_draw_shadow sampling the 256x256 compositing surface past its buffer (read as 0 outside
+it). Each has a fixups.json row giving what the original read (docs/regressions.md).
+
+The larger find did not come as a report. Under ASan Allied 1 went another way at frame 2,548. A per-frame digest put
+the first difference there, an lldb watchpoint on the scenario generator showed a GI's shot missing in that frame, and
+the GI had never taken the falling paratrooper as a target. TechnoClass::Evaluate_Object asks
+`object->Current_Mission_Control().IsNoThreat`, and for an object with CurrentMission MISSION_NONE that is
+MissionControl[-1], the 32 bytes before the table. Those bytes were the TibSunFactory pointer's high bytes under ASan
+and an empty vector in the release build, so the answer depended on the linker. In the original they are COORD_NONE's
+Z, zero padding and the Aircraft vector (read from the executable's initialisers at 0x004D2D50 and 0x004D3490). A
+fixups.json row returns that record. Before it, the release build and the build with `-ftrivial-auto-var-init=pattern`
+agreed with each other and MallocPreScribble changed nothing: neither uninitialised stack nor uninitialised heap was
+involved. After it, the ASan and release digests agree at every frame checked (to frame 217,000).
+
+The owner ruled for the original's values (IsRetaliate and IsScatter true; the release build had read false). Under
+them lane P21's all01.replay goes another way at about tick 2,650 (the landed paratroopers), so Allied 1 was
+re-recorded with the frame clock. P21's commands carry over to tick 6,383 (one object id remapped: the engineer). Then
+the three Grizzlies take the four V3s and the two sentry guns, the six GIs come up in support, and Tanya C4s the
+construction yard, both war factories, the radar, the barracks and the power plants. It won at tick 13,871, the same
+on a rerun (the old recording won at 11,007). The other 20 wins (sov08, sov10 and all09, recorded meanwhile, among them) hold at their ticks in the release build and under
+ASan.
+
+ctests: `ra2-native-asan-all01` and `-sov06` (label ra2-asan, only in an RA2_NATIVE_ASAN build;
+`ra2_campaign.py --asan` fails on any report).

@@ -9,15 +9,19 @@ their ticks (RA2_NATIVE_STEP_REPLAY, ra2/glue/stepserver_native.inc): clicks and
 the view moved through the trackpad pan's hook, the periodic saves written. The game runs at game speed 0, uncapped,
 with the gate's fixed seed, and only scripted input reaches it, as when it was recorded.
 
+With --asan (lane P35; the binary built with RA2_NATIVE_ASAN=ON, ctest label ra2-asan) AddressSanitizer's reports go
+to <work>/asan.<pid> and any report fails the run, as a fault does.
+
 Pass: the mission's own triggers end it in a win (step-replay: game over ... (win), game-over: player wins), at the tick
 the recording ended (a different tick means the replay went another way: reported), the mission's score screen shown
 (the dialog after the win), the save points written, and no fault, trap or assertion. Skipped (77) without the
 installed game.
 
   ra2_campaign.py --replay ra2/tests/campaign/all01.replay --side allied --mission 1 --binary <ra2-native>
-                  --data-dir <game folder> [--game-exe <game.exe>] --work <dir> [--seconds 900] [--keep]
+                  --data-dir <game folder> [--game-exe <game.exe>] --work <dir> [--seconds 900] [--keep] [--asan]
 """
 import argparse
+import glob
 import os
 import re
 import shutil
@@ -32,7 +36,7 @@ import mission_soak  # noqa: E402
 import ra2_step  # noqa: E402
 
 SKIP = 77
-BAD = re.compile(r'unrecovered|\btrap\b|signal \d+|SIG(SEGV|BUS|ILL|ABRT|FPE)|crash:|assert|not written|step-replay: .*not a recorded',
+BAD = re.compile(r'AddressSanitizer|unrecovered|\btrap\b|signal \d+|SIG(SEGV|BUS|ILL|ABRT|FPE)|crash:|assert|not written|step-replay: .*not a recorded',
                  re.I)
 
 
@@ -47,6 +51,7 @@ def main():
     ap.add_argument('--work', required=True)
     ap.add_argument('--seconds', type=int, default=900)
     ap.add_argument('--keep', action='store_true', help='keep the write folder (saves) after a pass')
+    ap.add_argument('--asan', action='store_true', help='an AddressSanitizer build: any report fails (lane P35)')
     a = ap.parse_args()
     if not a.data_dir or not os.path.isfile(os.path.join(a.data_dir, 'game.exe')):
         print('campaign-won: skipped: no installed game (game.exe) in --data-dir')
@@ -68,6 +73,9 @@ def main():
     env['RA2_NATIVE_STEP_REPLAY'] = os.path.abspath(a.replay)
     if re.search(r'^# frame clock', text, re.M):
         env['RA2_NATIVE_FRAME_CLOCK'] = '1'   # recorded with the frame clock (lane P33)
+    if a.asan:
+        # halt_on_error=0 with the build's -fsanitize-recover=address: every report is written, the run goes on.
+        env['ASAN_OPTIONS'] = 'halt_on_error=0:detect_leaks=0:detect_odr_violation=0:log_path=' + os.path.join(work, 'asan')
     cmd = [a.binary, '--data-dir', a.data_dir, '--run-to=never', '--run-seconds=%d' % a.seconds, '--write-dir=' + write,
            '--input-script=' + script, '--game-args=-noaudio -CD.']
     log = os.path.join(work, 'run.log')
@@ -102,6 +110,11 @@ def main():
     after = out.split('game-over: player wins', 1)[1] if 'game-over: player wins' in out else ''
     if not re.search(r'^dialog shown #%d ' % (3 + a.mission), after, re.M):
         bad.append('the score screen (dialog %d) was not shown after the win (dialogs %s)' % (3 + a.mission, shown[-3:]))
+    if a.asan:
+        for rep in sorted(glob.glob(os.path.join(work, 'asan.*'))):
+            with open(rep, errors='replace') as f:
+                summary = [l for l in f.read().splitlines() if l.startswith('SUMMARY: AddressSanitizer')]
+            bad.append('AddressSanitizer: %s (%s)' % (summary[0][27:200] if summary else 'a report', rep))
     for s in saves:
         if not os.path.isfile(os.path.join(write, s)):
             bad.append('save point %s not written' % s)
