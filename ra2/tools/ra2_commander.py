@@ -1045,6 +1045,10 @@ class Mgr:
             elif not f:
                 if g.queue(name, 1, st):
                     print(g.tick, 'queued', name, 'credits', st.get('credits'), flush=True)
+                elif len(q) > 1:
+                    # not on the sidebar now (a prerequisite missing or lost: Soviet 7's flak cannon after the
+                    # barracks fell): the next item first, this one later
+                    q.append(q.pop(0))
         for kind, wants in (('infantry', self.inf), ('vehicle', self.veh), ('aircraft', self.air), ('ship', self.navy)):
             if not wants or kind in st['factory']:
                 continue
