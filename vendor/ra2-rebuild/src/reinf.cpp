@@ -63,11 +63,11 @@
 #include "unit.h"
 #include "unittype.h"
 #include "vox.h"
-#include "iloco.h" // RA2
-#include "ipiggy.h" // RA2
-#include "scenario.h" // RA2
-#include "rules.h" // RA2
-#include "infatype.h" // RA2
+#include "iloco.h"
+#include "ipiggy.h"
+#include "scenario.h"
+#include "rules.h"
+#include "infatype.h"
 FootClass * _Create_Group(TeamTypeClass const * teamtype);
 static bool _Pop_Group_Out_Of_Object(FootClass * group, TechnoClass * object);
 
@@ -200,7 +200,13 @@ static bool _Create_Paradrop(TeamTypeClass const * teamtype, FootClass * object,
  *   06/19/1995 JLB : Announces reinforcements.                                                *
  *   02/15/1996 JLB : Recognizes team reinforcement location.                                  *
  *=============================================================================================*/
-#ifdef RA2_NON_MATCHING // not exact: 432 bytes differ; the original calls Coord's cell constructor (0x61EA80) out of line in the paradrop, where this expands it
+// RA2: the house of a team type, read through an inline of its own at the announcement below.
+static inline HouseClass * Team_House(TeamTypeClass const * teamtype)
+{
+	return(teamtype->House);
+}
+
+
 bool Do_Reinforcements(TeamTypeClass const * teamtype, WAYPOINT wp)
 {
 	if (!teamtype || !teamtype->TaskForce->ClassCount) return(false);
@@ -273,13 +279,12 @@ bool Do_Reinforcements(TeamTypeClass const * teamtype, WAYPOINT wp)
 	/*
 	**	Announce when the reinforcements have arrived.
 	*/
-	if (ok && teamtype->House->Is_Ally(PlayerPtr)) {
+	if (ok && Team_House(teamtype)->Is_Ally(PlayerPtr)) {
 		Record_Event_Cell(origin);
 	}
 
 	return(true);
 }
-#endif
 
 
 
@@ -825,7 +830,7 @@ int Create_Air_Reinforcement(HouseClass * house, AircraftType air, int number, M
 
 /// and warped there by a teleport locomotor riding on its own, and starts with the reinforcement chrono delay.
 /// </summary>
-#ifdef RA2_NON_MATCHING // not exact: 84 bytes differ against the image-derived bound 0063a880 (1,567 B; ours 1,567 B, 485 = 485 instructions, same calls and frame): esi and edi are exchanged for the whole function (the image keeps the object of the first loop in edi and the cell pointer, the team type and the second loop's object in esi). The text is ra2-decomp's matched twin (src/reinf.cpp, Yuri's Revenge 0x0065EC30) less its aircraft blocks. Lane F49: one reference to object fewer gives the image's registers (diagnostic: the unit flag written as one conditional expression, three instructions off there); the twin's other spellings, a do-while and a second pointer for the last loop leave the exchange. Two more forms give the image's registers and are not the image: `tries++` in both arms of the inner loop (the zero kept in eax across the loop header moves, 8 hunks) and `object->WarpingOut = true;` ahead of the Move_To call (the store moves ahead of the call, 2 hunks). Every one-line declaration moved through its block (304 compiles), every adjacent pair of statements exchanged (33) and the 12 orders of the placed arm's last four statements leave 84
+#ifdef RA2_NON_MATCHING // not exact: 84 bytes differ against the image-derived bound 0063a880 (1,567 B; ours 1,567 B, 485 = 485 instructions, same calls and frame): esi and edi are exchanged for the whole function (the image keeps the object of the first loop in edi and the cell pointer, the team type and the second loop's object in esi). The text is ra2-decomp's matched twin (src/reinf.cpp, Yuri's Revenge 0x0065EC30) less its aircraft blocks. Lane F49: one reference to object fewer gives the image's registers (diagnostic: the unit flag written as one conditional expression, three instructions off there); the twin's other spellings, a do-while and a second pointer for the last loop leave the exchange. Two more forms give the image's registers and are not the image: `tries++` in both arms of the inner loop (the zero kept in eax across the loop header moves, 8 hunks) and `object->WarpingOut = true;` ahead of the Move_To call (the store moves ahead of the call, 2 hunks). Every one-line declaration moved through its block (304 compiles), every adjacent pair of statements exchanged (33) and the 12 orders of the placed arm's last four statements leave 84. Yuri's Revenge's image has the image's registers here too (0x65EC30: one more reference to object and one more to the cell pointer in the inner loop). 0 to 23 declarations ahead of the function, the unit test through As_Unit, and the twin's nested flag, declared-then-assigned cell and arm order in all 15 combinations leave 84 or 162
 bool Do_Chrono_Reinforcements(TeamTypeClass const * teamtype, WAYPOINT wp)
 {
 	if (!teamtype || !teamtype->TaskForce->ClassCount) return(false);

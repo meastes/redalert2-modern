@@ -4,9 +4,9 @@
 #
 #   tools/update_rebuild.sh <redalert2-decomp checkout> <commit> [<public snapshot commit>]
 #
-# Writes vendor/ra2-rebuild/: src/ and include/ (rebuild/src, rebuild/include), LICENSE.md (rebuild/LICENSE.md),
-# adopted.csv (rebuild/manifest/adopted.csv), all copied unchanged from the commit by git archive; symbols.tsv
-# derived from rebuild/manifest/catalog by tools/make_symbols.py (names and addresses only); and PIN: the commit,
+# Writes vendor/ra2-rebuild/: src/, include/ and LICENSE.md (the decomp's exact tree at its root, since its
+# 2026-11-25 layout move), adopted.csv (manifests/adopted.csv), all copied unchanged from the commit by git archive;
+# symbols.tsv derived from manifests/catalog by tools/make_symbols.py (names and addresses only); and PIN: the commit,
 # the public snapshot commit when given, and the SHA-256 of every vendored file (tools/check_tree.py checks it).
 # The checkout is only read. Its own Python (with its tools/original_target) reads the catalog: RA2_DECOMP_PYTHON,
 # else python3.
@@ -24,20 +24,19 @@ vendor="$root/vendor/ra2-rebuild"
 work=$(mktemp -d "${TMPDIR:-/tmp}/ra2-revendor.XXXXXX")
 trap '/bin/rm -rf "$work"' EXIT
 
-git -C "$decomp" archive "$commit" rebuild/src rebuild/include rebuild/LICENSE.md rebuild/manifest/adopted.csv \
-    rebuild/manifest/catalog | tar -x -C "$work"
+git -C "$decomp" archive "$commit" src include LICENSE.md manifests/adopted.csv manifests/catalog | tar -x -C "$work"
 /bin/rm -rf "$vendor/src" "$vendor/include"
 mkdir -p "$vendor"
-/bin/cp -R "$work/rebuild/src" "$work/rebuild/include" "$vendor/"
-/bin/cp -f "$work/rebuild/LICENSE.md" "$vendor/LICENSE.md"
-/bin/cp -f "$work/rebuild/manifest/adopted.csv" "$vendor/adopted.csv"
-"${RA2_DECOMP_PYTHON:-python3}" -B "$here/make_symbols.py" --decomp "$decomp" --catalog "$work/rebuild/manifest/catalog" \
+/bin/cp -R "$work/src" "$work/include" "$vendor/"
+/bin/cp -f "$work/LICENSE.md" "$vendor/LICENSE.md"
+/bin/cp -f "$work/manifests/adopted.csv" "$vendor/adopted.csv"
+"${RA2_DECOMP_PYTHON:-python3}" -B "$here/make_symbols.py" --decomp "$decomp" --catalog "$work/manifests/catalog" \
     --out "$vendor/symbols.tsv"
 
 {
-  echo "# vendor/ra2-rebuild: rebuild/ of redalert2-decomp at the commit below, copied unchanged by"
-  echo "# tools/update_rebuild.sh: src/ and include/, LICENSE.md (rebuild/LICENSE.md), adopted.csv"
-  echo "# (rebuild/manifest/adopted.csv); symbols.tsv derived from rebuild/manifest/catalog (tools/make_symbols.py)."
+  echo "# vendor/ra2-rebuild: the exact tree of redalert2-decomp at the commit below, copied unchanged by"
+  echo "# tools/update_rebuild.sh: src/, include/ and LICENSE.md, adopted.csv (manifests/adopted.csv);"
+  echo "# symbols.tsv derived from manifests/catalog (tools/make_symbols.py)."
   echo "# Never edit these files: port changes go in ra2/fixups.json and ra2/glue. tools/check_tree.py checks this list."
   echo "commit $commit"
   echo "public-snapshot $snapshot"

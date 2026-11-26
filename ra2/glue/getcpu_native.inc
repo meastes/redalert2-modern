@@ -7,23 +7,20 @@
 // 0x0077F20F Detect_CMOV_Availability); arm64 has neither CPUID nor MMX/CMOV, so the native bodies
 // report a CPUID-capable family-6 processor without MMX and CMOV, model 0 (every MMX/CMOV branch
 // takes the plain path): main's native/link/behaviour_launch.cpp, carried over.
-// Get_CPU_Type() 0x004D2A60 is exact in main (src/recovered/getcpu.cpp) and not yet carried by the
-// rebuild; with model 0 main's Get_CPU_Type returns -1 (unknown) before reading the vendor, so the
-// behaviour body returns that (item 4 overlay). Get_CPU_Type_Name() 0x004D2B80 is the rebuild's own
-// since the re-pin to b873d2b3c6 (lane P5), and its "Unknown" path follows from the -1.
+// Get_CPU_Type() 0x004D2A60 and Get_CPU_Type_Name() 0x004D2B80 are the rebuild's own (Get_CPU_Type since
+// the re-pin to 66bccbbfdd, lane P28; its behaviour body here is gone): with CPUModel 0 it returns
+// CPU_UNKNOWN before reading the vendor, and the name's "Unknown" path follows.
 // ---------------------------------------------------------------------------------------------
+extern char CPUModel;   // RA2 0x008015A4 (the rebuild's Get_CPU_Type reads it)
+
 extern "C" bool __cdecl Detect_MMX_Availability(void)
 {
 	CPUType = 6;
+	CPUModel = 0;   // model 0, whatever the game.exe's initial byte: Get_CPU_Type answers CPU_UNKNOWN, as the old body did
 	return false;
 }
 
 extern "C" bool __cdecl Detect_CMOV_Availability(void)
 {
 	return false;
-}
-
-int Get_CPU_Type(void)
-{
-	return -1;   // family 6, model 0: main's 0x004D2A60 returns -1 when the model byte is zero
 }

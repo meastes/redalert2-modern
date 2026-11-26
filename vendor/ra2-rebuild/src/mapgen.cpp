@@ -66,12 +66,12 @@
 #include "worlddom.h"
 
 #include "ramp.hh"
-#include "stringtable.h" // RA2
+#include "stringtable.h"
 
-#include "rcptr.h" // RA2
-#include "_theater.h" // RA2
+#include "rcptr.h"
+#include "_theater.h"
 #include "_keyboar.h" // RA2: Keyboard->Clear in Map_Seed_Dialog_Proc
-#include "keyboard.h" // RA2: as above
+#include "keyboard.h"
 #include "findmake.h" // RA2: TGet_TypeList, used by Read_RMG_INI
 
 #define RA2_SOURCE "D:\\Ra2\\MapGen.cpp" // RA2: the file name RA2 passes to StringTable::LoadString
@@ -366,7 +366,7 @@ Cell MapRegionClass::Pick_Random_Clear_Map_Cell(void)
 /// </summary>
 /// <param name="cell">The seed cell the region starts out from.</param>
 MapRegionClass::MapRegionClass(Cell cell) :
-	StartCells(0), // RA2
+	StartCells(0),
 	NeighborRegions(0),
 	ID(TotalCount),
 	CellCount(0),
@@ -393,10 +393,10 @@ MapRegionClass::MapRegionClass(Cell cell) :
 /// </summary>
 MapRegionClass::~MapRegionClass(void)
 {
-	if (StartCells != NULL) { // RA2
-		delete StartCells; // RA2
-		StartCells = NULL; // RA2
-	} // RA2
+	if (StartCells != NULL) {
+		delete StartCells;
+		StartCells = NULL;
+	}
 	MapRegions.Delete(this);
 }
 
@@ -573,33 +573,33 @@ Cell MapRegionClass::Pick_Random_Clear_Cell(void)
 /// none to spare.</returns>
 Cell MapRegionClass::Pick_Random_Clear_Interior_Cell(void)
 {
-	MapRegionClass::CellData *cell = RMGCellData; // RA2: RA2's form
-	int count = MapCellStride * MapCellStride; // RA2: as above
+	MapRegionClass::CellData * cell = RMGCellData;
+	int count = MapCellStride * MapCellStride;
 	int tries = 0;
-	for (;;) { // RA2: as above
-		unsigned int maximum = count - 1; // RA2: as above
-		unsigned int index; // RA2: as above
-		do { // RA2: as above
-			index = (unsigned int)((unsigned int)RMGRandom() * (1.0 / 4294967295.0) * (unsigned int)(maximum + 1) + (double)0); // RA2: as above
-		} while (index > maximum); // RA2: as above
-		*cell = RMGCellData[index]; // RA2: as above
+	for (;;) {
+		unsigned int maximum = count - 1;
+		unsigned int index;
+		do {
+			index = (unsigned int)((unsigned int)RMGRandom() * (1.0 / 4294967295.0) * (unsigned int)(maximum + 1) + (double)0);
+		} while (index > maximum);
+		*cell = RMGCellData[index];
 		if (++tries >= 100) {
-			break; // RA2: as above
+			break;
 		}
-		if (cell->RegionID != ID) { // RA2: as above
-			continue; // RA2: as above
+		if (cell->RegionID != ID) {
+			continue;
 		}
-		if (cell->CellID.X == 0 && cell->CellID.Y == 0) { // RA2: as above
-			continue; // RA2: as above
+		if (cell->CellID.X == 0 && cell->CellID.Y == 0) {
+			continue;
 		}
-		if (!cell->Interior) { // RA2: as above
-			continue; // RA2: as above
+		if (!cell->Interior) {
+			continue;
 		}
-		if (Map[cell->CellID].Is_Tile_Clear()) { // RA2: as above
-			return cell->CellID; // RA2: as above
+		if (Map[cell->CellID].Is_Tile_Clear()) {
+			return cell->CellID;
 		}
 	}
-	return Cell(0, 0); // RA2: as above
+	return Cell(0, 0);
 }
 
 
@@ -619,17 +619,17 @@ Cell MapRegionClass::Pick_Random_Clear_Cell_In_Zone(int zone, int region_id)
 	int grid_size = MapCellStride * MapCellStride;
 	int tries = 0;
 	CellClass * cellptr; // RA2: Pick_Random_Clear_Cell_In_Zone at 0x56DEA0 matches only so
-	do { // RA2: as above
+	do {
 		data = RMGCellData[Pick_Random_UInt(0, grid_size - 1)];
 		if (++tries >= 100) {
-			return(Cell(0,0)); // RA2: as above
+			return(Cell(0, 0));
 		}
-		cellptr = &Map[data.CellID]; // RA2: as above
-	} while (data.CellID == Cell(0,0) // RA2: as above
+		cellptr = &Map[data.CellID];
+	} while (data.CellID == Cell(0, 0)
 			|| Map.Get_Cell_Zone(cellptr->CellID, MZONE_NORMAL, false) != zone // RA2: the cell by reference
-			|| !cellptr->Is_Tile_Clear() // RA2: as above
-			|| (region_id != -1 && data.RegionID != region_id)); // RA2: as above
-	return(data.CellID); // RA2: as above
+		|| !cellptr->Is_Tile_Clear()
+			|| (region_id != -1 && data.RegionID != region_id));
+	return(data.CellID);
 } // RA2: Pick_Random_Clear_Cell_In_Zone at 0x56DEA0 has no return(c);
 
 
@@ -697,6 +697,10 @@ double MapRegionClass::Get_Angle_Score(const Cell & cell1, const Cell & cell2, d
 
 
 
+static inline bool In_Zone_Map_Bounds(Cell const & cell);
+static inline Cell Offset_Cell(Cell const & cell, int dx, int dy);
+
+
 /// <summary>
 /// Creates a region grown out from a seed cell.
 /// This routine gathers up every cell reachable from the seed that shares its height and
@@ -707,8 +711,7 @@ double MapRegionClass::Get_Angle_Score(const Cell & cell1, const Cell & cell2, d
 /// <param name="cptr">The cell to grow the region out from.</param>
 /// <returns>Returns with the region created. NULL is returned when the patch was
 /// dissolved rather than kept.</returns>
-#ifdef RA2_NON_MATCHING // not exact: 313 bytes differ (adopted text; the count named in the loop; the reset returns straight after its wipe, so VectorClass<Cell>::Clear is called out of line at the border-list return as in the image; the other cleanup and the point comparison inside the recount are still expanded)
-MapRegionClass * MapRegionClass::Create_Region_From_Cell(CellClass * cptr) // RA2: RA2's form (0x56E100): green-LAT ground counts as water-like and the wipes call Clear_Region_Cells
+MapRegionClass * MapRegionClass::Create_Region_From_Cell(CellClass * cptr) // RA2: green-LAT ground counts as water-like and the wipes call Clear_Region_Cells
 {
 	int i;
 	int region_id = MapRegionClass::TotalCount;
@@ -717,36 +720,34 @@ MapRegionClass * MapRegionClass::Create_Region_From_Cell(CellClass * cptr) // RA
 	cells.Set_Growth_Step(50000);
 	cells.Add(cptr->Fetch_CellID());
 
-	bool has_water = cptr->Is_Tile_With_Water() || cptr->Is_Tile_Clear_To_Green_LAT(); // RA2: as above
+	bool has_water = cptr->Is_Tile_With_Water() || cptr->Is_Tile_Clear_To_Green_LAT();
 	int cell_height = cptr->Height;
 	int processed_count = 0;
 
-	while (cells.Count()) {
-		int count = cells.Count(); // RA2: the count is read once; the image indexes with it and takes one off again for the delete
-		Cell cell = cells[count - 1];
-		cells.Delete_Index(count - 1);
+	int pending = cells.Count();
+	while (pending) {
+		Cell cell = cells[pending - 1];
+		cells.Delete_Index(pending - 1);
 
 		CellData::Set_Spread(cell, region_id);
 		CellData::Set_Region(cell, region_id);
 
-		Cell ncell;
 		for (i = 0; i < FACING_COUNT; i++) {
-			ncell = Adjacent_Cell(cell, (FacingType)i);
+			Cell ncell = Adjacent_Cell(cell, (FacingType)i);
 			CellData & ndata = MapRegionClass::Get_Cell_Data(ncell);
-			if (My_In_Radar(ncell)) {
-				if (ndata.RegionID == -1 && ndata.SpreadID != region_id) {
-					ndata.SpreadID = region_id;
-					if (Map[ncell].Height == cell_height) {
-						int n_has_water = Map[ncell].Is_Tile_With_Water() || Map[ncell].Is_Tile_Clear_To_Green_LAT(); // RA2: as above
-						if (!(has_water ^ n_has_water)) {
-							cells.Add(ncell);
-						}
+			if (My_In_Radar(ncell) && ndata.RegionID == -1 && ndata.SpreadID != region_id) {
+				ndata.SpreadID = region_id;
+				if (Map[ncell].Height == cell_height) {
+					int n_has_water = Map[ncell].Is_Tile_With_Water() || Map[ncell].Is_Tile_Clear_To_Green_LAT();
+					if (!(has_water ^ n_has_water)) {
+						cells.Add(ncell);
 					}
 				}
 			}
 		}
 
 		processed_count++;
+		pending = cells.Count();
 	}
 
 	if (processed_count < 75 && !has_water) {
@@ -756,49 +757,41 @@ MapRegionClass * MapRegionClass::Create_Region_From_Cell(CellClass * cptr) // RA
 			DynamicVectorClass<Cell> * region_cells = RandomMapGen.Build_Region_Border_Cell_List(0);
 			Cell region_cell = (*region_cells)[Pick_Random_UInt(0, region_cells->Count() - 1)];
 
-			Cell ncell;
 			for (i = 0; i < FACING_COUNT; i++) {
-				ncell = Adjacent_Cell(region_cell, (FacingType)i);
-				if (My_In_Radar(ncell)) {
-					if (Map[ncell].Height != Map[region_cell].Height && !Map[ncell].Is_Tile_With_Water()) {
-						int height = Map[ncell].Height;
+				Cell ncell = Adjacent_Cell(region_cell, (FacingType)i);
+				if (My_In_Radar(ncell) && Map[ncell].Height != Map[region_cell].Height && !Map[ncell].Is_Tile_With_Water()) {
+					RandomMapGen.Clear_Region_Cells(0, -1, Map[ncell].Height, ISOTILE_CLEAR);
 
-						RandomMapGen.Clear_Region_Cells(0, -1, height, ISOTILE_CLEAR); // RA2: as above
-
-						reset_done = true;
-						break;
-					}
+					reset_done = true;
+					break;
 				}
 			}
 
 			delete region_cells;
-			if (reset_done) { // RA2: release the border list before returning
-				return(NULL);
-			}
 		} else {
-			Cell side_cell = Cell(-1, 0) + cptr->Fetch_CellID(); // RA2: try west first, then fetch the origin again for the northern neighbor
+			Cell side_cell = Offset_Cell(cptr->Fetch_CellID(), -1, 0);
 			if (!My_In_Radar(side_cell)) {
-				side_cell = cptr->Fetch_CellID() + Cell(0, -1);
+				side_cell = Offset_Cell(cptr->Fetch_CellID(), 0, -1);
 			}
 
-			if (My_In_Radar(side_cell)) {
-				int id = CellData::Get_Region(side_cell);
-				int height = Map[side_cell].Height;
+			if (In_Zone_Map_Bounds(side_cell)) {
+				RandomMapGen.Clear_Region_Cells(region_id, CellData::Get_Region(side_cell), Map[side_cell].Height, ISOTILE_CLEAR);
 
-				RandomMapGen.Clear_Region_Cells(region_id, id, height, ISOTILE_CLEAR); // RA2: the side-cell wipe completes this region
-				return(NULL);
+				reset_done = true;
 			}
+		}
+
+		if (reset_done) {
+			return(NULL);
 		}
 	}
 
 	MapRegionClass * region = new MapRegionClass(cptr->Fetch_CellID());
 	region->CellHeight = cell_height;
 	region->ContainsWater = has_water;
-	region->CellCount = 0;
 	region->Recount_Cells();
 	return(region);
 }
-#endif
 
 
 
@@ -962,48 +955,48 @@ void MapRegionClass::Clear_Cells(int new_id, int cell_height)
 /// <param name="region_id">The region id stamped onto each cell taken.</param>
 void MapRegionClass::Reassign_Border_Cells(int rings, unsigned int region_id)
 {
-	DynamicVectorClass<Cell> *ring = Build_Border_Cell_List(); // RA2: RA2's form
+	DynamicVectorClass<Cell> * ring = Build_Border_Cell_List();
 	if (rings > 1) {
-		int total = MapCellStride * MapCellStride; // RA2: as above
-		for (int i = 0; i < total; i++) { // RA2: as above
-			RMGCellData[i].SpreadID = -1; // RA2: as above
+		int total = MapCellStride * MapCellStride;
+		for (int i = 0; i < total; i++) {
+			RMGCellData[i].SpreadID = -1;
 		}
 	}
-	for (int step = 0; step < rings; step++) { // RA2: as above
-		int index; // RA2: as above
-		for (index = ring->Count() - 1; index >= 0; index--) { // RA2: as above
-			Cell cell = (*ring)[index]; // RA2: as above
-			if (RMGCellData) { // RA2: as above
-				RMGCellData[cell.Y * MapCellStride + cell.X].RegionID = region_id; // RA2: as above
+	for (int step = 0; step < rings; step++) {
+		int index;
+		for (index = ring->Count() - 1; index >= 0; index--) {
+			Cell cell = (*ring)[index];
+			if (RMGCellData) {
+				RMGCellData[cell.Y * MapCellStride + cell.X].RegionID = region_id;
 			}
 		}
-		if (step < rings - 1) { // RA2: as above
-			DynamicVectorClass<Cell> *next = new DynamicVectorClass<Cell>; // RA2: as above
-			next->Set_Growth_Step(ring->Count()); // RA2: as above
-			for (index = ring->Count() - 1; index >= 0; index--) { // RA2: as above
-				Cell cell = (*ring)[index]; // RA2: as above
-				for (int direction = 0; direction < 8; direction++) { // RA2: as above
-					Cell const &offset = AdjacentCell[direction & 7]; // RA2: as above
-					Cell adjacent = cell + offset; // RA2: as above
-					if (adjacent.Y + adjacent.X > MapStartDiagonal && adjacent.X - adjacent.Y < MapStartDiagonal && // RA2: as above
-						adjacent.Y - adjacent.X < MapStartDiagonal && adjacent.Y + adjacent.X <= MapEndDiagonal) { // RA2: as above
-						MapRegionClass::CellData &data = RMGCellData[adjacent.Y * MapCellStride + adjacent.X]; // RA2: as above
-						if (data.RegionID == ID && data.SpreadID != step + 1) { // RA2: as above
-							next->Add(adjacent); // RA2: as above
-							data.SpreadID = step + 1; // RA2: as above
+		if (step < rings - 1) {
+			DynamicVectorClass<Cell> * next = new DynamicVectorClass<Cell>;
+			next->Set_Growth_Step(ring->Count());
+			for (index = ring->Count() - 1; index >= 0; index--) {
+				Cell cell = (*ring)[index];
+				for (int direction = 0; direction < 8; direction++) {
+					Cell const & offset = AdjacentCell[direction & 7];
+					Cell adjacent = cell + offset;
+					if (adjacent.Y + adjacent.X > MapStartDiagonal && adjacent.X - adjacent.Y < MapStartDiagonal &&
+						adjacent.Y - adjacent.X < MapStartDiagonal && adjacent.Y + adjacent.X <= MapEndDiagonal) {
+						MapRegionClass::CellData & data = RMGCellData[adjacent.Y * MapCellStride + adjacent.X];
+						if (data.RegionID == ID && data.SpreadID != step + 1) {
+							next->Add(adjacent);
+							data.SpreadID = step + 1;
 						}
 					}
 				}
 			}
-			delete ring; // RA2: as above
-			ring = next; // RA2: as above
+			delete ring;
+			ring = next;
 		}
 	}
-	delete ring; // RA2: as above
+	delete ring;
 	if (rings > 1) {
-		int total = MapCellStride * MapCellStride; // RA2: as above
-		for (int i = 0; i < total; i++) { // RA2: as above
-			RMGCellData[i].SpreadID = -1; // RA2: as above
+		int total = MapCellStride * MapCellStride;
+		for (int i = 0; i < total; i++) {
+			RMGCellData[i].SpreadID = -1;
 		}
 	}
 }
@@ -1110,7 +1103,7 @@ bool MapRegionClass::Split_Region(void)
 	queue->Insert(nodes[0]);
 
 	CellNode * node = queue->Extract_Min();
-	double dist = (unsigned int)RMGRandom() * (DEG_TO_RAD(360) / 4294967295.0);
+	double dist = (unsigned int)RMGRandom() * (DEG_TO_RAD(360) / UINT_MAX);
 
 	while (node != NULL) {
 		if (spread_count >= (int)target_count) {
@@ -1597,42 +1590,42 @@ bool MapRegionClass::Make_Regions(void)
 void MapRegionClass::Build_Neighbor_Regions(void)
 {
 	NeighborRegions = new DynamicVectorClass<int>;
-	unsigned char * seen = new unsigned char[TotalCount]; // RA2: RA2's form
-	int index; // RA2: as above
-	for (index = 0; index < TotalCount; index++) { // RA2: as above
-		seen[index] = 0; // RA2: as above
+	unsigned char * seen = new unsigned char[TotalCount];
+	int index;
+	for (index = 0; index < TotalCount; index++) {
+		seen[index] = 0;
 	}
-	DynamicVectorClass<Cell> * boundary = Build_Border_Cell_List(); // RA2: as above
-	for (index = 0; index < boundary->Count(); index++) { // RA2: as above
-		Cell cell = (*boundary)[index]; // RA2: as above
-		for (int direction = 0; direction < 8; direction++) { // RA2: as above
-			Cell next = cell + AdjacentCell[direction & 7]; // RA2: as above
-			if (next.Y + next.X > MapStartDiagonal && next.X - next.Y < MapStartDiagonal && // RA2: as above
-			    next.Y - next.X < MapStartDiagonal && next.Y + next.X <= MapEndDiagonal) { // RA2: as above
-				if (RMGCellData) { // RA2: as above
-					int regionIndex = RMGCellData[next.Y * MapCellStride + next.X].RegionID; // RA2: as above
-					if (regionIndex >= 0) { // RA2: as above
-						seen[regionIndex] = 1; // RA2: as above
+	DynamicVectorClass<Cell> * boundary = Build_Border_Cell_List();
+	for (index = 0; index < boundary->Count(); index++) {
+		Cell cell = (*boundary)[index];
+		for (int direction = 0; direction < 8; direction++) {
+			Cell next = cell + AdjacentCell[direction & 7];
+			if (next.Y + next.X > MapStartDiagonal && next.X - next.Y < MapStartDiagonal &&
+				next.Y - next.X < MapStartDiagonal && next.Y + next.X <= MapEndDiagonal) {
+				if (RMGCellData) {
+					int regionIndex = RMGCellData[next.Y * MapCellStride + next.X].RegionID;
+					if (regionIndex >= 0) {
+						seen[regionIndex] = 1;
 					}
 				}
 			}
 		}
 	}
-	for (index = 0; index < TotalCount; index++) { // RA2: as above
-		if (seen[index] && index != ID) { // RA2: as above
-			NeighborRegions->Add(index); // RA2: as above
+	for (index = 0; index < TotalCount; index++) {
+		if (seen[index] && index != ID) {
+			NeighborRegions->Add(index);
 		}
 	}
-	CellCount = 0; // RA2: as above
-	int totalCells = MapCellStride * MapCellStride; // RA2: as above
-	for (index = 0; index < totalCells; index++) { // RA2: as above
-		if (RMGCellData[index].RegionID == ID && // RA2: as above
-		    RMGCellData[index].CellID != Cell(0, 0)) { // RA2: as above
-			CellCount++; // RA2: as above
+	CellCount = 0;
+	int totalCells = MapCellStride * MapCellStride;
+	for (index = 0; index < totalCells; index++) {
+		if (RMGCellData[index].RegionID == ID &&
+			RMGCellData[index].CellID != Cell(0, 0)) {
+			CellCount++;
 		}
 	}
-	delete boundary; // RA2: as above
-	delete[] seen; // RA2: as above
+	delete boundary;
+	delete[] seen;
 }
 
 
@@ -1655,7 +1648,7 @@ bool MapRegionClass::Connect_Regions_With_Bridge(MapRegionClass *region1,MapRegi
 	int tries = 0;
 	bool result = false;
 
-	for (; tries < 200; tries++) { // RA2: as above
+	for (; tries < 200; tries++) {
 		if (result) {
 			break;
 		}
@@ -1663,20 +1656,20 @@ bool MapRegionClass::Connect_Regions_With_Bridge(MapRegionClass *region1,MapRegi
 		Cell cell = Pick_Random_Cell();
 
 		Rect rect1(cell.X - 1, cell.Y, 3, 1);
-		Rect rect2=rect1; // RA2: as above
+		Rect rect2 = rect1;
 		Rect rect4(cell.X, cell.Y - 1, 1, 3);
-		Rect rect3=rect4; // RA2: as above
+		Rect rect3 = rect4;
 
 		bool allow_rect3 = true;
 		bool allow_rect1 = true;
 
 		while (!MapGeneratorClass::Can_Place_Paved_Road(rect1, false, false)) {
 			rect1.Y--;
-			Cell cell1(rect1.X, rect1.Y); // RA2: as above
-			Cell cell2(rect1.X + 2, rect1.Y); // RA2: as above
+			Cell cell1(rect1.X, rect1.Y);
+			Cell cell2(rect1.X + 2, rect1.Y);
 			CellClass * cptr1 = &Map[cell1];
 			CellClass * cptr2 = &Map[cell2];
-			if (!Map.In_Local_Radar(cell1,true) || !Map.In_Local_Radar(cell2,true) || cptr1->Is_Tile_Cliff() || cptr2->Is_Tile_Cliff()) { // RA2: as above
+			if (!Map.In_Local_Radar(cell1, true) || !Map.In_Local_Radar(cell2, true) || cptr1->Is_Tile_Cliff() || cptr2->Is_Tile_Cliff()) {
 				allow_rect1 = false;
 				break;
 			}
@@ -1686,11 +1679,11 @@ bool MapRegionClass::Connect_Regions_With_Bridge(MapRegionClass *region1,MapRegi
 			if (MapGeneratorClass::Can_Place_Paved_Road(Rect(rect1.X, rect1.Y - 3, 3, 3), false, false)) {
 				while (!MapGeneratorClass::Can_Place_Paved_Road(rect2, false, false)) {
 					rect2.Y++;
-					Cell cell1(rect2.X, rect2.Y); // RA2: as above
-					Cell cell2(rect2.X + 2, rect2.Y); // RA2: as above
+					Cell cell1(rect2.X, rect2.Y);
+					Cell cell2(rect2.X + 2, rect2.Y);
 					CellClass * cptr1 = &Map[cell1];
 					CellClass * cptr2 = &Map[cell2];
-					if (!Map.In_Local_Radar(cell1,true) || !Map.In_Local_Radar(cell2,true) || cptr1->Is_Tile_Cliff() || cptr2->Is_Tile_Cliff()) { // RA2: as above
+					if (!Map.In_Local_Radar(cell1, true) || !Map.In_Local_Radar(cell2, true) || cptr1->Is_Tile_Cliff() || cptr2->Is_Tile_Cliff()) {
 						allow_rect1 = false;
 						break;
 					}
@@ -1708,11 +1701,11 @@ bool MapRegionClass::Connect_Regions_With_Bridge(MapRegionClass *region1,MapRegi
 
 		while (!MapGeneratorClass::Can_Place_Paved_Road(rect3, false, false)) {
 			rect3.X--;
-			Cell cell1(rect3.X, rect3.Y); // RA2: as above
-			Cell cell2(rect3.X, rect3.Y + 2); // RA2: as above
+			Cell cell1(rect3.X, rect3.Y);
+			Cell cell2(rect3.X, rect3.Y + 2);
 			CellClass * cptr1 = &Map[cell1];
 			CellClass * cptr2 = &Map[cell2];
-			if (!Map.In_Local_Radar(cell1,true) || !Map.In_Local_Radar(cell2,true) || cptr1->Is_Tile_Cliff() || cptr2->Is_Tile_Cliff()) { // RA2: as above
+			if (!Map.In_Local_Radar(cell1, true) || !Map.In_Local_Radar(cell2, true) || cptr1->Is_Tile_Cliff() || cptr2->Is_Tile_Cliff()) {
 				allow_rect3 = false;
 				break;
 			}
@@ -1722,11 +1715,11 @@ bool MapRegionClass::Connect_Regions_With_Bridge(MapRegionClass *region1,MapRegi
 			if (MapGeneratorClass::Can_Place_Paved_Road(Rect(rect3.X - 3, rect3.Y, 3, 3), false, false)) {
 				while (!MapGeneratorClass::Can_Place_Paved_Road(rect4, false, false)) {
 					rect4.X++;
-					Cell cell1(rect4.X, rect4.Y); // RA2: as above
-					Cell cell2(rect4.X, rect4.Y + 2); // RA2: as above
+					Cell cell1(rect4.X, rect4.Y);
+					Cell cell2(rect4.X, rect4.Y + 2);
 					CellClass * cptr1 = &Map[cell1];
 					CellClass * cptr2 = &Map[cell2];
-					if (!Map.In_Local_Radar(cell1,true) || !Map.In_Local_Radar(cell2,true) || cptr1->Is_Tile_Cliff() || cptr2->Is_Tile_Cliff()) { // RA2: as above
+					if (!Map.In_Local_Radar(cell1, true) || !Map.In_Local_Radar(cell2, true) || cptr1->Is_Tile_Cliff() || cptr2->Is_Tile_Cliff()) {
 						allow_rect3 = false;
 						break;
 					}
@@ -1751,14 +1744,14 @@ bool MapRegionClass::Connect_Regions_With_Bridge(MapRegionClass *region1,MapRegi
 
 		if (allow_rect1) {
 			len1 = abs(rect2.Y - rect1.Y);
-			region_a = CellData::Get_Region(Cell(rect1.X, rect1.Y)); // RA2: as above
-			region_b = CellData::Get_Region(Cell(rect2.X, rect2.Y)); // RA2: as above
+			region_a = CellData::Get_Region(Cell(rect1.X, rect1.Y));
+			region_b = CellData::Get_Region(Cell(rect2.X, rect2.Y));
 		}
 
 		if (allow_rect3) {
 			len2 = abs(rect4.X - rect3.X);
-			region_c = CellData::Get_Region(Cell(rect4.X, rect4.Y)); // RA2: as above
-			region_d = CellData::Get_Region(Cell(rect3.X, rect3.Y)); // RA2: as above
+			region_c = CellData::Get_Region(Cell(rect4.X, rect4.Y));
+			region_d = CellData::Get_Region(Cell(rect3.X, rect3.Y));
 		}
 
 		if (allow_rect1) {
@@ -1768,10 +1761,10 @@ bool MapRegionClass::Connect_Regions_With_Bridge(MapRegionClass *region1,MapRegi
 		}
 
 		if (allow_rect3) {
-			if ((region_c != id1 || region_d != id2) && (region_c != id2 || region_d != id1)) { // RA2: as above
+			if ((region_c != id1 || region_d != id2) && (region_c != id2 || region_d != id1)) {
 				allow_rect3 = false;
 			}
-			if (allow_rect3 && allow_rect1) { // RA2: as above
+			if (allow_rect3 && allow_rect1) {
 				if (len1 < len2) {
 					allow_rect3 = false;
 				} else {
@@ -1789,7 +1782,7 @@ bool MapRegionClass::Connect_Regions_With_Bridge(MapRegionClass *region1,MapRegi
 			bridge = Rect(rect1.X, rect1.Y, 3, rect2.Y - rect1.Y + 1);
 		}
 
-		if (bridge.Is_Valid() && allow_rect3) { // RA2: as above
+		if (bridge.Is_Valid() && allow_rect3) {
 			if (Is_Bridge_Allowed(bridge)) {
 				for (int y = bridge.Y; y < bridge.Y + bridge.Height; y++) {
 					for (int x = bridge.X; x < bridge.X + bridge.Width; x++) {
@@ -1804,13 +1797,13 @@ bool MapRegionClass::Connect_Regions_With_Bridge(MapRegionClass *region1,MapRegi
 					}
 				}
 
-				if (MapGeneratorClass::Can_Place_Paved_Road_End(Rect(bridge.X + bridge.Width, bridge.Y - 2, 6, 6), false) && Pick_Random_UInt(0,1)) { // RA2: as above
+				if (MapGeneratorClass::Can_Place_Paved_Road_End(Rect(bridge.X + bridge.Width, bridge.Y - 2, 6, 6), false) && Pick_Random_UInt(0, 1)) {
 					MapGeneratorClass::Place_Tile((IsometricTileType)(IsometricTileTypeClass::PavedRoads + 10), Cell(bridge.X + bridge.Width, bridge.Y));
 				} else {
 					MapGeneratorClass::Place_Tile(IsometricTileTypeClass::PavedRoadEnds, Cell(bridge.X + bridge.Width, bridge.Y));
 				}
 
-				if (MapGeneratorClass::Can_Place_Paved_Road_End(Rect(bridge.X - 6, bridge.Y - 2, 6, 6), false) && Pick_Random_UInt(0,1)) { // RA2: as above
+				if (MapGeneratorClass::Can_Place_Paved_Road_End(Rect(bridge.X - 6, bridge.Y - 2, 6, 6), false) && Pick_Random_UInt(0, 1)) {
 					MapGeneratorClass::Place_Tile((IsometricTileType)(IsometricTileTypeClass::PavedRoads + 9), Cell(bridge.X - 4, bridge.Y));
 				} else {
 					MapGeneratorClass::Place_Tile((IsometricTileType)(IsometricTileTypeClass::PavedRoadEnds + 2), Cell(bridge.X - 1, bridge.Y));
@@ -1826,8 +1819,8 @@ bool MapRegionClass::Connect_Regions_With_Bridge(MapRegionClass *region1,MapRegi
 
 				result = true;
 			}
-		} else if (bridge.Is_Valid()) { // RA2: as above
-			if (allow_rect1 && Is_Bridge_Allowed(bridge)) { // RA2: as above
+		} else if (bridge.Is_Valid()) {
+			if (allow_rect1 && Is_Bridge_Allowed(bridge)) {
 				for (int y = bridge.Y; y < bridge.Y + bridge.Height; y++) {
 					for (int x = bridge.X; x < bridge.X + bridge.Width; x++) {
 						if (y == bridge.Y) {
@@ -1841,13 +1834,13 @@ bool MapRegionClass::Connect_Regions_With_Bridge(MapRegionClass *region1,MapRegi
 					}
 				}
 
-				if (MapGeneratorClass::Can_Place_Paved_Road_End(Rect(bridge.X - 2, bridge.Y - 6, 7, 6), false) && Pick_Random_UInt(0,1)) { // RA2: as above
+				if (MapGeneratorClass::Can_Place_Paved_Road_End(Rect(bridge.X - 2, bridge.Y - 6, 7, 6), false) && Pick_Random_UInt(0, 1)) {
 					MapGeneratorClass::Place_Tile((IsometricTileType)(IsometricTileTypeClass::PavedRoads + 13), Cell(bridge.X, bridge.Y - 4));
 				} else {
 					MapGeneratorClass::Place_Tile((IsometricTileType)(IsometricTileTypeClass::PavedRoadEnds + 1), Cell(bridge.X, bridge.Y - 1));
 				}
 
-				if (MapGeneratorClass::Can_Place_Paved_Road_End(Rect(bridge.X - 2, bridge.Y + bridge.Height, 7, 6), false) && Pick_Random_UInt(0,1)) { // RA2: as above
+				if (MapGeneratorClass::Can_Place_Paved_Road_End(Rect(bridge.X - 2, bridge.Y + bridge.Height, 7, 6), false) && Pick_Random_UInt(0, 1)) {
 					MapGeneratorClass::Place_Tile((IsometricTileType)(IsometricTileTypeClass::PavedRoads + 12), Cell(bridge.X, bridge.Y + bridge.Height));
 				} else {
 					MapGeneratorClass::Place_Tile((IsometricTileType)(IsometricTileTypeClass::PavedRoadEnds + 3), Cell(bridge.X, bridge.Y + bridge.Height));
@@ -2005,113 +1998,113 @@ void MapRegionClass::Make_Region_Connections(void)
 /// <returns>bool; Was a ramp carved?</returns>
 bool MapRegionClass::Connect_Regions_With_Ramp(Cell const &cell,int region_id, float density) // RA2: RA2's form of the ramp connector (0x572270): a float density, the neighbor mask as a bit set, do/while(0) with break once a ramp is built
 {
-	bool valid=true; // RA2: as above
-	unsigned mask=Build_Neighbor_Region_Mask(cell,valid,region_id,density); // RA2: as above
-	if(!valid)return(false); // RA2: as above
-	bool result=false; // RA2: as above
-	if(mask==(MG_FACINGF_N | MG_FACINGF_NE | MG_FACINGF_E | MG_FACINGF_SE | MG_FACINGF_S | MG_FACINGF_SW | MG_FACINGF_W | MG_FACINGF_NW))return(false); // RA2: as above
+	bool valid = true;
+	unsigned mask = Build_Neighbor_Region_Mask(cell, valid, region_id, density);
+	if (!valid) return(false);
+	bool result = false;
+	if (mask == (MG_FACINGF_N | MG_FACINGF_NE | MG_FACINGF_E | MG_FACINGF_SE | MG_FACINGF_S | MG_FACINGF_SW | MG_FACINGF_W | MG_FACINGF_NW)) return(false);
 	do {
-	Cell first,second; // RA2: as above
-	if((mask & (MG_FACINGF_N | MG_FACINGF_E))==(MG_FACINGF_N | MG_FACINGF_E) && (mask & (MG_FACINGF_S | MG_FACINGF_SW | MG_FACINGF_W))==0) { // RA2: as above
-		first.X=cell.X-1;first.Y=cell.Y-5; // RA2: as above
-		second.X=cell.X+5;second.Y=cell.Y+1; // RA2: as above
-		if(mask & MG_FACINGF_NW)++first.Y; // RA2: as above
-		if(mask & MG_FACINGF_SE)--second.X; // RA2: as above
-		result=Build_Corner_Ramp_SW(first,second,region_id); // RA2: as above
-		if(result)break; // RA2: as above
+		Cell first, second;
+		if ((mask & (MG_FACINGF_N | MG_FACINGF_E)) == (MG_FACINGF_N | MG_FACINGF_E) && (mask & (MG_FACINGF_S | MG_FACINGF_SW | MG_FACINGF_W)) == 0) {
+			first.X = cell.X - 1;first.Y = cell.Y - 5;
+			second.X = cell.X + 5;second.Y = cell.Y + 1;
+			if (mask & MG_FACINGF_NW) ++first.Y;
+			if (mask & MG_FACINGF_SE) --second.X;
+			result = Build_Corner_Ramp_SW(first, second, region_id);
+			if (result) break;
 	}
-	if((mask & (MG_FACINGF_E | MG_FACINGF_S))==(MG_FACINGF_E | MG_FACINGF_S) && (mask & (MG_FACINGF_NE | MG_FACINGF_SW))==0) { // RA2: as above
-		first.X=cell.X+5;first.Y=cell.Y-1; // RA2: as above
-		second.X=cell.X-1;second.Y=cell.Y+5; // RA2: as above
-		if(mask & MG_FACINGF_SW)--second.Y; // RA2: as above
-		if(mask & MG_FACINGF_NE)--first.X; // RA2: as above
-		result=Build_Corner_Ramp_NW(first,second,region_id); // RA2: as above
-		if(result)break; // RA2: as above
+		if ((mask & (MG_FACINGF_E | MG_FACINGF_S)) == (MG_FACINGF_E | MG_FACINGF_S) && (mask & (MG_FACINGF_NE | MG_FACINGF_SW)) == 0) {
+			first.X = cell.X + 5;first.Y = cell.Y - 1;
+			second.X = cell.X - 1;second.Y = cell.Y + 5;
+			if (mask & MG_FACINGF_SW) --second.Y;
+			if (mask & MG_FACINGF_NE) --first.X;
+			result = Build_Corner_Ramp_NW(first, second, region_id);
+			if (result) break;
 	}
-	if((mask & (MG_FACINGF_S | MG_FACINGF_W))==(MG_FACINGF_S | MG_FACINGF_W) && (mask & (MG_FACINGF_N | MG_FACINGF_NE | MG_FACINGF_E))==0) { // RA2: as above
-		first.X=cell.X+1;first.Y=cell.Y+5; // RA2: as above
-		second.X=cell.X-5;second.Y=cell.Y-1; // RA2: as above
-		if(mask & MG_FACINGF_NW)--second.X; // RA2: as above
-		if(mask & MG_FACINGF_SE)--first.Y; // RA2: as above
-		result=Build_Corner_Ramp_NE(first,second,region_id); // RA2: as above
-		if(result)break; // RA2: as above
+		if ((mask & (MG_FACINGF_S | MG_FACINGF_W)) == (MG_FACINGF_S | MG_FACINGF_W) && (mask & (MG_FACINGF_N | MG_FACINGF_NE | MG_FACINGF_E)) == 0) {
+			first.X = cell.X + 1;first.Y = cell.Y + 5;
+			second.X = cell.X - 5;second.Y = cell.Y - 1;
+			if (mask & MG_FACINGF_NW) --second.X;
+			if (mask & MG_FACINGF_SE) --first.Y;
+			result = Build_Corner_Ramp_NE(first, second, region_id);
+			if (result) break;
 	}
-	if((mask & (MG_FACINGF_N | MG_FACINGF_W))==(MG_FACINGF_N | MG_FACINGF_W) && (mask & (MG_FACINGF_E | MG_FACINGF_SE | MG_FACINGF_S))==0) { // RA2: as above
-		first.X=cell.X-5;first.Y=cell.Y+1; // RA2: as above
-		second.X=cell.X+1;second.Y=cell.Y-5; // RA2: as above
-		if(mask & MG_FACINGF_NE)++second.Y; // RA2: as above
-		if(mask & MG_FACINGF_SW)++first.X; // RA2: as above
-		result=Build_Corner_Ramp_NE(first,second,region_id); // RA2: as above
-		if(result)break; // RA2: as above
+		if ((mask & (MG_FACINGF_N | MG_FACINGF_W)) == (MG_FACINGF_N | MG_FACINGF_W) && (mask & (MG_FACINGF_E | MG_FACINGF_SE | MG_FACINGF_S)) == 0) {
+			first.X = cell.X - 5;first.Y = cell.Y + 1;
+			second.X = cell.X + 1;second.Y = cell.Y - 5;
+			if (mask & MG_FACINGF_NE) ++second.Y;
+			if (mask & MG_FACINGF_SW) ++first.X;
+			result = Build_Corner_Ramp_NE(first, second, region_id);
+			if (result) break;
 	}
-	if((mask & (MG_FACINGF_SW | MG_FACINGF_W | MG_FACINGF_NW))==0 && (mask & (MG_FACINGF_N | MG_FACINGF_S))!=0) { // RA2: as above
-		first.X=cell.X-1;first.Y=cell.Y-4; // RA2: as above
-		second.X=first.X;second.Y=cell.Y+4; // RA2: as above
-		if(mask & MG_FACINGF_N) {++first.Y;++second.Y;} // RA2: as above
-		if(mask & MG_FACINGF_S) {--second.Y;--first.Y;} // RA2: as above
-		first.X+=(short)Pick_Random_UInt(0,1); // RA2: as above
-		second.X+=(short)Pick_Random_UInt(0,1); // RA2: as above
-		result=Build_West_Ramp(first,second,region_id); // RA2: as above
-		if(result)break; // RA2: as above
+		if ((mask & (MG_FACINGF_SW | MG_FACINGF_W | MG_FACINGF_NW)) == 0 && (mask & (MG_FACINGF_N | MG_FACINGF_S)) != 0) {
+			first.X = cell.X - 1;first.Y = cell.Y - 4;
+			second.X = first.X;second.Y = cell.Y + 4;
+			if (mask & MG_FACINGF_N) {++first.Y;++second.Y;}
+			if (mask & MG_FACINGF_S) {--second.Y;--first.Y;}
+			first.X += (short)Pick_Random_UInt(0, 1);
+			second.X += (short)Pick_Random_UInt(0, 1);
+			result = Build_West_Ramp(first, second, region_id);
+			if (result) break;
 	}
-	if((mask & (MG_FACINGF_NE | MG_FACINGF_E | MG_FACINGF_SE))==0 && (mask & (MG_FACINGF_N | MG_FACINGF_S))!=0) { // RA2: as above
-		first.X=cell.X+1;first.Y=cell.Y+4; // RA2: as above
-		second.X=first.X;second.Y=cell.Y-4; // RA2: as above
-		if(mask & MG_FACINGF_N) {++second.Y;++first.Y;} // RA2: as above
-		if(mask & MG_FACINGF_S) {--first.Y;--second.Y;} // RA2: as above
-		first.X+=(short)Pick_Random_UInt(0,1)-1; // RA2: as above
-		second.X+=(short)Pick_Random_UInt(0,1)-1; // RA2: as above
-		result=Build_East_Ramp(first,second,region_id); // RA2: as above
-		if(result)break; // RA2: as above
+		if ((mask & (MG_FACINGF_NE | MG_FACINGF_E | MG_FACINGF_SE)) == 0 && (mask & (MG_FACINGF_N | MG_FACINGF_S)) != 0) {
+			first.X = cell.X + 1;first.Y = cell.Y + 4;
+			second.X = first.X;second.Y = cell.Y - 4;
+			if (mask & MG_FACINGF_N) {++second.Y;++first.Y;}
+			if (mask & MG_FACINGF_S) {--first.Y;--second.Y;}
+			first.X += (short)Pick_Random_UInt(0, 1) - 1;
+			second.X += (short)Pick_Random_UInt(0, 1) - 1;
+			result = Build_East_Ramp(first, second, region_id);
+			if (result) break;
 	}
-	if((mask & (MG_FACINGF_N | MG_FACINGF_NE | MG_FACINGF_NW))==0 && (mask & (MG_FACINGF_E | MG_FACINGF_W))!=0) { // RA2: as above
-		first.X=cell.X+4;first.Y=cell.Y-1; // RA2: as above
-		second.X=cell.X-4;second.Y=first.Y; // RA2: as above
-		if(mask & MG_FACINGF_W) {++second.X;++first.X;} // RA2: as above
-		if(mask & MG_FACINGF_E) {--first.X;--second.X;} // RA2: as above
-		first.Y+=(short)Pick_Random_UInt(0,1); // RA2: as above
-		second.Y+=(short)Pick_Random_UInt(0,1); // RA2: as above
-		result=Build_North_Ramp(first,second,region_id); // RA2: as above
-		if(result)break; // RA2: as above
+		if ((mask & (MG_FACINGF_N | MG_FACINGF_NE | MG_FACINGF_NW)) == 0 && (mask & (MG_FACINGF_E | MG_FACINGF_W)) != 0) {
+			first.X = cell.X + 4;first.Y = cell.Y - 1;
+			second.X = cell.X - 4;second.Y = first.Y;
+			if (mask & MG_FACINGF_W) {++second.X;++first.X;}
+			if (mask & MG_FACINGF_E) {--first.X;--second.X;}
+			first.Y += (short)Pick_Random_UInt(0, 1);
+			second.Y += (short)Pick_Random_UInt(0, 1);
+			result = Build_North_Ramp(first, second, region_id);
+			if (result) break;
 	}
-	if((mask & (MG_FACINGF_SE | MG_FACINGF_S | MG_FACINGF_SW))==0 && (mask & (MG_FACINGF_E | MG_FACINGF_W))!=0) { // RA2: as above
-		first.X=cell.X-4;first.Y=cell.Y+1; // RA2: as above
-		second.X=cell.X+4;second.Y=first.Y; // RA2: as above
-		if(mask & MG_FACINGF_W) {++first.X;++second.X;} // RA2: as above
-		if(mask & MG_FACINGF_E) {--second.X;--first.X;} // RA2: as above
-		first.Y+=(short)Pick_Random_UInt(0,1)-1; // RA2: as above
-		second.Y+=(short)Pick_Random_UInt(0,1)-1; // RA2: as above
-		result=Build_South_Ramp(first,second,region_id); // RA2: as above
+		if ((mask & (MG_FACINGF_SE | MG_FACINGF_S | MG_FACINGF_SW)) == 0 && (mask & (MG_FACINGF_E | MG_FACINGF_W)) != 0) {
+			first.X = cell.X - 4;first.Y = cell.Y + 1;
+			second.X = cell.X + 4;second.Y = first.Y;
+			if (mask & MG_FACINGF_W) {++first.X;++second.X;}
+			if (mask & MG_FACINGF_E) {--second.X;--first.X;}
+			first.Y += (short)Pick_Random_UInt(0, 1) - 1;
+			second.Y += (short)Pick_Random_UInt(0, 1) - 1;
+			result = Build_South_Ramp(first, second, region_id);
 	}
-	} while(0); // RA2: as above
-	if(density>0.5f && !result) { // RA2: as above
-		Cell first,second; // RA2: as above
-		if((mask & MG_FACINGF_S)==0) { // RA2: as above
-			first.X=cell.X-4;first.Y=cell.Y+1; // RA2: as above
-			second.X=cell.X+4;second.Y=cell.Y+1; // RA2: as above
-			result=Build_South_Ramp(first,second,region_id); // RA2: as above
-			if(result)return result; // RA2: as above
+	} while (0);
+	if (density > 0.5f && !result) {
+		Cell first, second;
+		if ((mask & MG_FACINGF_S) == 0) {
+			first.X = cell.X - 4;first.Y = cell.Y + 1;
+			second.X = cell.X + 4;second.Y = cell.Y + 1;
+			result = Build_South_Ramp(first, second, region_id);
+			if (result) return result;
 		}
-		if((mask & MG_FACINGF_E)==0) { // RA2: as above
-			first.X=cell.X+1;first.Y=cell.Y+4; // RA2: as above
-			second.X=cell.X+1;second.Y=cell.Y-4; // RA2: as above
-			result=Build_East_Ramp(first,second,region_id); // RA2: as above
-			if(result)return result; // RA2: as above
+		if ((mask & MG_FACINGF_E) == 0) {
+			first.X = cell.X + 1;first.Y = cell.Y + 4;
+			second.X = cell.X + 1;second.Y = cell.Y - 4;
+			result = Build_East_Ramp(first, second, region_id);
+			if (result) return result;
 		}
-		if((mask & MG_FACINGF_S)==0) { // RA2: as above
-			first.X=cell.X+4;first.Y=cell.Y-1; // RA2: as above
-			second.X=cell.X-4;second.Y=cell.Y-1; // RA2: as above
-			result=Build_North_Ramp(first,second,region_id); // RA2: as above
-			if(result)return result; // RA2: as above
+		if ((mask & MG_FACINGF_S) == 0) {
+			first.X = cell.X + 4;first.Y = cell.Y - 1;
+			second.X = cell.X - 4;second.Y = cell.Y - 1;
+			result = Build_North_Ramp(first, second, region_id);
+			if (result) return result;
 		}
-		if((mask & MG_FACINGF_W)==0) { // RA2: as above
-			first.X=cell.X-1;first.Y=cell.Y-4; // RA2: as above
-			second.X=cell.X-1;second.Y=cell.Y+4; // RA2: as above
-			result=Build_West_Ramp(first,second,region_id); // RA2: as above
-			if(result)return result; // RA2: as above
+		if ((mask & MG_FACINGF_W) == 0) {
+			first.X = cell.X - 1;first.Y = cell.Y - 4;
+			second.X = cell.X - 1;second.Y = cell.Y + 4;
+			result = Build_West_Ramp(first, second, region_id);
+			if (result) return result;
 		}
 	}
-	return result; // RA2: as above
+	return result;
 }
 
 
@@ -2130,7 +2123,7 @@ bool MapRegionClass::Connect_Regions_With_Ramp(Cell const &cell,int region_id, f
 unsigned MapRegionClass::Build_Neighbor_Region_Mask(Cell const & cell, bool & valid, int unknown, float density) // RA2: a fourth parameter, the density scaling the required cell count
 {
 	static const double _count_minimum = 5.0; // RA2: static constants (0x7A5C10, 0x7A5C18), not folded literals
-	static const double _count_maximum = 15.0; // RA2: as above
+	static const double _count_maximum = 15.0;
 	int required = (int)((_count_maximum - _count_minimum) * (1.0f - density) + _count_minimum); // RA2: the bounds are static constants, not folded literals; the required count scales with the density
 	Cell c = (cell - Cell(2, 2));
 	int ox = c.X;
@@ -2145,7 +2138,7 @@ unsigned MapRegionClass::Build_Neighbor_Region_Mask(Cell const & cell, bool & va
 	for (int y = 0; y < 3; y++) {
 		for (int x = 0; x < 3; x++) {
 			if (y != 1 || x != 1) {
-				if (MapGeneratorClass::Region_Cell_Count_At_Least(Rect(ox + 5 * (x - 1), oy + 5 * (y - 1), 5, 5), ID, unknown, required)) { // RA2: as above
+				if (MapGeneratorClass::Region_Cell_Count_At_Least(Rect(ox + 5 * (x - 1), oy + 5 * (y - 1), 5, 5), ID, unknown, required)) {
 					/// One bit per neighboring direction, clockwise from the northeast, laid out
 					/// as a 3x3 grid so that it can be indexed by the offsets of the scan below.
 					static int _facing_bits[3][3] = {
@@ -2180,8 +2173,8 @@ bool MapRegionClass::Build_South_Ramp(Cell const & cell1, Cell const & cell2, in
 	/*
 	 * Compute a bounding rect around the ramp area and validate it.
 	 */
-	Rect area(cell1.X - 5, (cell1.Y < cell2.Y ? cell1.Y : cell2.Y) - 3, cell2.X - cell1.X + 9, (cell1.Y > cell2.Y ? cell1.Y : cell2.Y) - (cell1.Y < cell2.Y ? cell1.Y : cell2.Y) + 11); // RA2: RA2's form
-	if (!Is_Ramp_Area_Clear(area, region_id)) { // RA2: as above
+	Rect area(cell1.X - 5, (cell1.Y < cell2.Y ? cell1.Y : cell2.Y) - 3, cell2.X - cell1.X + 9, (cell1.Y > cell2.Y ? cell1.Y : cell2.Y) - (cell1.Y < cell2.Y ? cell1.Y : cell2.Y) + 11);
+	if (!Is_Ramp_Area_Clear(area, region_id)) {
 		return(false);
 	}
 
@@ -2189,18 +2182,18 @@ bool MapRegionClass::Build_South_Ramp(Cell const & cell1, Cell const & cell2, in
 	 * The ramp body drifts sideways as it runs; reject if the drift is too
 	 * large to fit within the horizontal span.
 	 */
-	int drift = cell2.Y - cell1.Y; // RA2: as above
-	int span = abs(drift); // RA2: as above
-	int width = cell2.X - cell1.X; // RA2: as above
-	if (span > width - 5) { // RA2: as above
+	int drift = cell2.Y - cell1.Y;
+	int span = abs(drift);
+	int width = cell2.X - cell1.X;
+	if (span > width - 5) {
 		return(false);
 	}
 
-	int half = (width + 1) / 2 + 3; // RA2: as above
-	Flatten_Area(Rect(area.X, cell1.Y + 1, half + 2, area.Y + area.Height - cell1.Y + 1), region_id); // RA2: as above
-	Flatten_Area(Rect(cell2.X - half + 3, cell2.Y + 1, half + 2, area.Y + area.Height - cell2.Y + 1), region_id); // RA2: as above
-	Flatten_Area(Rect(area.X + 4, area.Y + 2, half - 2, cell1.Y - area.Y - 1)); // RA2: as above
-	Flatten_Area(Rect(cell2.X - half + 2, area.Y + 2, half - 1, cell2.Y - area.Y - 1)); // RA2: as above
+	int half = (width + 1) / 2 + 3;
+	Flatten_Area(Rect(area.X, cell1.Y + 1, half + 2, area.Y + area.Height - cell1.Y + 1), region_id);
+	Flatten_Area(Rect(cell2.X - half + 3, cell2.Y + 1, half + 2, area.Y + area.Height - cell2.Y + 1), region_id);
+	Flatten_Area(Rect(area.X + 4, area.Y + 2, half - 2, cell1.Y - area.Y - 1));
+	Flatten_Area(Rect(cell2.X - half + 2, area.Y + 2, half - 1, cell2.Y - area.Y - 1));
 
 	/*
 	 * Place the two slope set pieces at the ramp ends.
@@ -2209,42 +2202,42 @@ bool MapRegionClass::Build_South_Ramp(Cell const & cell1, Cell const & cell2, in
 	MapGeneratorClass::Place_Tile((IsometricTileType)(IsometricTileTypeClass::SlopeSetPieces + 1), cell2 - Cell(2, 0), region_id, CellHeight);
 
 	Cell tail(0, 0);
-	if (drift != 0) { // RA2: as above
-		int pick = Pick_Random_UInt(0, 1); // RA2: as above
+	if (drift != 0) {
+		int pick = Pick_Random_UInt(0, 1);
 		Cell bias;
 		bias.X = 0;
-		int down = drift > 0; // RA2: as above
-		bias.Y = drift < 0 ? -1 : 0; // RA2: as above
-		if (pick == 1) { // RA2: as above
-			tail += Cell(span, drift); // RA2: as above
+		int down = drift > 0;
+		bias.Y = drift < 0 ? -1 : 0;
+		if (pick == 1) {
+			tail += Cell(span, drift);
 		} else {
-			bias.X = (cell2 - Cell(span, 0)).X - cell1.X - 5; // RA2: as above
+			bias.X = (cell2 - Cell(span, 0)).X - cell1.X - 5;
 		}
-		static int _heights[] = {3, 2, 1, 0, 0}; // RA2: as above
-		static int _ramps[] = {11, 15, 15, 15, 7, 12, 16, 16, 16, 8}; // RA2: as above
-		for (int forward = 0; forward < span; forward++) { // RA2: as above
-			for (int row = 0; row < 5; row++) { // RA2: as above
-				short offset = down ? forward : -forward; // RA2: as above
-				Cell position = Cell(cell1.X + 3, cell1.Y) + Cell(forward, row) + bias; // RA2: as above
-				position = Cell(position.X, position.Y + offset); // RA2: as above
-				CellClass &target = Map[position]; // RA2: as above
-				target.Height = (char)(CellHeight + _heights[row] - 4); // RA2: as above
-				target.Ramp = (unsigned char)_ramps[5 * down + row]; // RA2: as above
-				target.ITType = (IsometricTileType)((unsigned)IsometricTileTypeClass::RampStart + target.Ramp - 1); // RA2: as above
-				target.SubTile = 0; // RA2: as above
+		static int _heights[] = { 3, 2, 1, 0, 0 };
+		static int _ramps[] = { 11, 15, 15, 15, 7, 12, 16, 16, 16, 8 };
+		for (int forward = 0; forward < span; forward++) {
+			for (int row = 0; row < 5; row++) {
+				short offset = down ? forward : -forward;
+				Cell position = Cell(cell1.X + 3, cell1.Y) + Cell(forward, row) + bias;
+				position = Cell(position.X, position.Y + offset);
+				CellClass & target = Map[position];
+				target.Height = (char)(CellHeight + _heights[row] - 4);
+				target.Ramp = (unsigned char)_ramps[5 * down + row];
+				target.ITType = (IsometricTileType)((unsigned)IsometricTileTypeClass::RampStart + target.Ramp - 1);
+				target.SubTile = 0;
 			}
 		}
 	}
 
-	for (int column = 0; column < cell2.X - cell1.X - span - 5; column++) { // RA2: as above
-		for (int row = 0; row < 4; row++) { // RA2: as above
-			Cell position = Cell(cell1.X + 3, cell1.Y) + Cell(column, row) + tail; // RA2: as above
-			CellData::Set_Region(position, region_id); // RA2: as above
-			CellClass &target = Map[position]; // RA2: as above
-			target.Height = (char)(CellHeight - (char)row - 1); // RA2: as above
-			target.Ramp = 4; // RA2: as above
-			target.ITType = (IsometricTileType)((unsigned)IsometricTileTypeClass::RampStart + 3u); // RA2: as above
-			target.SubTile = 0; // RA2: as above
+	for (int column = 0; column < cell2.X - cell1.X - span - 5; column++) {
+		for (int row = 0; row < 4; row++) {
+			Cell position = Cell(cell1.X + 3, cell1.Y) + Cell(column, row) + tail;
+			CellData::Set_Region(position, region_id);
+			CellClass & target = Map[position];
+			target.Height = (char)(CellHeight - (char)row - 1);
+			target.Ramp = 4;
+			target.ITType = (IsometricTileType)((unsigned)IsometricTileTypeClass::RampStart + 3u);
+			target.SubTile = 0;
 		}
 	}
 	return(true);
@@ -2266,55 +2259,55 @@ bool MapRegionClass::Build_East_Ramp(Cell const & first, Cell const & second, in
 {
 	static int RampHeights[] = {3, 2, 1, 0, 0}; // RA2: the table at 0x7E0A28
 	static int RampShapes[] = {10, 14, 14, 14, 6, 11, 15, 15, 15, 7}; // RA2: the table at 0x7E0A3C
-	Rect area((first.X<second.X?first.X:second.X)-3,second.Y-4,(first.X>second.X?first.X:second.X)-(first.X<second.X?first.X:second.X)+11,first.Y-second.Y+9); // RA2: as above
-	if(!Is_Ramp_Area_Clear(area,lowRegion)) { // RA2: as above
+	Rect area((first.X < second.X ? first.X : second.X) - 3, second.Y - 4, (first.X > second.X ? first.X : second.X) - (first.X < second.X ? first.X : second.X) + 11, first.Y - second.Y + 9);
+	if (!Is_Ramp_Area_Clear(area, lowRegion)) {
 		return(false);
 	}
-	int drift=second.X-first.X; // RA2: as above
-	int span=abs(drift); // RA2: as above
-	int height=first.Y-second.Y; // RA2: as above
-	if(span>height-5) { // RA2: as above
+	int drift = second.X - first.X;
+	int span = abs(drift);
+	int height = first.Y - second.Y;
+	if (span > height - 5) {
 		return(false);
 	}
-	int half=(height+1)/2+2; // RA2: as above
-	Flatten_Area(Rect(first.X+1,first.Y-half+2,7,half+3),lowRegion); // RA2: as above
-	Flatten_Area(Rect(second.X+1,area.Y,7,half+2),lowRegion); // RA2: as above
-	Flatten_Area(Rect(area.X+2,first.Y-half+2,first.X-area.X-1,half-1)); // RA2: as above
-	Flatten_Area(Rect(area.X+2,second.Y,second.X-area.X-1,half-2)); // RA2: as above
-	MapGeneratorClass::Place_Tile((IsometricTileType)(IsometricTileTypeClass::SlopeSetPieces + 2),first-Cell(0,2),lowRegion,CellHeight); // RA2: as above
-	MapGeneratorClass::Place_Tile((IsometricTileType)(IsometricTileTypeClass::SlopeSetPieces + 3),second,lowRegion,CellHeight); // RA2: as above
-	Cell tail(0,0); // RA2: as above
-	if(drift!=0) { // RA2: as above
-		int pick=Pick_Random_UInt(0,1); // RA2: as above
-		int down=drift>0; // RA2: as above
-		Cell bias(drift<0?-1:0,0); // RA2: as above
-		if(pick==1) { // RA2: as above
-			tail+=Cell(drift,-span); // RA2: as above
+	int half = (height + 1) / 2 + 2;
+	Flatten_Area(Rect(first.X + 1, first.Y - half + 2, 7, half + 3), lowRegion);
+	Flatten_Area(Rect(second.X + 1, area.Y, 7, half + 2), lowRegion);
+	Flatten_Area(Rect(area.X + 2, first.Y - half + 2, first.X - area.X - 1, half - 1));
+	Flatten_Area(Rect(area.X + 2, second.Y, second.X - area.X - 1, half - 2));
+	MapGeneratorClass::Place_Tile((IsometricTileType)(IsometricTileTypeClass::SlopeSetPieces + 2), first - Cell(0, 2), lowRegion, CellHeight);
+	MapGeneratorClass::Place_Tile((IsometricTileType)(IsometricTileTypeClass::SlopeSetPieces + 3), second, lowRegion, CellHeight);
+	Cell tail(0, 0);
+	if (drift != 0) {
+		int pick = Pick_Random_UInt(0, 1);
+		int down = drift > 0;
+		Cell bias(drift < 0 ? -1 : 0, 0);
+		if (pick == 1) {
+			tail += Cell(drift, -span);
 		} else {
-			bias-=Cell(0,first.Y-(short)span-second.Y-5); // RA2: as above
+			bias -= Cell(0, first.Y - (short)span - second.Y - 5);
 		}
-		for(int forward=0;forward<span;forward++) { // RA2: as above
-			for(int row=0;row<5;row++) { // RA2: as above
-				short offset=down?forward:-forward; // RA2: as above
-				Cell position=Cell(first.X,first.Y-3)+Cell(row,-forward)+bias; // RA2: as above
-				position=Cell(position.X+offset,position.Y); // RA2: as above
-				CellClass &target=Map[position]; // RA2: as above
-				target.Height=(char)(RampHeights[row] + CellHeight - 4); // RA2: as above
-				target.Ramp=(unsigned char)RampShapes[5*down+row]; // RA2: as above
-				target.ITType=(IsometricTileType)((unsigned)IsometricTileTypeClass::RampStart + target.Ramp - 1); // RA2: as above
-				target.SubTile=0; // RA2: as above
+		for (int forward = 0; forward < span; forward++) {
+			for (int row = 0; row < 5; row++) {
+				short offset = down ? forward : -forward;
+				Cell position = Cell(first.X, first.Y - 3) + Cell(row, -forward) + bias;
+				position = Cell(position.X + offset, position.Y);
+				CellClass & target = Map[position];
+				target.Height = (char)(RampHeights[row] + CellHeight - 4);
+				target.Ramp = (unsigned char)RampShapes[5 * down + row];
+				target.ITType = (IsometricTileType)((unsigned)IsometricTileTypeClass::RampStart + target.Ramp - 1);
+				target.SubTile = 0;
 			}
 		}
 	}
-	for(int column=0;column<first.Y-second.Y-span-5;column++) { // RA2: as above
-		for(int row=0;row<4;row++) { // RA2: as above
-			Cell position=Cell(first.X,first.Y-3)+Cell(row,-column)+tail; // RA2: as above
-			CellData::Set_Region(position,lowRegion); // RA2: as above
-			CellClass &target=Map[position]; // RA2: as above
-			target.Height=(char)(CellHeight-(char)row-1); // RA2: as above
-			target.Ramp=3; // RA2: as above
-			target.ITType=(IsometricTileType)((unsigned)IsometricTileTypeClass::RampStart + 2u); // RA2: as above
-			target.SubTile=0; // RA2: as above
+	for (int column = 0; column < first.Y - second.Y - span - 5; column++) {
+		for (int row = 0; row < 4; row++) {
+			Cell position = Cell(first.X, first.Y - 3) + Cell(row, -column) + tail;
+			CellData::Set_Region(position, lowRegion);
+			CellClass & target = Map[position];
+			target.Height = (char)(CellHeight - (char)row - 1);
+			target.Ramp = 3;
+			target.ITType = (IsometricTileType)((unsigned)IsometricTileTypeClass::RampStart + 2u);
+			target.SubTile = 0;
 		}
 	}
 	return(true);
@@ -2336,59 +2329,59 @@ bool MapRegionClass::Build_North_Ramp(Cell const & first, Cell const & second, i
 {
 	static int RampHeights[] = {3, 2, 1, 0, 0}; // RA2: the table at 0x7E0A64
 	static int RampShapes[] = {10, 14, 14, 14, 6, 9, 13, 13, 13, 5}; // RA2: the table at 0x7E0A78
-	Rect area(second.X-4,(first.Y<second.Y?first.Y:second.Y)-7,first.X-second.X+8,(first.Y>second.Y?first.Y:second.Y)-(first.Y<second.Y?first.Y:second.Y)+11); // RA2: as above
-	if(!Is_Ramp_Area_Clear(area,lowRegion)) { // RA2: as above
+	Rect area(second.X - 4, (first.Y < second.Y ? first.Y : second.Y) - 7, first.X - second.X + 8, (first.Y > second.Y ? first.Y : second.Y) - (first.Y < second.Y ? first.Y : second.Y) + 11);
+	if (!Is_Ramp_Area_Clear(area, lowRegion)) {
 		return(false);
 	}
-	int drift=second.Y-first.Y; // RA2: as above
-	int span=abs(drift); // RA2: as above
-	int width=first.X-second.X; // RA2: as above
-	if(span>width-5) { // RA2: as above
+	int drift = second.Y - first.Y;
+	int span = abs(drift);
+	int width = first.X - second.X;
+	if (span > width - 5) {
 		return(false);
 	}
-	int half=(width+1)/2+3; // RA2: as above
-	Flatten_Area(Rect(area.X,area.Y,half+2,second.Y-area.Y),lowRegion); // RA2: as above
-	Flatten_Area(Rect(first.X-half+2,area.Y,half+3,first.Y-area.Y),lowRegion); // RA2: as above
-	Flatten_Area(Rect(second.X,second.Y,half-2,area.Y+area.Height-second.Y-2)); // RA2: as above
-	Flatten_Area(Rect(first.X-half+2,first.Y,half-1,area.Y+area.Height-first.Y-2)); // RA2: as above
-	MapGeneratorClass::Place_Tile((IsometricTileType)(IsometricTileTypeClass::SlopeSetPieces + 4),second-Cell(0,3),lowRegion,CellHeight); // RA2: as above
-	MapGeneratorClass::Place_Tile((IsometricTileType)(IsometricTileTypeClass::SlopeSetPieces + 5),first-Cell(2,3),lowRegion,CellHeight); // RA2: as above
-	MapGeneratorClass::Place_Tile((IsometricTileType)(IsometricTileTypeClass::SlopeSetPieces + 6),first-Cell(1,1),lowRegion,CellHeight); // RA2: as above
-	Cell tail(0,0); // RA2: as above
-	if(drift!=0) { // RA2: as above
-		int pick=Pick_Random_UInt(0,1); // RA2: as above
+	int half = (width + 1) / 2 + 3;
+	Flatten_Area(Rect(area.X, area.Y, half + 2, second.Y - area.Y), lowRegion);
+	Flatten_Area(Rect(first.X - half + 2, area.Y, half + 3, first.Y - area.Y), lowRegion);
+	Flatten_Area(Rect(second.X, second.Y, half - 2, area.Y + area.Height - second.Y - 2));
+	Flatten_Area(Rect(first.X - half + 2, first.Y, half - 1, area.Y + area.Height - first.Y - 2));
+	MapGeneratorClass::Place_Tile((IsometricTileType)(IsometricTileTypeClass::SlopeSetPieces + 4), second - Cell(0, 3), lowRegion, CellHeight);
+	MapGeneratorClass::Place_Tile((IsometricTileType)(IsometricTileTypeClass::SlopeSetPieces + 5), first - Cell(2, 3), lowRegion, CellHeight);
+	MapGeneratorClass::Place_Tile((IsometricTileType)(IsometricTileTypeClass::SlopeSetPieces + 6), first - Cell(1, 1), lowRegion, CellHeight);
+	Cell tail(0, 0);
+	if (drift != 0) {
+		int pick = Pick_Random_UInt(0, 1);
 		Cell bias;
-		bias.X=0; // RA2: as above
-		int down=drift>0; // RA2: as above
-		bias.Y=drift<0; // RA2: as above
-		if(pick==1) { // RA2: as above
-			tail+=Cell(span,-drift); // RA2: as above
+		bias.X = 0;
+		int down = drift > 0;
+		bias.Y = drift < 0;
+		if (pick == 1) {
+			tail += Cell(span, -drift);
 		} else {
-			bias.X=(first-Cell(span,0)).X-second.X-5; // RA2: as above
+			bias.X = (first - Cell(span, 0)).X - second.X - 5;
 		}
-		for(int forward=0;forward<span;forward++) { // RA2: as above
-			for(int row=0;row<5;row++) { // RA2: as above
-				short offset=down?-forward:forward; // RA2: as above
-				Cell position=Cell(second.X+3,second.Y)+Cell(forward,-row)+bias; // RA2: as above
-				position=Cell(position.X,position.Y+offset); // RA2: as above
-				CellClass &target=Map[position]; // RA2: as above
+		for (int forward = 0; forward < span; forward++) {
+			for (int row = 0; row < 5; row++) {
+				short offset = down ? -forward : forward;
+				Cell position = Cell(second.X + 3, second.Y) + Cell(forward, -row) + bias;
+				position = Cell(position.X, position.Y + offset);
+				CellClass & target = Map[position];
 				short height = RampHeights[row]; // RA2: ra2-decomp src/mapgen.cpp keeps the height in a short
-				target.Height = height + CellHeight - 4; // RA2: as above
-				target.Ramp=(unsigned char)RampShapes[5*down+row]; // RA2: as above
-				target.ITType=(IsometricTileType)((unsigned)IsometricTileTypeClass::RampStart + target.Ramp - 1); // RA2: as above
-				target.SubTile=0; // RA2: as above
+				target.Height = height + CellHeight - 4;
+				target.Ramp = (unsigned char)RampShapes[5 * down + row];
+				target.ITType = (IsometricTileType)((unsigned)IsometricTileTypeClass::RampStart + target.Ramp - 1);
+				target.SubTile = 0;
 			}
 		}
 	}
-	for(int column=0;column<first.X-second.X-span-5;column++) { // RA2: as above
-		for(int row=0;row<4;row++) { // RA2: as above
-			Cell position=Cell(second.X+3,second.Y)+Cell(column,-row)+tail; // RA2: as above
-			CellData::Set_Region(position,lowRegion); // RA2: as above
-			CellClass &target=Map[position]; // RA2: as above
-			target.Height=(char)(CellHeight-(char)row-1); // RA2: as above
-			target.Ramp=2; // RA2: as above
-			target.ITType=(IsometricTileType)((unsigned)IsometricTileTypeClass::RampStart + 1u); // RA2: as above
-			target.SubTile=0; // RA2: as above
+	for (int column = 0; column < first.X - second.X - span - 5; column++) {
+		for (int row = 0; row < 4; row++) {
+			Cell position = Cell(second.X + 3, second.Y) + Cell(column, -row) + tail;
+			CellData::Set_Region(position, lowRegion);
+			CellClass & target = Map[position];
+			target.Height = (char)(CellHeight - (char)row - 1);
+			target.Ramp = 2;
+			target.ITType = (IsometricTileType)((unsigned)IsometricTileTypeClass::RampStart + 1u);
+			target.SubTile = 0;
 		}
 	}
 	return(true);
@@ -2412,55 +2405,55 @@ bool MapRegionClass::Build_West_Ramp(Cell const &first,Cell const &second,int lo
 {
 	static int RampHeights[] = {3, 2, 1, 0, 0}; // RA2: the table at 0x7E0AA0
 	static int RampShapes[] = {9, 13, 13, 13, 5, 12, 16, 16, 16, 8}; // RA2: the table at 0x7E0AB4
-	Rect area((first.X<second.X?first.X:second.X)-7,first.Y-4,(first.X>second.X?first.X:second.X)-(first.X<second.X?first.X:second.X)+11,second.Y-first.Y+9); // RA2: as above
-	if(!Is_Ramp_Area_Clear(area,lowRegion)) { // RA2: as above
+	Rect area((first.X < second.X ? first.X : second.X) - 7, first.Y - 4, (first.X > second.X ? first.X : second.X) - (first.X < second.X ? first.X : second.X) + 11, second.Y - first.Y + 9);
+	if (!Is_Ramp_Area_Clear(area, lowRegion)) {
 		return(false);
 	}
-	int drift=second.X-first.X; // RA2: as above
-	int span=abs(drift); // RA2: as above
-	if(span>second.Y-first.Y-5) { // RA2: as above
+	int drift = second.X - first.X;
+	int span = abs(drift);
+	if (span > second.Y - first.Y - 5) {
 		return(false);
 	}
-	int half=(second.Y-first.Y+1)/2+2; // RA2: as above
-	Flatten_Area(Rect(area.X,area.Y,first.X-area.X,half+2),lowRegion); // RA2: as above
-	Flatten_Area(Rect(area.X,second.Y-half+3,second.X-area.X,half+2),lowRegion); // RA2: as above
-	Flatten_Area(Rect(first.X,first.Y,area.X+area.Width-first.X-1,half-1)); // RA2: as above
-	Flatten_Area(Rect(second.X,second.Y-half+3,area.X+area.Width-second.X-1,half-2)); // RA2: as above
-	MapGeneratorClass::Place_Tile((IsometricTileType)(IsometricTileTypeClass::SlopeSetPieces + 7),first-Cell(3,0),lowRegion,CellHeight); // RA2: as above
-	MapGeneratorClass::Place_Tile((IsometricTileType)(IsometricTileTypeClass::SlopeSetPieces + 8),second-Cell(3,2),lowRegion,CellHeight); // RA2: as above
-	MapGeneratorClass::Place_Tile((IsometricTileType)(IsometricTileTypeClass::SlopeSetPieces + 9),second-Cell(1,1),lowRegion,CellHeight); // RA2: as above
-	Cell tail(0,0); // RA2: as above
-	if(drift!=0) { // RA2: as above
-		int pick=Pick_Random_UInt(0,1); // RA2: as above
-		int down=drift>0; // RA2: as above
-		Cell bias(drift>0,0); // RA2: as above
-		if(pick==1) { // RA2: as above
-			tail+=Cell(drift,span); // RA2: as above
+	int half = (second.Y - first.Y + 1) / 2 + 2;
+	Flatten_Area(Rect(area.X, area.Y, first.X - area.X, half + 2), lowRegion);
+	Flatten_Area(Rect(area.X, second.Y - half + 3, second.X - area.X, half + 2), lowRegion);
+	Flatten_Area(Rect(first.X, first.Y, area.X + area.Width - first.X - 1, half - 1));
+	Flatten_Area(Rect(second.X, second.Y - half + 3, area.X + area.Width - second.X - 1, half - 2));
+	MapGeneratorClass::Place_Tile((IsometricTileType)(IsometricTileTypeClass::SlopeSetPieces + 7), first - Cell(3, 0), lowRegion, CellHeight);
+	MapGeneratorClass::Place_Tile((IsometricTileType)(IsometricTileTypeClass::SlopeSetPieces + 8), second - Cell(3, 2), lowRegion, CellHeight);
+	MapGeneratorClass::Place_Tile((IsometricTileType)(IsometricTileTypeClass::SlopeSetPieces + 9), second - Cell(1, 1), lowRegion, CellHeight);
+	Cell tail(0, 0);
+	if (drift != 0) {
+		int pick = Pick_Random_UInt(0, 1);
+		int down = drift > 0;
+		Cell bias(drift > 0, 0);
+		if (pick == 1) {
+			tail += Cell(drift, span);
 		} else {
-			bias+=Cell(0,second.Y-(short)span-first.Y-5); // RA2: as above
+			bias += Cell(0, second.Y - (short)span - first.Y - 5);
 		}
-		for(int forward=0;forward<span;forward++) { // RA2: as above
-			for(int row=0;row<5;row++) { // RA2: as above
-				short offset=down?forward:-forward; // RA2: as above
-				Cell position=Cell(first.X,first.Y+3)+Cell(-row,forward)+bias; // RA2: as above
-				position=Cell(position.X+offset,position.Y); // RA2: as above
-				CellClass &target=Map[position]; // RA2: as above
-				target.Height=(char)(RampHeights[row] + CellHeight - 4); // RA2: as above
-				target.Ramp=(unsigned char)RampShapes[5*down+row]; // RA2: as above
-				target.ITType=(IsometricTileType)((unsigned)IsometricTileTypeClass::RampStart + target.Ramp - 1); // RA2: as above
-				target.SubTile=0; // RA2: as above
+		for (int forward = 0; forward < span; forward++) {
+			for (int row = 0; row < 5; row++) {
+				short offset = down ? forward : -forward;
+				Cell position = Cell(first.X, first.Y + 3) + Cell(-row, forward) + bias;
+				position = Cell(position.X + offset, position.Y);
+				CellClass & target = Map[position];
+				target.Height = (char)(RampHeights[row] + CellHeight - 4);
+				target.Ramp = (unsigned char)RampShapes[5 * down + row];
+				target.ITType = (IsometricTileType)((unsigned)IsometricTileTypeClass::RampStart + target.Ramp - 1);
+				target.SubTile = 0;
 			}
 		}
 	}
-	for(int column=0;column<second.Y-first.Y-span-5;column++) { // RA2: as above
-		for(int row=0;row<4;row++) { // RA2: as above
-			Cell position=Cell(first.X,first.Y+3)+Cell(-row,column)+tail; // RA2: as above
-			CellData::Set_Region(position,lowRegion); // RA2: as above
-			CellClass &target=Map[position]; // RA2: as above
-			target.Height=(char)(CellHeight-(char)row-1); // RA2: as above
-			target.Ramp=1; // RA2: as above
-			target.ITType=(IsometricTileType)((unsigned)IsometricTileTypeClass::RampStart); // RA2: as above
-			target.SubTile=0; // RA2: as above
+	for (int column = 0; column < second.Y - first.Y - span - 5; column++) {
+		for (int row = 0; row < 4; row++) {
+			Cell position = Cell(first.X, first.Y + 3) + Cell(-row, column) + tail;
+			CellData::Set_Region(position, lowRegion);
+			CellClass & target = Map[position];
+			target.Height = (char)(CellHeight - (char)row - 1);
+			target.Ramp = 1;
+			target.ITType = (IsometricTileType)((unsigned)IsometricTileTypeClass::RampStart);
+			target.SubTile = 0;
 		}
 	}
 	return(true);
@@ -2547,43 +2540,43 @@ bool MapRegionClass::Build_Corner_Ramp_SE(Cell const & cell1, Cell const & cell2
 /// <returns>bool; Was the corner ramp carved?</returns>
 bool MapRegionClass::Build_Corner_Ramp_NE(Cell const &first,Cell const &second,int region) // RA2: RA2's form of the NE corner ramp (0x574930)
 {
-	int dx=first.X-second.X; // RA2: as above
-	if(dx>=3) { // RA2: as above
-		int dy=first.Y-second.Y; // RA2: as above
-		if(dy>=3) { // RA2: as above
-			int top=second.Y-7; // RA2: as above
-			Rect area(second.X-2,top,dx+10,first.Y-second.Y+10); // RA2: as above
-			if(Is_Ramp_Area_Clear(area,region)) { // RA2: as above
-				Flatten_Area(Rect(area.X,area.Y,area.Width,7),region); // RA2: as above
-				Flatten_Area(Rect(first.X+1,area.Y,7,area.Height),region); // RA2: as above
-				Flatten_Area(Rect(second.X,second.Y,1,2)); // RA2: as above
-				Flatten_Area(Rect(first.X-1,first.Y,2,1)); // RA2: as above
-				Flatten_Area(Rect(second.X+1,second.Y+1,first.X-second.X-1,first.Y-second.Y-1)); // RA2: as above
-				MapGeneratorClass::Place_Tile((IsometricTileType)(IsometricTileTypeClass::SlopeSetPieces + 2),first-Cell(0,2),region,CellHeight); // RA2: as above
-				MapGeneratorClass::Place_Tile((IsometricTileType)(IsometricTileTypeClass::SlopeSetPieces + 4),second-Cell(0,3),region,CellHeight); // RA2: as above
-				for(int corner=0;corner<4;++corner) { // RA2: as above
-					CellClass &cell=Map[Cell(first.X+corner,second.Y-corner)]; // RA2: as above
-					cell.Height=(char)(CellHeight-(char)corner-1); // RA2: as above
-					cell.Ramp=6; // RA2: as above
-					cell.ITType=(IsometricTileType)((unsigned)IsometricTileTypeClass::RampStart + 5); // RA2: as above
-					cell.SubTile=0; // RA2: as above
+	int dx = first.X - second.X;
+	if (dx >= 3) {
+		int dy = first.Y - second.Y;
+		if (dy >= 3) {
+			int top = second.Y - 7;
+			Rect area(second.X - 2, top, dx + 10, first.Y - second.Y + 10);
+			if (Is_Ramp_Area_Clear(area, region)) {
+				Flatten_Area(Rect(area.X, area.Y, area.Width, 7), region);
+				Flatten_Area(Rect(first.X + 1, area.Y, 7, area.Height), region);
+				Flatten_Area(Rect(second.X, second.Y, 1, 2));
+				Flatten_Area(Rect(first.X - 1, first.Y, 2, 1));
+				Flatten_Area(Rect(second.X + 1, second.Y + 1, first.X - second.X - 1, first.Y - second.Y - 1));
+				MapGeneratorClass::Place_Tile((IsometricTileType)(IsometricTileTypeClass::SlopeSetPieces + 2), first - Cell(0, 2), region, CellHeight);
+				MapGeneratorClass::Place_Tile((IsometricTileType)(IsometricTileTypeClass::SlopeSetPieces + 4), second - Cell(0, 3), region, CellHeight);
+				for (int corner = 0; corner < 4; ++corner) {
+					CellClass & cell = Map[Cell(first.X + corner, second.Y - corner)];
+					cell.Height = (char)(CellHeight - (char)corner - 1);
+					cell.Ramp = 6;
+					cell.ITType = (IsometricTileType)((unsigned)IsometricTileTypeClass::RampStart + 5);
+					cell.SubTile = 0;
 				}
-				for(int east=0;east<4;++east) { // RA2: as above
-					for(int y=0;y<first.Y-second.Y+east-3;++y) { // RA2: as above
-						CellClass &cell=Map[Cell(first.X+east,first.Y-y-3)]; // RA2: as above
-						cell.Height=(char)(CellHeight-(char)east-1); // RA2: as above
-						cell.Ramp=3; // RA2: as above
-						cell.ITType=(IsometricTileType)((unsigned)IsometricTileTypeClass::RampStart + 2); // RA2: as above
-						cell.SubTile=0; // RA2: as above
+				for (int east = 0; east < 4; ++east) {
+					for (int y = 0; y < first.Y - second.Y + east - 3; ++y) {
+						CellClass & cell = Map[Cell(first.X + east, first.Y - y - 3)];
+						cell.Height = (char)(CellHeight - (char)east - 1);
+						cell.Ramp = 3;
+						cell.ITType = (IsometricTileType)((unsigned)IsometricTileTypeClass::RampStart + 2);
+						cell.SubTile = 0;
 					}
 				}
-				for(int north=0;north<4;++north) { // RA2: as above
-					for(int x=0;x<first.X-second.X+north-3;++x) { // RA2: as above
-						CellClass &cell=Map[Cell(second.X+x+3,second.Y-north)]; // RA2: as above
-						cell.Height=(char)(CellHeight-(char)north-1); // RA2: as above
-						cell.Ramp=2; // RA2: as above
-						cell.ITType=(IsometricTileType)((unsigned)IsometricTileTypeClass::RampStart + 1); // RA2: as above
-						cell.SubTile=0; // RA2: as above
+				for (int north = 0; north < 4; ++north) {
+					for (int x = 0; x < first.X - second.X + north - 3; ++x) {
+						CellClass & cell = Map[Cell(second.X + x + 3, second.Y - north)];
+						cell.Height = (char)(CellHeight - (char)north - 1);
+						cell.Ramp = 2;
+						cell.ITType = (IsometricTileType)((unsigned)IsometricTileTypeClass::RampStart + 1);
+						cell.SubTile = 0;
 					}
 				}
 				return(true);
@@ -2608,44 +2601,44 @@ bool MapRegionClass::Build_Corner_Ramp_NE(Cell const &first,Cell const &second,i
 /// <returns>bool; Was the corner ramp carved?</returns>
 bool MapRegionClass::Build_Corner_Ramp_NW(Cell const &first,Cell const &second,int region) // RA2: RA2's form of the NW corner ramp (0x574E50): one Rect per flattened strip, the slope pieces and the three tile loops
 {
-	int dx=first.X-second.X; // RA2: as above
-	if(dx>=3) { // RA2: as above
-		int dy=second.Y-first.Y; // RA2: as above
-		if(dy>=3) { // RA2: as above
-			Rect area(second.X-7,first.Y-7,dx+10,dy+10); // RA2: as above
-			if(Is_Ramp_Area_Clear(area,region)) { // RA2: as above
-				Flatten_Area(Rect(area.X,area.Y,area.Width,7),region); // RA2: as above
-				Flatten_Area(Rect(area.X,area.Y,7,area.Height),region); // RA2: as above
-				Flatten_Area(Rect(first.X,first.Y,1,2)); // RA2: as above
-				Flatten_Area(Rect(second.X,second.Y,2,1)); // RA2: as above
-				Flatten_Area(Rect(second.X+1,first.Y+1,first.X-second.X-1,second.Y-first.Y-1)); // RA2: as above
-				MapGeneratorClass::Place_Tile((IsometricTileType)(IsometricTileTypeClass::SlopeSetPieces + 5),first-Cell(2,3),region,CellHeight); // RA2: as above
-				MapGeneratorClass::Place_Tile((IsometricTileType)(IsometricTileTypeClass::SlopeSetPieces + 6),first-Cell(1,1),region,CellHeight); // RA2: as above
-				MapGeneratorClass::Place_Tile((IsometricTileType)(IsometricTileTypeClass::SlopeSetPieces + 8),second-Cell(3,2),region,CellHeight); // RA2: as above
-				MapGeneratorClass::Place_Tile((IsometricTileType)(IsometricTileTypeClass::SlopeSetPieces + 9),second-Cell(1,1),region,CellHeight); // RA2: as above
-				for(int corner=0;corner<4;++corner) { // RA2: as above
-					CellClass &cell=Map[Cell(second.X-corner,first.Y-corner)]; // RA2: as above
-					cell.Height=(char)(CellHeight-(char)corner-1); // RA2: as above
-					cell.Ramp=5; // RA2: as above
-					cell.ITType=(IsometricTileType)((unsigned)IsometricTileTypeClass::RampStart + 4); // RA2: as above
-					cell.SubTile=0; // RA2: as above
+	int dx = first.X - second.X;
+	if (dx >= 3) {
+		int dy = second.Y - first.Y;
+		if (dy >= 3) {
+			Rect area(second.X - 7, first.Y - 7, dx + 10, dy + 10);
+			if (Is_Ramp_Area_Clear(area, region)) {
+				Flatten_Area(Rect(area.X, area.Y, area.Width, 7), region);
+				Flatten_Area(Rect(area.X, area.Y, 7, area.Height), region);
+				Flatten_Area(Rect(first.X, first.Y, 1, 2));
+				Flatten_Area(Rect(second.X, second.Y, 2, 1));
+				Flatten_Area(Rect(second.X + 1, first.Y + 1, first.X - second.X - 1, second.Y - first.Y - 1));
+				MapGeneratorClass::Place_Tile((IsometricTileType)(IsometricTileTypeClass::SlopeSetPieces + 5), first - Cell(2, 3), region, CellHeight);
+				MapGeneratorClass::Place_Tile((IsometricTileType)(IsometricTileTypeClass::SlopeSetPieces + 6), first - Cell(1, 1), region, CellHeight);
+				MapGeneratorClass::Place_Tile((IsometricTileType)(IsometricTileTypeClass::SlopeSetPieces + 8), second - Cell(3, 2), region, CellHeight);
+				MapGeneratorClass::Place_Tile((IsometricTileType)(IsometricTileTypeClass::SlopeSetPieces + 9), second - Cell(1, 1), region, CellHeight);
+				for (int corner = 0; corner < 4; ++corner) {
+					CellClass & cell = Map[Cell(second.X - corner, first.Y - corner)];
+					cell.Height = (char)(CellHeight - (char)corner - 1);
+					cell.Ramp = 5;
+					cell.ITType = (IsometricTileType)((unsigned)IsometricTileTypeClass::RampStart + 4);
+					cell.SubTile = 0;
 				}
-				for(int north=0;north<4;++north) { // RA2: as above
-					for(int x=0;x<first.X-second.X+north-3;++x) { // RA2: as above
-						CellClass &cell=Map[Cell(first.X-x-3,first.Y-north)]; // RA2: as above
-						cell.Height=(char)(CellHeight-(char)north-1); // RA2: as above
-						cell.Ramp=2; // RA2: as above
-						cell.ITType=(IsometricTileType)((unsigned)IsometricTileTypeClass::RampStart + 1); // RA2: as above
-						cell.SubTile=0; // RA2: as above
+				for (int north = 0; north < 4; ++north) {
+					for (int x = 0; x < first.X - second.X + north - 3; ++x) {
+						CellClass & cell = Map[Cell(first.X - x - 3, first.Y - north)];
+						cell.Height = (char)(CellHeight - (char)north - 1);
+						cell.Ramp = 2;
+						cell.ITType = (IsometricTileType)((unsigned)IsometricTileTypeClass::RampStart + 1);
+						cell.SubTile = 0;
 					}
 				}
-				for(int west=0;west<4;++west) { // RA2: as above
-					for(int y=0;y<second.Y-first.Y+west-3;++y) { // RA2: as above
-						CellClass &cell=Map[Cell(second.X-west,second.Y-y-3)]; // RA2: as above
-						cell.Height=(char)(CellHeight-(char)west-1); // RA2: as above
-						cell.Ramp=1; // RA2: as above
-						cell.ITType=(IsometricTileType)((unsigned)IsometricTileTypeClass::RampStart); // RA2: as above
-						cell.SubTile=0; // RA2: as above
+				for (int west = 0; west < 4; ++west) {
+					for (int y = 0; y < second.Y - first.Y + west - 3; ++y) {
+						CellClass & cell = Map[Cell(second.X - west, second.Y - y - 3)];
+						cell.Height = (char)(CellHeight - (char)west - 1);
+						cell.Ramp = 1;
+						cell.ITType = (IsometricTileType)((unsigned)IsometricTileTypeClass::RampStart);
+						cell.SubTile = 0;
 					}
 				}
 				return(true);
@@ -2670,43 +2663,43 @@ bool MapRegionClass::Build_Corner_Ramp_NW(Cell const &first,Cell const &second,i
 /// <returns>bool; Was the corner ramp carved?</returns>
 bool MapRegionClass::Build_Corner_Ramp_SW(Cell const &first,Cell const &second,int region) // RA2: RA2's form of the SW corner ramp (0x5753F0)
 {
-	int dx=second.X-first.X; // RA2: as above
-	if(dx>=3) { // RA2: as above
-		int dy=second.Y-first.Y; // RA2: as above
-		if(dy>=3) { // RA2: as above
-			int top=first.Y-4; // RA2: as above
-			Rect area(first.X-7,top,dx+10,second.Y-first.Y+10); // RA2: as above
-			if(Is_Ramp_Area_Clear(area,region)) { // RA2: as above
-				Flatten_Area(Rect(area.X,area.Y,7,area.Height),region); // RA2: as above
-				Flatten_Area(Rect(area.X,second.Y+1,area.Width,7),region); // RA2: as above
-				Flatten_Area(Rect(first.X,first.Y,2,1)); // RA2: as above
-				Flatten_Area(Rect(second.X,second.Y-1,1,2)); // RA2: as above
-				Flatten_Area(Rect(first.X+1,first.Y+1,second.X-first.X-1,second.Y-first.Y-1)); // RA2: as above
-				MapGeneratorClass::Place_Tile((IsometricTileType)(IsometricTileTypeClass::SlopeSetPieces + 7),first-Cell(3,0),region,CellHeight); // RA2: as above
-				MapGeneratorClass::Place_Tile((IsometricTileType)(IsometricTileTypeClass::SlopeSetPieces + 1),second-Cell(2,0),region,CellHeight); // RA2: as above
-				for(int corner=0;corner<4;++corner) { // RA2: as above
-					CellClass &cell=Map[Cell(first.X-corner,second.Y+corner)]; // RA2: as above
-					cell.Height=(char)(CellHeight-(char)corner-1); // RA2: as above
-					cell.Ramp=8; // RA2: as above
-					cell.ITType=(IsometricTileType)((unsigned)IsometricTileTypeClass::RampStart + 7); // RA2: as above
-					cell.SubTile=0; // RA2: as above
+	int dx = second.X - first.X;
+	if (dx >= 3) {
+		int dy = second.Y - first.Y;
+		if (dy >= 3) {
+			int top = first.Y - 4;
+			Rect area(first.X - 7, top, dx + 10, second.Y - first.Y + 10);
+			if (Is_Ramp_Area_Clear(area, region)) {
+				Flatten_Area(Rect(area.X, area.Y, 7, area.Height), region);
+				Flatten_Area(Rect(area.X, second.Y + 1, area.Width, 7), region);
+				Flatten_Area(Rect(first.X, first.Y, 2, 1));
+				Flatten_Area(Rect(second.X, second.Y - 1, 1, 2));
+				Flatten_Area(Rect(first.X + 1, first.Y + 1, second.X - first.X - 1, second.Y - first.Y - 1));
+				MapGeneratorClass::Place_Tile((IsometricTileType)(IsometricTileTypeClass::SlopeSetPieces + 7), first - Cell(3, 0), region, CellHeight);
+				MapGeneratorClass::Place_Tile((IsometricTileType)(IsometricTileTypeClass::SlopeSetPieces + 1), second - Cell(2, 0), region, CellHeight);
+				for (int corner = 0; corner < 4; ++corner) {
+					CellClass & cell = Map[Cell(first.X - corner, second.Y + corner)];
+					cell.Height = (char)(CellHeight - (char)corner - 1);
+					cell.Ramp = 8;
+					cell.ITType = (IsometricTileType)((unsigned)IsometricTileTypeClass::RampStart + 7);
+					cell.SubTile = 0;
 				}
-				for(int west=0;west<4;++west) { // RA2: as above
-					for(int y=0;y<second.Y-first.Y+west-3;++y) { // RA2: as above
-						CellClass &cell=Map[Cell(first.X-west,first.Y+y+3)]; // RA2: as above
-						cell.Height=(char)(CellHeight-(char)west-1); // RA2: as above
-						cell.Ramp=1; // RA2: as above
-						cell.ITType=(IsometricTileType)((unsigned)IsometricTileTypeClass::RampStart); // RA2: as above
-						cell.SubTile=0; // RA2: as above
+				for (int west = 0; west < 4; ++west) {
+					for (int y = 0; y < second.Y - first.Y + west - 3; ++y) {
+						CellClass & cell = Map[Cell(first.X - west, first.Y + y + 3)];
+						cell.Height = (char)(CellHeight - (char)west - 1);
+						cell.Ramp = 1;
+						cell.ITType = (IsometricTileType)((unsigned)IsometricTileTypeClass::RampStart);
+						cell.SubTile = 0;
 					}
 				}
-				for(int south=0;south<4;++south) { // RA2: as above
-					for(int x=0;x<second.X-first.X+south-3;++x) { // RA2: as above
-						CellClass &cell=Map[Cell(second.X-x-3,second.Y+south)]; // RA2: as above
-						cell.Height=(char)(CellHeight-(char)south-1); // RA2: as above
-						cell.Ramp=4; // RA2: as above
-						cell.ITType=(IsometricTileType)((unsigned)IsometricTileTypeClass::RampStart + 3); // RA2: as above
-						cell.SubTile=0; // RA2: as above
+				for (int south = 0; south < 4; ++south) {
+					for (int x = 0; x < second.X - first.X + south - 3; ++x) {
+						CellClass & cell = Map[Cell(second.X - x - 3, second.Y + south)];
+						cell.Height = (char)(CellHeight - (char)south - 1);
+						cell.Ramp = 4;
+						cell.ITType = (IsometricTileType)((unsigned)IsometricTileTypeClass::RampStart + 3);
+						cell.SubTile = 0;
 					}
 				}
 				return(true);
@@ -2787,10 +2780,10 @@ void MapRegionClass::Flatten_Area(Rect const & rect)
 	for (int y = rect.Y; y < rect.Y + rect.Height; y++) {
 		for (int x = rect.X; x < rect.X + rect.Width; x++) {
 			Cell const position(x, y); // RA2: a const Cell named position, and the cell reference in a local, as RA2's form; needed for the inlined copies in the ramp builders
-			if (My_In_Radar(position)) { // RA2: as above
-				CellData::Set_Region(position, ID); // RA2: as above
-				CellClass & target = Map[position]; // RA2: as above
-				target.Height = CellHeight; // RA2: as above
+			if (My_In_Radar(position)) {
+				CellData::Set_Region(position, ID);
+				CellClass & target = Map[position];
+				target.Height = CellHeight;
 			}
 		}
 	}
@@ -2820,6 +2813,15 @@ MapRegionClass * MapRegionClass::From_ID(int id)
 /// <summary>
 /// RA2: is the cell within the playable diamond? (My_In_Radar with RA2's register use)
 /// </summary>
+/*
+**	RA2: the cell moved by (dx, dy); Create_Region_From_Cell's two side cells come through it (ra2-decomp 9f31c93,
+**	which took it from main's reconstruction).
+*/
+static inline Cell Offset_Cell(Cell const & cell, int dx, int dy)
+{
+	return Cell(cell.X + dx, cell.Y + dy);
+}
+
 static inline bool In_Zone_Map_Bounds(Cell const & cell)
 {
 	int x = cell.X;
@@ -2843,33 +2845,33 @@ static inline bool In_Zone_Map_Bounds(Cell const & cell)
 /// <param name="zone">The zone the region is to cover.</param>
 void MapRegionClass::Create_Zone_Region(CellClass * cptr, MZoneType mzone, int zone) // RA2: not in TibSun, at 0x575D20
 {
-	MapRegionClass * region = new MapRegionClass(cptr->CellID); // RA2
-	int region_id = region->ID; // RA2
+	MapRegionClass * region = new MapRegionClass(cptr->CellID);
+	int region_id = region->ID;
 
-	DynamicVectorClass<Cell> cells; // RA2
-	cells.Set_Growth_Step(20000); // RA2
-	CellData::Set_Spread(cptr->CellID, region_id); // RA2
-	cells.Add(cptr->CellID); // RA2
+	DynamicVectorClass<Cell> cells;
+	cells.Set_Growth_Step(20000);
+	CellData::Set_Spread(cptr->CellID, region_id);
+	cells.Add(cptr->CellID);
 
-	while (cells.Count() > 0) { // RA2
-		Cell cell = cells[cells.Count() - 1]; // RA2
-		cells.Delete_Index(cells.Count() - 1); // RA2
-		MapRegionClass::Get_Cell_Data(cell).RegionID = region_id; // RA2
-		region->CellCount++; // RA2
-		region->Cells.Add(cell); // RA2
+	while (cells.Count() > 0) {
+		Cell cell = cells[cells.Count() - 1];
+		cells.Delete_Index(cells.Count() - 1);
+		MapRegionClass::Get_Cell_Data(cell).RegionID = region_id;
+		region->CellCount++;
+		region->Cells.Add(cell);
 
-		for (int i = FACING_FIRST; i < FACING_COUNT; i++) { // RA2
-			CellClass & other = Map[AdjacentCell[i & 7] + cell]; // RA2
-			Cell const & ncell = other.CellID; // RA2
-			if (In_Zone_Map_Bounds(other.CellID)) { // RA2
-				CellData & ndata = MapRegionClass::Get_Cell_Data(ncell); // RA2
-				if (other.Passability == PASSABLE_LAND && Map.Get_Cell_Zone(ncell, mzone, false) == zone && ndata.SpreadID == -1) { // RA2
-					ndata.SpreadID = region_id; // RA2
-					cells.Add(ncell); // RA2
-				} // RA2
-			} // RA2
-		} // RA2
-	} // RA2
+		for (int i = FACING_FIRST; i < FACING_COUNT; i++) {
+			CellClass & other = Map[AdjacentCell[i & 7] + cell];
+			Cell const & ncell = other.CellID;
+			if (In_Zone_Map_Bounds(other.CellID)) {
+				CellData & ndata = MapRegionClass::Get_Cell_Data(ncell);
+				if (other.Passability == PASSABLE_LAND && Map.Get_Cell_Zone(ncell, mzone, false) == zone && ndata.SpreadID == -1) {
+					ndata.SpreadID = region_id;
+					cells.Add(ncell);
+				}
+			}
+		}
+	}
 }
 
 
@@ -2881,16 +2883,16 @@ void MapRegionClass::Create_Zone_Region(CellClass * cptr, MZoneType mzone, int z
 /// <param name="zone">The zone the regions are to cover.</param>
 void MapRegionClass::Create_Zone_Regions(MZoneType mzone, int zone) // RA2: not in TibSun, at 0x576000
 {
-	Destroy_Cell_Regions(); // RA2
-	Map.Reset_Iterator(); // RA2
-	for (CellClass * cptr = Map.Iterate(); cptr != NULL; cptr = Map.Iterate()) { // RA2
-		Cell const & cell = cptr->CellID; // RA2
-		if (My_In_Radar(cptr->CellID)) { // RA2
-			if (Get_Cell_Data(cell).RegionID == -1 && cptr->Passability == PASSABLE_LAND && Map.Get_Cell_Zone(cell, mzone, false) == zone) { // RA2
-				Create_Zone_Region(cptr, mzone, zone); // RA2
-			} // RA2
-		} // RA2
-	} // RA2
+	Destroy_Cell_Regions();
+	Map.Reset_Iterator();
+	for (CellClass * cptr = Map.Iterate(); cptr != NULL; cptr = Map.Iterate()) {
+		Cell const & cell = cptr->CellID;
+		if (My_In_Radar(cptr->CellID)) {
+			if (Get_Cell_Data(cell).RegionID == -1 && cptr->Passability == PASSABLE_LAND && Map.Get_Cell_Zone(cell, mzone, false) == zone) {
+				Create_Zone_Region(cptr, mzone, zone);
+			}
+		}
+	}
 }
 
 
@@ -2906,48 +2908,48 @@ void MapRegionClass::Create_Zone_Regions(MZoneType mzone, int zone) // RA2: not 
 /// <param name="first_waypoint">The waypoint of this region's first start point.</param>
 void MapRegionClass::Place_Start_Points(int first_waypoint) // RA2: not in TibSun, at 0x576170
 {
-	Rect bounds = Map.LocalRect; // RA2
-	bounds.X += 4; // RA2
-	bounds.Y += 4; // RA2
-	bounds.Width -= 8; // RA2
-	bounds.Height -= 8; // RA2
-	DynamicVectorClass<Cell> cells; // RA2
+	Rect bounds = Map.LocalRect;
+	bounds.X += 4;
+	bounds.Y += 4;
+	bounds.Width -= 8;
+	bounds.Height -= 8;
+	DynamicVectorClass<Cell> cells;
 
-	unsigned int extra; // RA2
-	do { // RA2
-		extra = (unsigned int)RMGRandom() * (3.0 / 4294967295.0); // RA2
-	} while (extra > 2); // RA2
-	int wanted = StartCount * 15 + extra; // RA2
+	unsigned int extra;
+	do {
+		extra = (unsigned int)RMGRandom() * (3.0 / 4294967295.0);
+	} while (extra > 2);
+	int wanted = StartCount * 15 + extra;
 
-	for (int tries = 0; cells.Count() < wanted && tries < 300; tries++) { // RA2
-		unsigned int last = Cells.Count() - 1; // RA2
-		unsigned int pick; // RA2
-		do { // RA2
-			pick = RMG_RANDOM_DOUBLE(last + 1); // RA2
-		} while (pick > last); // RA2
-		Cell cell = Cells[pick]; // RA2
-		Rect rect(cell.X - 3, cell.Y - 3, 6, 6); // RA2
-		if (MapGeneratorClass::Can_Place_Paved_Road(rect, false, false) && Map.In_Area_Radar(bounds, cell, true)) { // RA2
-			cells.Add(cell); // RA2
-		} // RA2
-	} // RA2
+	for (int tries = 0; cells.Count() < wanted && tries < 300; tries++) {
+		unsigned int last = Cells.Count() - 1;
+		unsigned int pick;
+		do {
+			pick = RMG_RANDOM_DOUBLE(last + 1);
+		} while (pick > last);
+		Cell cell = Cells[pick];
+		Rect rect(cell.X - 3, cell.Y - 3, 6, 6);
+		if (MapGeneratorClass::Can_Place_Paved_Road(rect, false, false) && Map.In_Area_Radar(bounds, cell, true)) {
+			cells.Add(cell);
+		}
+	}
 
-	DynamicVectorClass<Cell> * layout = Pick_Spread_Cells(cells); // RA2
-	if (layout == NULL) { // RA2
-		return; // RA2
-	} // RA2
+	DynamicVectorClass<Cell> * layout = Pick_Spread_Cells(cells);
+	if (layout == NULL) {
+		return;
+	}
 
-	int i; // RA2
-	for (i = 0; i < StartCount; i++) { // RA2
-		Scen->Set_Waypoint(first_waypoint + i, (*layout)[i]); // RA2
-		Map[Scen->Get_Waypoint_Cell(first_waypoint + i)].IsWaypoint = true; // RA2
-	} // RA2
-	for (i = 0; i < StartCount; i++) { // RA2
-		layout->Delete_Index(0); // RA2
-	} // RA2
+	int i;
+	for (i = 0; i < StartCount; i++) {
+		Scen->Set_Waypoint(first_waypoint + i, (*layout)[i]);
+		Map[Scen->Get_Waypoint_Cell(first_waypoint + i)].IsWaypoint = true;
+	}
+	for (i = 0; i < StartCount; i++) {
+		layout->Delete_Index(0);
+	}
 
-	delete StartCells; // RA2
-	StartCells = layout; // RA2
+	delete StartCells;
+	StartCells = layout;
 }
 
 
@@ -3041,68 +3043,68 @@ bool Generate_Starting_Points(void)
 DynamicVectorClass<Cell> * MapRegionClass::Pick_Spread_Cells(DynamicVectorClass<Cell> const & cells) // RA2: a MapRegionClass member, picking for its own start points
 {
 	double layout_fraction = (double)RandomMapGen.SeedData.TiberiumLayout; // RA2: RA2's form (sized by StartCount)
-	int start_count = StartCount; // RA2: as above
-	layout_fraction *= 0.01; // RA2: as above
+	int start_count = StartCount;
+	layout_fraction *= 0.01;
 	double max_distance = -1.0;
 	int max_cell_index = -1;
-	layout_fraction *= 12.0; // RA2: as above
-	int target_count = (int)((layout_fraction / (double)RandomMapGen.SeedData.NumPlayers + 2.0) * start_count); // RA2: as above
-	if (start_count == 0 && cells.Count() > 0) { // RA2: as above
-		target_count = cells.Count(); // RA2: as above
-	} // RA2: as above
-	if (target_count > cells.Count() || target_count == 0) { // RA2: as above
-		if (start_count == 0) { // RA2: as above
-			return(NULL); // RA2: as above
-		} // RA2: as above
-		target_count = cells.Count(); // RA2: as above
-	} // RA2: as above
+	layout_fraction *= 12.0;
+	int target_count = (int)((layout_fraction / (double)RandomMapGen.SeedData.NumPlayers + 2.0) * start_count);
+	if (start_count == 0 && cells.Count() > 0) {
+		target_count = cells.Count();
+	}
+	if (target_count > cells.Count() || target_count == 0) {
+		if (start_count == 0) {
+			return(NULL);
+		}
+		target_count = cells.Count();
+	}
 
 	DynamicVectorClass<Cell> *layout = new DynamicVectorClass<Cell>;
 
-	int i; // RA2: as above
-	for (i = 0; i < (int)((unsigned)cells.Count() - 1u); i++) { // RA2: as above
-		Cell c1 = cells[i]; // RA2: as above
-		int region1 = MapRegionClass::CellData::Get_Region(c1); // RA2: as above
-		for (int j = i + 1; j < cells.Count(); j++) { // RA2: as above
-			Cell c2 = cells[j]; // RA2: as above
-			int dx = (int)c1.X - c2.X, dy = (int)c1.Y - c2.Y; // RA2: as above
-			int region2 = MapRegionClass::CellData::Get_Region(c2); // RA2: as above
-			int square = (int)((unsigned)dx * (unsigned)dx + (unsigned)dy * (unsigned)dy); // RA2: as above
-			double score = (double)fastmath::sqrt((double)square) + (double)(region2 != region1 ? 20 : 0); // RA2: as above
+	int i;
+	for (i = 0; i < (int)((unsigned)cells.Count() - 1u); i++) {
+		Cell c1 = cells[i];
+		int region1 = MapRegionClass::CellData::Get_Region(c1);
+		for (int j = i + 1; j < cells.Count(); j++) {
+			Cell c2 = cells[j];
+			int dx = (int)c1.X - c2.X, dy = (int)c1.Y - c2.Y;
+			int region2 = MapRegionClass::CellData::Get_Region(c2);
+			int square = (int)((unsigned)dx * (unsigned)dx + (unsigned)dy * (unsigned)dy);
+			double score = (double)fastmath::sqrt((double)square) + (double)(region2 != region1 ? 20 : 0);
 
 			/*
 			 * The check against zero here is always true; the inner cursor
 			 * starts past the first cell.
 			 */
-			if (j && score > max_distance) { // RA2: as above
-				max_distance = score; // RA2: as above
-				max_cell_index = i; // RA2: as above
-			} // RA2: as above
-		} // RA2: as above
-	} // RA2: as above
+			if (j && score > max_distance) {
+				max_distance = score;
+				max_cell_index = i;
+			}
+		}
+	}
 
-	if (max_cell_index != -1) { // RA2: as above
+	if (max_cell_index != -1) {
 		layout->Add(cells[max_cell_index]);
-	} else if (cells.Count() != 0) { // RA2: as above
-		layout->Add(cells[0]); // RA2: as above
-		return(layout); // RA2: as above
-	} // RA2: as above
+	} else if (cells.Count() != 0) {
+		layout->Add(cells[0]);
+		return(layout);
+	}
 
 	while (layout->Count() < target_count) {
 		double best_score = -1.0;
 		int best_index = -1;
 
-		for (i = 0; i < cells.Count(); i++) { // RA2: as above
-			Cell c1 = cells[i]; // RA2: as above
+		for (i = 0; i < cells.Count(); i++) {
+			Cell c1 = cells[i];
 			int region1 = MapRegionClass::CellData::Get_Region(c1);
 
 			double min_score = 9999999.0;
 			for (int j = 0; j < layout->Count(); j++) {
 				Cell c2 = (*layout)[j];
-				int dx = (int)c1.X - c2.X, dy = (int)c1.Y - c2.Y; // RA2: as above
+				int dx = (int)c1.X - c2.X, dy = (int)c1.Y - c2.Y;
 				int region2 = MapRegionClass::CellData::Get_Region(c2);
-				int square = (int)((unsigned)dx * (unsigned)dx + (unsigned)dy * (unsigned)dy); // RA2: as above
-				double score = (double)fastmath::sqrt((double)square) + (double)(region2 != region1 ? 20 : 0); // RA2: as above
+				int square = (int)((unsigned)dx * (unsigned)dx + (unsigned)dy * (unsigned)dy);
+				double score = (double)fastmath::sqrt((double)square) + (double)(region2 != region1 ? 20 : 0);
 				if (score < min_score) {
 					min_score = score;
 				}
@@ -3110,7 +3112,7 @@ DynamicVectorClass<Cell> * MapRegionClass::Pick_Spread_Cells(DynamicVectorClass<
 
 			if (min_score > best_score) {
 				best_score = min_score;
-				best_index = i; // RA2: as above
+				best_index = i;
 			}
 		}
 
@@ -3184,10 +3186,10 @@ void MapRegionClass::Place_Neutral_Tech_Building(void)
 /// </summary>
 MapSeedClass::MapSeedClass(void) :
 	Biome(0), // RA2: RA2's seed settings (YR's form: map type and resources; TibSun's Firestorm settings are not in RA2's MapSeedClass)
-	MapType(1), // RA2: as above
-	Resources(1), // RA2: as above
+	MapType(1),
+	Resources(1),
 	Hills(0),
-	Time(1), // RA2: as above
+	Time(1),
 	WaterAmount(0),
 	NumPlayers(2),
 	Tiberium(0),
@@ -3198,14 +3200,14 @@ MapSeedClass::MapSeedClass(void) :
 	Height(0),
 	Accessibility(0),
 	Cliffs(0),
-	Seed(-1) // RA2: as above
+	Seed(-1)
 {
 	Extension = "SED";
-	MapDescription[0] = L'\0'; // RA2: as above
+	MapDescription[0] = L'\0';
 	Description = MapDescription;
 	if (StringTable::Is_Initialized()) { // RA2: the stock description, once there is a string table to take it from
-		Set_Default_Description(); // RA2: as above
-	} // RA2: as above
+		Set_Default_Description();
+	}
 }
 
 
@@ -3216,7 +3218,7 @@ MapSeedClass::MapSeedClass(void) :
 /// </summary>
 void MapSeedClass::Set_Default_Description(void) // RA2: not in TibSun, at 0x576FE0
 {
-	wcscpy(MapDescription, StringTable::LoadString("TXT_RANDOM_MAP_DESCRIPTION", NULL, RA2_SOURCE, 3793)); // RA2
+	wcscpy(MapDescription, StringTable::LoadString("TXT_RANDOM_MAP_DESCRIPTION", NULL, RA2_SOURCE, 3793));
 }
 
 
@@ -3237,12 +3239,12 @@ MapGeneratorClass::MapGeneratorClass(void) :
 	LocalWidth(0),
 	LocalHeight(0),
 	RMGMinimumTiberium(2500), // RA2: MapGeneratorClass at 0x577010 matches only so
-	RMGMaximumTiberium(5500), // RA2: as above
-	MaxTrees(500), // RA2: as above
-	PreviewStale(true), // RA2: as above
+	RMGMaximumTiberium(5500),
+	MaxTrees(500),
+	PreviewStale(true),
 	SeededWaterAmount(0),
-	CellHeight(4), // RA2: as above
-	PlaceWaterfall(false) // RA2: as above
+	CellHeight(4),
+	PlaceWaterfall(false)
 {
 }
 
@@ -3281,8 +3283,8 @@ static inline void Delete_Regions(void)
 MapGeneratorClass::~MapGeneratorClass(void)
 {
 	Reset_Cell_Data(); // RA2: ~MapGeneratorClass at 0x5771B0 matches only so
-	Delete_Regions(); // RA2: as above
-	MapRegionClass::TotalCount = 0; // RA2: as above
+	Delete_Regions();
+	MapRegionClass::TotalCount = 0;
 
 	if (RMGCellData != NULL) {
 		delete [] RMGCellData;
@@ -3445,11 +3447,11 @@ void Clean_Up_RMCache(void)
 void Do_Random_Map(HWND dialog, bool (*callback)())
 {
 	rc_ptr<WDTTerritory> territory; // RA2: a tour game limits the player count, found as in Fixup_WDT_Settings
-	if (Session.Type == GAME_INTERNET && Session.TournamentState == 2) { // RA2: as above
-		territory = Find_WDT_Territory(Session.TournamentTerritory); // RA2: as above
+	if (Session.Type == GAME_INTERNET && Session.TournamentState == 2) {
+		territory = Find_WDT_Territory(Session.TournamentTerritory);
 	}
-	if (territory.Get() != NULL) { // RA2: as above
-		RandomMapGen.SeedData.NumPlayers = 4; // RA2: as above
+	if (territory.Get() != NULL) {
+		RandomMapGen.SeedData.NumPlayers = 4;
 	}
 
 	char *digest = CalcRandomMapDigest(); // RA2: no IsWDT, WDTTerritory (TibSun's use does not compile against RA2's declaration)
@@ -3541,242 +3543,242 @@ namespace OwnerDraw { bool __fastcall Is_Control_Disabled(HWND control); } // RA
 /// <returns>TRUE if the message was processed, FALSE otherwise.</returns>
 BOOL CALLBACK Map_Seed_Dialog_Proc(HWND window, UINT message, WPARAM wparam, LPARAM lparam) // RA2: RA2's form (0x577BD0)
 {
-	BOOL result = OwnerDraw::Default_Dialog_Proc(window, message, wparam, lparam); // RA2: as above
-	if (result) { // RA2: as above
-		return(result); // RA2: as above
+	BOOL result = OwnerDraw::Default_Dialog_Proc(window, message, wparam, lparam);
+	if (result) {
+		return(result);
 	}
 
-	LONG * state = (LONG *)GetWindowLongA(window, DWL_USER); // RA2: as above
+	LONG * state = (LONG *)GetWindowLongA(window, DWL_USER);
 
-	switch (message) { // RA2: as above
+	switch (message) {
 
 		/*
 		 * Repaint the map preview, if one exists, and the progress screen over it.
 		 */
 		case WM_PAINT: // RA2: the preview is skipped when its frame control is disabled, and the progress screen is drawn over it
-			if (RandomMapGen.MapPreview != NULL) { // RA2: as above
-				HWND frame = GetDlgItem(window, IDC_PREVIEW_FRAME); // RA2: as above
-				if (!OwnerDraw::Is_Control_Disabled(frame)) { // RA2: as above
-					RandomMapGen.MapPreview->Blit_Preview(window); // RA2: as above
+			if (RandomMapGen.MapPreview != NULL) {
+				HWND frame = GetDlgItem(window, IDC_PREVIEW_FRAME);
+				if (!OwnerDraw::Is_Control_Disabled(frame)) {
+					RandomMapGen.MapPreview->Blit_Preview(window);
 				}
 			}
-			if (Progress.Has_Dialog()) { // RA2: as above
-				Progress.Display_Progress(Point2D(-1, -1)); // RA2: as above
+			if (Progress.Has_Dialog()) {
+				Progress.Display_Progress(Point2D(-1, -1));
 			}
-			ValidateRect(window, NULL); // RA2: as above
-			return(0); // RA2: as above
+			ValidateRect(window, NULL);
+			return(0);
 
 		/*
 		 * A change of the player count scroll bar invalidates the saved preview.
 		 */
 		case WM_HSCROLL: // RA2: the player count slider
-			if (lparam != 0 && GetDlgCtrlID((HWND)lparam) == IDC_MAPGEN_PLAYERS) { // RA2: as above
+			if (lparam != 0 && GetDlgCtrlID((HWND)lparam) == IDC_MAPGEN_PLAYERS) {
 				HWND handle = GetDlgItem(window, 0x6C5); // RA2: the generate button
-				if (handle != NULL) { // RA2: as above
-					EnableWindow(handle, false); // RA2: as above
+				if (handle != NULL) {
+					EnableWindow(handle, false);
 				}
 				handle = GetDlgItem(window, 0x6C3); // RA2: the save button
-				if (handle != NULL) { // RA2: as above
-					EnableWindow(handle, false); // RA2: as above
+				if (handle != NULL) {
+					EnableWindow(handle, false);
 				}
-				RandomMapGen.SeedData.Get_Settings(window); // RA2: as above
-				InvalidateRect(window, NULL, false); // RA2: as above
-				return(0); // RA2: as above
+				RandomMapGen.SeedData.Get_Settings(window);
+				InvalidateRect(window, NULL, false);
+				return(0);
 			}
-			break; // RA2: as above
+			break;
 
 		case WM_COMMAND:
-			switch (LOWORD(wparam)) { // RA2: as above
+			switch (LOWORD(wparam)) {
 
 				/*
 				 * Cancel the dialog.
 				 */
 				case 0x5C0: // RA2: the cancel button
 					*state = 2;
-					return(1); // RA2: as above
+					return(1);
 
 				/*
 				 * A change of any of the choices invalidates the saved preview.
 				 */
 				case IDC_MAPGEN_TIME_OF_DAY: // RA2: the choices
-				case 0x405: // RA2: as above
-				case 0x406: // RA2: as above
-				case 0x407: // RA2: as above
-				case 0x408: // RA2: as above
-					if (HIWORD(wparam) == CBN_SELCHANGE) { // RA2: as above
-						HWND handle = GetDlgItem(window, 0x6C5); // RA2: as above
-						if (handle != NULL) { // RA2: as above
-							EnableWindow(handle, false); // RA2: as above
+				case 0x405:
+				case 0x406:
+				case 0x407:
+				case 0x408:
+					if (HIWORD(wparam) == CBN_SELCHANGE) {
+						HWND handle = GetDlgItem(window, 0x6C5);
+						if (handle != NULL) {
+							EnableWindow(handle, false);
 						}
-						handle = GetDlgItem(window, 0x6C3); // RA2: as above
-						if (handle != NULL) { // RA2: as above
-							EnableWindow(handle, false); // RA2: as above
+						handle = GetDlgItem(window, 0x6C3);
+						if (handle != NULL) {
+							EnableWindow(handle, false);
 						}
-						RandomMapGen.SeedData.Get_Settings(window); // RA2: as above
-						InvalidateRect(window, NULL, false); // RA2: as above
-						return(0); // RA2: as above
+						RandomMapGen.SeedData.Get_Settings(window);
+						InvalidateRect(window, NULL, false);
+						return(0);
 					}
-					break; // RA2: as above
+					break;
 
 				/*
 				 * Build and display a preview of the current map seed.
 				 */
 				case IDC_MAPGEN_PREVIEW: // RA2: the controls are disabled while the map is made
-					MouseCursor->Hide_Mouse(); // RA2: as above
-					if (MapSeedPreviewFlag) { // RA2: as above
-						RandomMapGen.PreviewStale = true; // RA2: as above
+					MouseCursor->Hide_Mouse();
+					if (MapSeedPreviewFlag) {
+						RandomMapGen.PreviewStale = true;
 					} else {
-						RandomMapGen.PreviewStale = false; // RA2: as above
-						MapSeedPreviewFlag = true; // RA2: as above
+						RandomMapGen.PreviewStale = false;
+						MapSeedPreviewFlag = true;
 					}
-					RandomMapGen.SeedData.Get_Settings(window); // RA2: as above
-					EnableWindow(GetDlgItem(window, 0x405), false); // RA2: as above
-					EnableWindow(GetDlgItem(window, IDC_MAPGEN_TIME_OF_DAY), false); // RA2: as above
-					EnableWindow(GetDlgItem(window, 0x407), false); // RA2: as above
-					EnableWindow(GetDlgItem(window, 0x406), false); // RA2: as above
-					EnableWindow(GetDlgItem(window, 0x408), false); // RA2: as above
-					EnableWindow(GetDlgItem(window, IDC_MAPGEN_PLAYERS), false); // RA2: as above
-					EnableWindow(GetDlgItem(window, IDC_MAPGEN_SURPRISE), false); // RA2: as above
-					EnableWindow(GetDlgItem(window, IDC_MAPGEN_PREVIEW), false); // RA2: as above
-					EnableWindow(GetDlgItem(window, 0x6C2), false); // RA2: as above
-					EnableWindow(GetDlgItem(window, 0x6C3), false); // RA2: as above
-					EnableWindow(GetDlgItem(window, 0x6C4), false); // RA2: as above
-					EnableWindow(GetDlgItem(window, 0x6C5), false); // RA2: as above
-					EnableWindow(GetDlgItem(window, 0x5C0), false); // RA2: as above
+					RandomMapGen.SeedData.Get_Settings(window);
+					EnableWindow(GetDlgItem(window, 0x405), false);
+					EnableWindow(GetDlgItem(window, IDC_MAPGEN_TIME_OF_DAY), false);
+					EnableWindow(GetDlgItem(window, 0x407), false);
+					EnableWindow(GetDlgItem(window, 0x406), false);
+					EnableWindow(GetDlgItem(window, 0x408), false);
+					EnableWindow(GetDlgItem(window, IDC_MAPGEN_PLAYERS), false);
+					EnableWindow(GetDlgItem(window, IDC_MAPGEN_SURPRISE), false);
+					EnableWindow(GetDlgItem(window, IDC_MAPGEN_PREVIEW), false);
+					EnableWindow(GetDlgItem(window, 0x6C2), false);
+					EnableWindow(GetDlgItem(window, 0x6C3), false);
+					EnableWindow(GetDlgItem(window, 0x6C4), false);
+					EnableWindow(GetDlgItem(window, 0x6C5), false);
+					EnableWindow(GetDlgItem(window, 0x5C0), false);
 					wcscpy(RandomMapGen.SeedData.MapDescription, StringTable::LoadString("TXT_RANDOM_MAP_DESCRIPTION", NULL, RA2_SOURCE, 3793)); // RA2: the description is reset
-					RandomMapGen.Generate_Random_Map(true, window); // RA2: as above
-					RandomMapGen.MapPreview->Create_Preview(); // RA2: as above
-					EnableWindow(GetDlgItem(window, 0x405), true); // RA2: as above
-					EnableWindow(GetDlgItem(window, IDC_MAPGEN_TIME_OF_DAY), true); // RA2: as above
-					EnableWindow(GetDlgItem(window, 0x407), true); // RA2: as above
-					EnableWindow(GetDlgItem(window, 0x406), true); // RA2: as above
-					EnableWindow(GetDlgItem(window, 0x408), true); // RA2: as above
-					EnableWindow(GetDlgItem(window, IDC_MAPGEN_PLAYERS), true); // RA2: as above
-					EnableWindow(GetDlgItem(window, IDC_MAPGEN_SURPRISE), true); // RA2: as above
-					EnableWindow(GetDlgItem(window, IDC_MAPGEN_PREVIEW), true); // RA2: as above
-					EnableWindow(GetDlgItem(window, 0x6C2), true); // RA2: as above
-					EnableWindow(GetDlgItem(window, 0x6C3), true); // RA2: as above
-					EnableWindow(GetDlgItem(window, 0x6C4), true); // RA2: as above
-					EnableWindow(GetDlgItem(window, 0x6C5), true); // RA2: as above
-					EnableWindow(GetDlgItem(window, 0x5C0), true); // RA2: as above
-					if (RandomMapGen.MapSeeder != NULL) { // RA2: as above
-						delete RandomMapGen.MapSeeder; // RA2: as above
+					RandomMapGen.Generate_Random_Map(true, window);
+					RandomMapGen.MapPreview->Create_Preview();
+					EnableWindow(GetDlgItem(window, 0x405), true);
+					EnableWindow(GetDlgItem(window, IDC_MAPGEN_TIME_OF_DAY), true);
+					EnableWindow(GetDlgItem(window, 0x407), true);
+					EnableWindow(GetDlgItem(window, 0x406), true);
+					EnableWindow(GetDlgItem(window, 0x408), true);
+					EnableWindow(GetDlgItem(window, IDC_MAPGEN_PLAYERS), true);
+					EnableWindow(GetDlgItem(window, IDC_MAPGEN_SURPRISE), true);
+					EnableWindow(GetDlgItem(window, IDC_MAPGEN_PREVIEW), true);
+					EnableWindow(GetDlgItem(window, 0x6C2), true);
+					EnableWindow(GetDlgItem(window, 0x6C3), true);
+					EnableWindow(GetDlgItem(window, 0x6C4), true);
+					EnableWindow(GetDlgItem(window, 0x6C5), true);
+					EnableWindow(GetDlgItem(window, 0x5C0), true);
+					if (RandomMapGen.MapSeeder != NULL) {
+						delete RandomMapGen.MapSeeder;
 					}
-					RandomMapGen.MapSeeder = new MapSeedClass; // RA2: as above
-					memcpy(RandomMapGen.MapSeeder, &RandomMapGen.SeedData, sizeof(MapSeedClass)); // RA2: as above
-					MouseCursor->Show_Mouse(); // RA2: as above
-					Keyboard->Clear(); // RA2: as above
-					PostMessageA(window, WM_PAINT, 0, 0); // RA2: as above
-					return(0); // RA2: as above
+					RandomMapGen.MapSeeder = new MapSeedClass;
+					memcpy(RandomMapGen.MapSeeder, &RandomMapGen.SeedData, sizeof(MapSeedClass));
+					MouseCursor->Show_Mouse();
+					Keyboard->Clear();
+					PostMessageA(window, WM_PAINT, 0, 0);
+					return(0);
 
 				/*
 				 * Randomize the generator settings.
 				 */
 				case IDC_MAPGEN_SURPRISE: { // RA2: the settings are drawn here, not by Randomize
-					RandomMapGen.SeedData.Get_Settings(window); // RA2: as above
-					RandomMapGen.SeedData.Set_Settings(window); // RA2: as above
-					RandomMapGen.SeedData.Biome = (unsigned int)NonCriticalRandomNumber(0, 100) >= 50; // RA2: as above
-					RandomMapGen.SeedData.MapType = NonCriticalRandomNumber(1, 4); // RA2: as above
-					RandomMapGen.SeedData.Time = NonCriticalRandomNumber(0, 3); // RA2: as above
-					RandomMapGen.SeedData.Resources = NonCriticalRandomNumber(0, 3); // RA2: as above
-					RandomMapGen.SeedData.Width = NonCriticalRandomNumber(0, 3); // RA2: as above
-					RandomMapGen.SeedData.Height = RandomMapGen.SeedData.Width; // RA2: as above
-					RandomMapGen.SeedData.Randomize_For_Map_Type(RandomMapGen.SeedData.MapType); // RA2: as above
-					wcscpy(RandomMapGen.SeedData.MapDescription, StringTable::LoadString("TXT_RANDOM_MAP_DESCRIPTION", NULL, RA2_SOURCE, 3793)); // RA2: as above
-					RandomMapGen.SeedData.Seed = NonCriticalRandomNumber(0, 65535); // RA2: as above
-					RandomMapGen.SeedData.Fixup_Settings(); // RA2: as above
-					RandomMapGen.SeedData.Set_Settings(window); // RA2: as above
+					RandomMapGen.SeedData.Get_Settings(window);
+					RandomMapGen.SeedData.Set_Settings(window);
+					RandomMapGen.SeedData.Biome = (unsigned int)NonCriticalRandomNumber(0, 100) >= 50;
+					RandomMapGen.SeedData.MapType = NonCriticalRandomNumber(1, 4);
+					RandomMapGen.SeedData.Time = NonCriticalRandomNumber(0, 3);
+					RandomMapGen.SeedData.Resources = NonCriticalRandomNumber(0, 3);
+					RandomMapGen.SeedData.Width = NonCriticalRandomNumber(0, 3);
+					RandomMapGen.SeedData.Height = RandomMapGen.SeedData.Width;
+					RandomMapGen.SeedData.Randomize_For_Map_Type(RandomMapGen.SeedData.MapType);
+					wcscpy(RandomMapGen.SeedData.MapDescription, StringTable::LoadString("TXT_RANDOM_MAP_DESCRIPTION", NULL, RA2_SOURCE, 3793));
+					RandomMapGen.SeedData.Seed = NonCriticalRandomNumber(0, 65535);
+					RandomMapGen.SeedData.Fixup_Settings();
+					RandomMapGen.SeedData.Set_Settings(window);
 					delete RandomMapGen.MapPreview; // RA2: the old preview is dropped
-					RandomMapGen.MapPreview = NULL; // RA2: as above
-					HWND handle = GetDlgItem(window, 0x6C5); // RA2: as above
-					if (handle != NULL) { // RA2: as above
-						EnableWindow(handle, false); // RA2: as above
+					RandomMapGen.MapPreview = NULL;
+					HWND handle = GetDlgItem(window, 0x6C5);
+					if (handle != NULL) {
+						EnableWindow(handle, false);
 					}
-					handle = GetDlgItem(window, 0x6C3); // RA2: as above
-					if (handle != NULL) { // RA2: as above
-						EnableWindow(handle, false); // RA2: as above
+					handle = GetDlgItem(window, 0x6C3);
+					if (handle != NULL) {
+						EnableWindow(handle, false);
 					}
-					InvalidateRect(window, NULL, false); // RA2: as above
-					return(0); // RA2: as above
+					InvalidateRect(window, NULL, false);
+					return(0);
 				}
 
 				/*
 				 * Save the current map seed.
 				 */
 				case 0x6C3: { // RA2: the save button
-					RandomMapGen.SeedData.Get_Settings(window); // RA2: as above
-					RandomMapGen.SeedData.LoadOptionsClass::Save(RandomMapGen.SeedData.MapDescription); // RA2: as above
+					RandomMapGen.SeedData.Get_Settings(window);
+					RandomMapGen.SeedData.LoadOptionsClass::Save(RandomMapGen.SeedData.MapDescription);
 
-					bool enable = RandomMapGen.SeedData.Files_Present(); // RA2: as above
+					bool enable = RandomMapGen.SeedData.Files_Present();
 					HWND handle = GetDlgItem(window, 0x6C2); // RA2: the load button
-					if (handle != NULL) { // RA2: as above
-						EnableWindow(handle, enable); // RA2: as above
+					if (handle != NULL) {
+						EnableWindow(handle, enable);
 					}
 					handle = GetDlgItem(window, 0x6C4); // RA2: the delete button
-					if (handle == NULL) { // RA2: as above
-						return(0); // RA2: as above
+					if (handle == NULL) {
+						return(0);
 					}
-					EnableWindow(handle, enable); // RA2: as above
-					return(0); // RA2: as above
+					EnableWindow(handle, enable);
+					return(0);
 				}
 
 				/*
 				 * Load a saved map seed.
 				 */
 				case 0x6C2: { // RA2: the load button
-					RandomMapGen.SeedData.Get_Settings(window); // RA2: as above
+					RandomMapGen.SeedData.Get_Settings(window);
 					bool loaded = RandomMapGen.SeedData.Load(NULL); // RA2: MapSeedClass::Load (0x5791A0) expanded here, held in a local (TibSun asks LoadOptionsClass::Load directly)
-					if (loaded) { // RA2: as above
+					if (loaded) {
 						MapSeedPreviewFlag = false; // RA2: the next preview starts fresh
-						PostMessageA(window, WM_COMMAND, MAKEWPARAM(IDC_MAPGEN_PREVIEW, BN_CLICKED), (LPARAM)GetDlgItem(window, IDC_MAPGEN_PREVIEW)); // RA2: as above
+						PostMessageA(window, WM_COMMAND, MAKEWPARAM(IDC_MAPGEN_PREVIEW, BN_CLICKED), (LPARAM)GetDlgItem(window, IDC_MAPGEN_PREVIEW));
 					}
 					while (MouseCursor->Get_Mouse_State() != 0) { // RA2: the mouse is shown again
-						MouseCursor->Show_Mouse(); // RA2: as above
+						MouseCursor->Show_Mouse();
 					}
-					RandomMapGen.SeedData.Set_Settings(window); // RA2: as above
-					return(0); // RA2: as above
+					RandomMapGen.SeedData.Set_Settings(window);
+					return(0);
 				}
 
 				/*
 				 * Delete the saved map seed.
 				 */
 				case 0x6C4: { // RA2: the delete button
-					RandomMapGen.SeedData.Get_Settings(window); // RA2: as above
-					RandomMapGen.SeedData.LoadOptionsClass::Delete(); // RA2: as above
+					RandomMapGen.SeedData.Get_Settings(window);
+					RandomMapGen.SeedData.LoadOptionsClass::Delete();
 
-					bool enable = RandomMapGen.SeedData.Files_Present(); // RA2: as above
-					HWND handle = GetDlgItem(window, 0x6C2); // RA2: as above
-					if (handle != NULL) { // RA2: as above
-						EnableWindow(handle, enable); // RA2: as above
+					bool enable = RandomMapGen.SeedData.Files_Present();
+					HWND handle = GetDlgItem(window, 0x6C2);
+					if (handle != NULL) {
+						EnableWindow(handle, enable);
 					}
-					handle = GetDlgItem(window, 0x6C4); // RA2: as above
-					if (handle == NULL) { // RA2: as above
-						return(0); // RA2: as above
+					handle = GetDlgItem(window, 0x6C4);
+					if (handle == NULL) {
+						return(0);
 					}
-					EnableWindow(handle, enable); // RA2: as above
-					return(0); // RA2: as above
+					EnableWindow(handle, enable);
+					return(0);
 				}
 
 				/*
 				 * Generate the map and accept the dialog.
 				 */
 				case 0x6C5: // RA2: the generate button
-					RandomMapGen.SeedData.Get_Settings(window); // RA2: as above
-					if (Debug_Map) { // RA2: as above
-						RandomMapGen.Generate_Random_Map(false, window); // RA2: as above
+					RandomMapGen.SeedData.Get_Settings(window);
+					if (Debug_Map) {
+						RandomMapGen.Generate_Random_Map(false, window);
 						Scen->Set_Scenario_Name("Random Map"); // RA2: a literal
-						Write_Scenario_INI("RandMap.Map", true); // RA2: as above
+						Write_Scenario_INI("RandMap.Map", true);
 					} else {
-						if (RandomMapGen.MapPreview == NULL || RandomMapGen.MapPreview->Get_Preview_Surface() == NULL) { // RA2: as above
-							RandomMapGen.Generate_Random_Map(true, window); // RA2: as above
-							if (Debug_Map) { // RA2: as above
-								Scen->Set_Scenario_Name("Random Map"); // RA2: as above
-								Write_Scenario_INI("RandMap.Map", true); // RA2: as above
+						if (RandomMapGen.MapPreview == NULL || RandomMapGen.MapPreview->Get_Preview_Surface() == NULL) {
+							RandomMapGen.Generate_Random_Map(true, window);
+							if (Debug_Map) {
+								Scen->Set_Scenario_Name("Random Map");
+								Write_Scenario_INI("RandMap.Map", true);
 							}
 						}
 					}
 					*state = 1;
-					return(1); // RA2: as above
+					return(1);
 			}
 			break; // RA2: the other commands fall out to the bottom
 
@@ -3785,40 +3787,40 @@ BOOL CALLBACK Map_Seed_Dialog_Proc(HWND window, UINT message, WPARAM wparam, LPA
 		 */
 		case OD_SUBCLASSED: { // RA2: RA2's own message to set the dialog up (WM_USER + 0x97)
 			MapSeedSelection = -1; // RA2: a file scope variable at 0x7E0ADC
-			HWND handle = GetDlgItem(window, IDC_MAPGEN_PREVIEW); // RA2: as above
-			if (Debug_Map) { // RA2: as above
-				EnableWindow(handle, false); // RA2: as above
+			HWND handle = GetDlgItem(window, IDC_MAPGEN_PREVIEW);
+			if (Debug_Map) {
+				EnableWindow(handle, false);
 			} else {
-				EnableWindow(handle, true); // RA2: as above
+				EnableWindow(handle, true);
 			}
-			if (RandomMapGen.SeedData.Seed == -1) { // RA2: as above
+			if (RandomMapGen.SeedData.Seed == -1) {
 				RandomMapGen.SeedData.Seed = Scen->RandomNumber(0, 65535); // RA2: the scenario's own generator
-				RandomMapGen.PreviewStale = true; // RA2: as above
+				RandomMapGen.PreviewStale = true;
 			}
 			MapSeedPreviewFlag = true; // RA2: a file scope variable at 0x7E0AE0
-			RandomMapGen.SeedData.Set_Settings(window); // RA2: as above
+			RandomMapGen.SeedData.Set_Settings(window);
 
-			bool enable = RandomMapGen.SeedData.Files_Present(); // RA2: as above
-			handle = GetDlgItem(window, 0x6C2); // RA2: as above
-			if (handle != NULL) { // RA2: as above
-				EnableWindow(handle, enable); // RA2: as above
+			bool enable = RandomMapGen.SeedData.Files_Present();
+			handle = GetDlgItem(window, 0x6C2);
+			if (handle != NULL) {
+				EnableWindow(handle, enable);
 			}
-			handle = GetDlgItem(window, 0x6C4); // RA2: as above
-			if (handle != NULL) { // RA2: as above
-				EnableWindow(handle, enable); // RA2: as above
+			handle = GetDlgItem(window, 0x6C4);
+			if (handle != NULL) {
+				EnableWindow(handle, enable);
 			}
-			handle = GetDlgItem(window, 0x6C5); // RA2: as above
-			if (handle != NULL) { // RA2: as above
-				EnableWindow(handle, false); // RA2: as above
+			handle = GetDlgItem(window, 0x6C5);
+			if (handle != NULL) {
+				EnableWindow(handle, false);
 			}
-			handle = GetDlgItem(window, 0x6C3); // RA2: as above
-			if (handle != NULL) { // RA2: as above
-				EnableWindow(handle, false); // RA2: as above
+			handle = GetDlgItem(window, 0x6C3);
+			if (handle != NULL) {
+				EnableWindow(handle, false);
 			}
-			return(0); // RA2: as above
+			return(0);
 		}
 	}
-	return(0); // RA2: as above
+	return(0);
 }
 
 
@@ -3834,60 +3836,60 @@ BOOL CALLBACK Map_Seed_Dialog_Proc(HWND window, UINT message, WPARAM wparam, LPA
 void MapSeedClass::Get_Settings(HWND dialog)
 {
 	HWND handle; // RA2: RA2's dialog controls - map type, resources, a stale preview (YR's form; TibSun's does not compile against RA2's declaration)
-	int old; // RA2: as above
+	int old;
 
-	old = MapType; // RA2: as above
-	handle = GetDlgItem(dialog, 0x405); // RA2: as above
-	MapType = ComboBox_GetItemData(handle, ComboBox_GetCurSel(handle)); // RA2: as above
-	if (old != MapType) { // RA2: as above
-		RandomMapGen.PreviewStale = true; // RA2: as above
+	old = MapType;
+	handle = GetDlgItem(dialog, 0x405);
+	MapType = ComboBox_GetItemData(handle, ComboBox_GetCurSel(handle));
+	if (old != MapType) {
+		RandomMapGen.PreviewStale = true;
 	}
 
-	old = Biome; // RA2: as above
-	handle = GetDlgItem(dialog, 0x407); // RA2: as above
+	old = Biome;
+	handle = GetDlgItem(dialog, 0x407);
 	Biome = ComboBox_GetItemData(handle, ComboBox_GetCurSel(handle));
-	if (old != Biome) { // RA2: as above
-		RandomMapGen.PreviewStale = true; // RA2: as above
+	if (old != Biome) {
+		RandomMapGen.PreviewStale = true;
 	}
 
-	old = Resources; // RA2: as above
-	handle = GetDlgItem(dialog, 0x408); // RA2: as above
-	Resources = ComboBox_GetItemData(handle, ComboBox_GetCurSel(handle)); // RA2: as above
-	if (old != Resources) { // RA2: as above
-		RandomMapGen.PreviewStale = true; // RA2: as above
+	old = Resources;
+	handle = GetDlgItem(dialog, 0x408);
+	Resources = ComboBox_GetItemData(handle, ComboBox_GetCurSel(handle));
+	if (old != Resources) {
+		RandomMapGen.PreviewStale = true;
 	}
 
-	old = Time; // RA2: as above
-	handle = GetDlgItem(dialog, 0x3EA); // RA2: as above
-	Time = ComboBox_GetItemData(handle, ComboBox_GetCurSel(handle)); // RA2: as above
-	if (old != Time) { // RA2: as above
-		RandomMapGen.PreviewStale = true; // RA2: as above
+	old = Time;
+	handle = GetDlgItem(dialog, 0x3EA);
+	Time = ComboBox_GetItemData(handle, ComboBox_GetCurSel(handle));
+	if (old != Time) {
+		RandomMapGen.PreviewStale = true;
 	}
 
-	old = Width; // RA2: as above
-	handle = GetDlgItem(dialog, 0x406); // RA2: as above
-	Height = Width = ComboBox_GetItemData(handle, ComboBox_GetCurSel(handle)); // RA2: as above
-	if (old != Width) { // RA2: as above
-		RandomMapGen.PreviewStale = true; // RA2: as above
+	old = Width;
+	handle = GetDlgItem(dialog, 0x406);
+	Height = Width = ComboBox_GetItemData(handle, ComboBox_GetCurSel(handle));
+	if (old != Width) {
+		RandomMapGen.PreviewStale = true;
 	}
 
-	int old_players = NumPlayers; // RA2: as above
-	handle = GetDlgItem(dialog, 0x3EB); // RA2: as above
-	NumPlayers = SendMessageA(handle, WM_USER, 0, 0); // RA2: as above
-	if (old_players != NumPlayers) { // RA2: as above
-		RandomMapGen.PreviewStale = true; // RA2: as above
-	} else if (!RandomMapGen.PreviewStale) { // RA2: as above
-		goto done; // RA2: as above
+	int old_players = NumPlayers;
+	handle = GetDlgItem(dialog, 0x3EB);
+	NumPlayers = SendMessageA(handle, WM_USER, 0, 0);
+	if (old_players != NumPlayers) {
+		RandomMapGen.PreviewStale = true;
+	} else if (!RandomMapGen.PreviewStale) {
+		goto done;
 	}
 
 	Randomize_For_Map_Type(MapType); // RA2: redraws the terrain settings for the map type
-	if (RandomMapGen.MapPreview != NULL) { // RA2: as above
-		delete RandomMapGen.MapPreview; // RA2: as above
+	if (RandomMapGen.MapPreview != NULL) {
+		delete RandomMapGen.MapPreview;
 	}
-	RandomMapGen.MapPreview = NULL; // RA2: as above
-	RandomMapGen.PreviewStale = false; // RA2: as above
+	RandomMapGen.MapPreview = NULL;
+	RandomMapGen.PreviewStale = false;
 
-done: // RA2: as above
+done:
 	Fixup_Settings();
 }
 
@@ -3895,20 +3897,20 @@ done: // RA2: as above
 /*
 ** RA2: the string table names of the map generator dialog's choices.
 */
-static char const * _map_type_names[5] = {"TXT_MAP_ARCHIPELAGO", "TXT_MAP_CONTINENT", "TXT_MAP_TEAM_CONTINENTS", "TXT_MAP_INLAND", "TXT_MAP_MOUNTAINOUS"}; // RA2
-static char const * _resource_names[4] = {"TXT_RESOURCE_LOW", "TXT_RESOURCE_MODERATE", "TXT_RESOURCE_HIGH", "TXT_RESOURCE_EXTREME"}; // RA2
+static char const * _map_type_names[5] = { "TXT_MAP_ARCHIPELAGO", "TXT_MAP_CONTINENT", "TXT_MAP_TEAM_CONTINENTS", "TXT_MAP_INLAND", "TXT_MAP_MOUNTAINOUS" };
+static char const * _resource_names[4] = { "TXT_RESOURCE_LOW", "TXT_RESOURCE_MODERATE", "TXT_RESOURCE_HIGH", "TXT_RESOURCE_EXTREME" };
 static char const * _theater_names[2] = { "TXT_THEATER_TEMPERATE", "TXT_THEATER_SNOW" }; // RA2: no code reads it
-static char const * _time_names[4] = {"TXT_TIME_MORNING", "TXT_TIME_AFTERNOON", "TXT_TIME_DUSK", "TXT_TIME_NIGHT"}; // RA2
-static char const * _map_size_names[4] = {"TXT_MAPSIZE_SMALL", "TXT_MAPSIZE_MEDIUM", "TXT_MAPSIZE_LARGE", "TXT_MAPSIZE_VERY_LARGE"}; // RA2
+static char const * _time_names[4] = { "TXT_TIME_MORNING", "TXT_TIME_AFTERNOON", "TXT_TIME_DUSK", "TXT_TIME_NIGHT" };
+static char const * _map_size_names[4] = { "TXT_MAPSIZE_SMALL", "TXT_MAPSIZE_MEDIUM", "TXT_MAPSIZE_LARGE", "TXT_MAPSIZE_VERY_LARGE" };
 
 /*
 ** RA2: the messages RA2's own combo box, edit and spinner controls take (wide text).
 */
-#define CB_FINDSTRING_WIDE	(WM_USER + 0xBE) // RA2
-#define CB_ADDSTRING_WIDE	(WM_USER + 0xC2) // RA2
-#define WM_SETTEXT_WIDE		(WM_USER + 0xB4) // RA2
-#define UDM_SETPOS_RA2		(WM_USER + 5) // RA2
-#define UDM_SETRANGE_RA2	(WM_USER + 6) // RA2
+#define CB_FINDSTRING_WIDE (WM_USER + 0xBE)
+#define CB_ADDSTRING_WIDE (WM_USER + 0xC2)
+#define WM_SETTEXT_WIDE (WM_USER + 0xB4)
+#define UDM_SETPOS_RA2 (WM_USER + 5)
+#define UDM_SETRANGE_RA2 (WM_USER + 6)
 
 
 /// <summary>
@@ -3929,68 +3931,68 @@ void MapSeedClass::Set_Settings(HWND dialog)
 	LRESULT item;
 	int i;
 
-	handle = GetDlgItem(dialog, IDC_MAPGEN_TIME_OF_DAY); // RA2: as above
+	handle = GetDlgItem(dialog, IDC_MAPGEN_TIME_OF_DAY);
 	while (SendMessageA(handle, CB_GETCOUNT, 0, 0) > 0) {
 		SendMessageA(handle, CB_DELETESTRING, 0, 0);
 	}
-	for (i = 0; i < 4; i++) { // RA2: as above
-		item = SendMessageA(handle, CB_ADDSTRING_WIDE, 0, (LPARAM)StringTable::LoadString(_time_names[i], NULL, RA2_SOURCE, 4727)); // RA2: as above
+	for (i = 0; i < 4; i++) {
+		item = SendMessageA(handle, CB_ADDSTRING_WIDE, 0, (LPARAM)StringTable::LoadString(_time_names[i], NULL, RA2_SOURCE, 4727));
 		SendMessageA(handle, CB_SETITEMDATA, item, i);
 	}
-	item = SendMessageA(handle, CB_FINDSTRING_WIDE, 0, (LPARAM)StringTable::LoadString(_time_names[Time], NULL, RA2_SOURCE, 4731)); // RA2: as above
+	item = SendMessageA(handle, CB_FINDSTRING_WIDE, 0, (LPARAM)StringTable::LoadString(_time_names[Time], NULL, RA2_SOURCE, 4731));
 	SendMessageA(handle, CB_SETCURSEL, item, 0);
 
-	handle = GetDlgItem(dialog, 0x406); // RA2: as above
+	handle = GetDlgItem(dialog, 0x406);
 	while (SendMessageA(handle, CB_GETCOUNT, 0, 0) > 0) {
 		SendMessageA(handle, CB_DELETESTRING, 0, 0);
 	}
-	for (i = 0; i < 4; i++) { // RA2: as above
-		item = SendMessageA(handle, CB_ADDSTRING_WIDE, 0, (LPARAM)StringTable::LoadString(_map_size_names[i], NULL, RA2_SOURCE, 4742)); // RA2: as above
+	for (i = 0; i < 4; i++) {
+		item = SendMessageA(handle, CB_ADDSTRING_WIDE, 0, (LPARAM)StringTable::LoadString(_map_size_names[i], NULL, RA2_SOURCE, 4742));
 		SendMessageA(handle, CB_SETITEMDATA, item, i);
 	}
-	item = SendMessageA(handle, CB_FINDSTRING_WIDE, 0, (LPARAM)StringTable::LoadString(_map_size_names[Width], NULL, RA2_SOURCE, 4746)); // RA2: as above
+	item = SendMessageA(handle, CB_FINDSTRING_WIDE, 0, (LPARAM)StringTable::LoadString(_map_size_names[Width], NULL, RA2_SOURCE, 4746));
 	SendMessageA(handle, CB_SETCURSEL, item, 0);
 
-	handle = GetDlgItem(dialog, 0x405); // RA2: as above
+	handle = GetDlgItem(dialog, 0x405);
 	while (SendMessageA(handle, CB_GETCOUNT, 0, 0) > 0) {
 		SendMessageA(handle, CB_DELETESTRING, 0, 0);
 	}
-	for (i = 1; i < 5; i++) { // RA2: as above
-		item = SendMessageA(handle, CB_ADDSTRING_WIDE, 0, (LPARAM)StringTable::LoadString(_map_type_names[i], NULL, RA2_SOURCE, 4758)); // RA2: as above
+	for (i = 1; i < 5; i++) {
+		item = SendMessageA(handle, CB_ADDSTRING_WIDE, 0, (LPARAM)StringTable::LoadString(_map_type_names[i], NULL, RA2_SOURCE, 4758));
 		SendMessageA(handle, CB_SETITEMDATA, item, i);
 	}
-	item = SendMessageA(handle, CB_FINDSTRING_WIDE, 0, (LPARAM)StringTable::LoadString(_map_type_names[MapType], NULL, RA2_SOURCE, 4762)); // RA2: as above
+	item = SendMessageA(handle, CB_FINDSTRING_WIDE, 0, (LPARAM)StringTable::LoadString(_map_type_names[MapType], NULL, RA2_SOURCE, 4762));
 	SendMessageA(handle, CB_SETCURSEL, item, 0);
 
-	handle = GetDlgItem(dialog, 0x407); // RA2: as above
+	handle = GetDlgItem(dialog, 0x407);
 	while (SendMessageA(handle, CB_GETCOUNT, 0, 0) > 0) {
 		SendMessageA(handle, CB_DELETESTRING, 0, 0);
 	}
-	for (i = 0; i < 2; i++) { // RA2: as above
-		item = SendMessageA(handle, CB_ADDSTRING_WIDE, 0, (LPARAM)StringTable::LoadString(Theaters[i].UIName, NULL, RA2_SOURCE, 4774)); // RA2: as above
+	for (i = 0; i < 2; i++) {
+		item = SendMessageA(handle, CB_ADDSTRING_WIDE, 0, (LPARAM)StringTable::LoadString(Theaters[i].UIName, NULL, RA2_SOURCE, 4774));
 		SendMessageA(handle, CB_SETITEMDATA, item, i);
 	}
-	item = SendMessageA(handle, CB_FINDSTRING_WIDE, 0, (LPARAM)StringTable::LoadString(Theaters[Biome].UIName, NULL, RA2_SOURCE, 4778)); // RA2: as above
+	item = SendMessageA(handle, CB_FINDSTRING_WIDE, 0, (LPARAM)StringTable::LoadString(Theaters[Biome].UIName, NULL, RA2_SOURCE, 4778));
 	SendMessageA(handle, CB_SETCURSEL, item, 0);
 
-	handle = GetDlgItem(dialog, 0x408); // RA2: as above
+	handle = GetDlgItem(dialog, 0x408);
 	while (SendMessageA(handle, CB_GETCOUNT, 0, 0) > 0) {
 		SendMessageA(handle, CB_DELETESTRING, 0, 0);
 	}
-	for (i = 0; i < 4; i++) { // RA2: as above
-		item = SendMessageA(handle, CB_ADDSTRING_WIDE, 0, (LPARAM)StringTable::LoadString(_resource_names[i], NULL, RA2_SOURCE, 4789)); // RA2: as above
+	for (i = 0; i < 4; i++) {
+		item = SendMessageA(handle, CB_ADDSTRING_WIDE, 0, (LPARAM)StringTable::LoadString(_resource_names[i], NULL, RA2_SOURCE, 4789));
 		SendMessageA(handle, CB_SETITEMDATA, item, i);
 	}
-	item = SendMessageA(handle, CB_FINDSTRING_WIDE, 0, (LPARAM)StringTable::LoadString(_resource_names[Resources], NULL, RA2_SOURCE, 4793)); // RA2: as above
+	item = SendMessageA(handle, CB_FINDSTRING_WIDE, 0, (LPARAM)StringTable::LoadString(_resource_names[Resources], NULL, RA2_SOURCE, 4793));
 	SendMessageA(handle, CB_SETCURSEL, item, 0);
 
 	handle = GetDlgItem(dialog, IDC_MAPGEN_DIMENSION_EDIT);
-	sprintf(_seed_text, "%d", Seed); // RA2: as above
-	SendMessageA(handle, WM_SETTEXT_WIDE, 0, (LPARAM)_seed_text); // RA2: as above
+	sprintf(_seed_text, "%d", Seed);
+	SendMessageA(handle, WM_SETTEXT_WIDE, 0, (LPARAM)_seed_text);
 
 	handle = GetDlgItem(dialog, 0x3EB); // RA2: as above; the player count spinner
-	SendMessageA(handle, UDM_SETRANGE_RA2, 1, MAKELONG(2, MAX_PLAYERS)); // RA2: as above
-	SendMessageA(handle, UDM_SETPOS_RA2, 1, NumPlayers); // RA2: as above
+	SendMessageA(handle, UDM_SETRANGE_RA2, 1, MAKELONG(2, MAX_PLAYERS));
+	SendMessageA(handle, UDM_SETPOS_RA2, 1, NumPlayers);
 }
 
 
@@ -4001,31 +4003,31 @@ void MapSeedClass::Set_Settings(HWND dialog)
 ** RA2: the ranges Randomize_For_Map_Type draws each setting from, indexed by MapType (the first
 ** entry is the unused map type 0). The urban and accessibility minimums are all zero.
 */
-static int _region_size_min[5] = {50, 0, 35, 0, 0}; // RA2
-static int _region_size_max[5] = {100, 100, 100, 100, 50}; // RA2
-static int _water_min[5] = {75, 0, 50, 0, 0}; // RA2
-static int _water_max[5] = {100, 25, 100, 100, 100}; // RA2
-static int _access_min[5] = {0, 0, 0, 0, 0}; // RA2
-static int _access_max[5] = {100, 100, 100, 100, 20}; // RA2
-static int _urban_min[5] = {0, 0, 0, 0, 0}; // RA2
-static int _urban_max[5] = {50, 100, 100, 100, 0}; // RA2
-static int _rugged_min[5] = {20, 20, 20, 20, 20}; // RA2
-static int _rugged_max[5] = {100, 100, 100, 100, 100}; // RA2
+static int _region_size_min[5] = { 50, 0, 35, 0, 0 };
+static int _region_size_max[5] = { 100, 100, 100, 100, 50 };
+static int _water_min[5] = { 75, 0, 50, 0, 0 };
+static int _water_max[5] = { 100, 25, 100, 100, 100 };
+static int _access_min[5] = { 0, 0, 0, 0, 0 };
+static int _access_max[5] = { 100, 100, 100, 100, 20 };
+static int _urban_min[5] = { 0, 0, 0, 0, 0 };
+static int _urban_max[5] = { 50, 100, 100, 100, 0 };
+static int _rugged_min[5] = { 20, 20, 20, 20, 20 };
+static int _rugged_max[5] = { 100, 100, 100, 100, 100 };
 
 /*
 ** RA2: the vegetation ranges are read through pointers that nothing ever sets, so RA2 reads
 ** through a null pointer here (RA2 bug, kept).
 */
-static int * _vegetation_min; // RA2
-static int * _vegetation_max; // RA2
+static int * _vegetation_min;
+static int * _vegetation_max;
 
 
 /// <summary>
 /// RA2: draws a setting from its range; going through this wrapper gives RA2's register use.
 /// </summary>
-static inline int Random_Setting(int min, int max) // RA2
+static inline int Random_Setting(int min, int max)
 {
-	return(NonCriticalRandomNumber(min, max)); // RA2
+	return(NonCriticalRandomNumber(min, max));
 }
 
 
@@ -4038,30 +4040,30 @@ static inline int Random_Setting(int min, int max) // RA2
 /// <param name="map_type">The kind of map the settings are drawn for.</param>
 void MapSeedClass::Randomize_For_Map_Type(int map_type) // RA2: not in TibSun, at 0x5789F0
 {
-	WaterAmount = Random_Setting(_water_min[map_type], _water_max[map_type]); // RA2
-	Hills = Random_Setting(_rugged_min[map_type], _rugged_max[map_type]); // RA2
-	Cities = Random_Setting(_urban_min[map_type], _urban_max[map_type]); // RA2
-	Accessibility = Random_Setting(_access_min[map_type], _access_max[map_type]); // RA2
-	Cliffs = Random_Setting(_region_size_min[map_type], _region_size_max[map_type]); // RA2
-	Tiberium = Resources * 20; // RA2
-	TiberiumLayout = Random_Setting(0, 100); // RA2
-	int minimum = _vegetation_min[map_type]; // RA2
-	int maximum = _vegetation_max[map_type]; // RA2
-	if (minimum < 0) { // RA2
-		minimum = 0; // RA2
-	} else if (minimum > 100) { // RA2
-		minimum = 100; // RA2
-	} // RA2
-	if (maximum < 0) { // RA2
-		maximum = 0; // RA2
-	} else if (maximum > 100) { // RA2
-		maximum = 100; // RA2
-	} // RA2
-	if (minimum > maximum) { // RA2
-		minimum = maximum; // RA2
-	} // RA2
-	Vegetation = Random_Setting(minimum, maximum); // RA2
-	Seed = NonCriticalRandomNumber(0, 65535); // RA2
+	WaterAmount = Random_Setting(_water_min[map_type], _water_max[map_type]);
+	Hills = Random_Setting(_rugged_min[map_type], _rugged_max[map_type]);
+	Cities = Random_Setting(_urban_min[map_type], _urban_max[map_type]);
+	Accessibility = Random_Setting(_access_min[map_type], _access_max[map_type]);
+	Cliffs = Random_Setting(_region_size_min[map_type], _region_size_max[map_type]);
+	Tiberium = Resources * 20;
+	TiberiumLayout = Random_Setting(0, 100);
+	int minimum = _vegetation_min[map_type];
+	int maximum = _vegetation_max[map_type];
+	if (minimum < 0) {
+		minimum = 0;
+	} else if (minimum > 100) {
+		minimum = 100;
+	}
+	if (maximum < 0) {
+		maximum = 0;
+	} else if (maximum > 100) {
+		maximum = 100;
+	}
+	if (minimum > maximum) {
+		minimum = maximum;
+	}
+	Vegetation = Random_Setting(minimum, maximum);
+	Seed = NonCriticalRandomNumber(0, 65535);
 }
 
 
@@ -4073,13 +4075,13 @@ void MapSeedClass::Randomize_For_Map_Type(int map_type) // RA2: not in TibSun, a
 void MapSeedClass::Randomize(void)
 {
 	Biome = (unsigned)NonCriticalRandomNumber(0, 100) >= 50U; // RA2: RA2's form; TibSun's does not compile against RA2's declaration
-	MapType = NonCriticalRandomNumber(1, 4); // RA2: as above
-	Time = NonCriticalRandomNumber(0, 3); // RA2: as above
-	Resources = NonCriticalRandomNumber(0, 3); // RA2: as above
-	Height = Width = NonCriticalRandomNumber(0, 3); // RA2: as above
-	Randomize_For_Map_Type(MapType); // RA2: as above
-	Set_Default_Description(); // RA2: as above
-	Seed = NonCriticalRandomNumber(0, 65535); // RA2: as above
+	MapType = NonCriticalRandomNumber(1, 4);
+	Time = NonCriticalRandomNumber(0, 3);
+	Resources = NonCriticalRandomNumber(0, 3);
+	Height = Width = NonCriticalRandomNumber(0, 3);
+	Randomize_For_Map_Type(MapType);
+	Set_Default_Description();
+	Seed = NonCriticalRandomNumber(0, 65535);
 	Fixup_Settings();
 }
 
@@ -4093,52 +4095,52 @@ void MapSeedClass::Randomize(void)
 void MapSeedClass::Fixup_WDT_Settings(void)
 {
 	rc_ptr<WDTTerritory> territory; // RA2: RA2's form (the territory comes from the tour by index)
-	if (Session.Type == GAME_INTERNET && Session.TournamentState == 2) { // RA2: as above
-		territory = Find_WDT_Territory(Session.TournamentTerritory); // RA2: as above
-	} // RA2: as above
+	if (Session.Type == GAME_INTERNET && Session.TournamentState == 2) {
+		territory = Find_WDT_Territory(Session.TournamentTerritory);
+	}
 
-	if (territory.Get() != NULL) { // RA2: as above
-		unsigned short seed = territory->Seed; // RA2: as above
-		Seed = seed == 0 ? NonCriticalRandomNumber(0, 0xFFFF) : seed; // RA2: as above
+	if (territory.Get() != NULL) {
+		unsigned short seed = territory->Seed;
+		Seed = seed == 0 ? NonCriticalRandomNumber(0, 0xFFFF) : seed;
 
-		switch (territory->Width) { // RA2: as above
-			case 0: Width = 0; break; // RA2: as above
-			case 2: Width = 2; break; // RA2: as above
-			case 3: Width = 3; break; // RA2: as above
-			case 1: Width = 1; break; // RA2: as above
-			default: Width = 1; break; // RA2: as above
-		} // RA2: as above
+		switch (territory->Width) {
+			case 0: Width = 0; break;
+			case 2: Width = 2; break;
+			case 3: Width = 3; break;
+			case 1: Width = 1; break;
+			default: Width = 1; break;
+		}
 
-		switch (territory->Height) { // RA2: as above
-			case 0: Height = 0; break; // RA2: as above
-			case 2: Height = 2; break; // RA2: as above
-			case 3: Height = 3; break; // RA2: as above
-			case 1: Height = 1; break; // RA2: as above
-			default: Height = 1; break; // RA2: as above
-		} // RA2: as above
+		switch (territory->Height) {
+			case 0: Height = 0; break;
+			case 2: Height = 2; break;
+			case 3: Height = 3; break;
+			case 1: Height = 1; break;
+			default: Height = 1; break;
+		}
 
-		NumPlayers = 4; // RA2: as above
+		NumPlayers = 4;
 
-		switch (territory->Time) { // RA2: as above
-			case 2: Time = 0; break; // RA2: as above
-			case 1: Time = 2; break; // RA2: as above
-			case 3: Time = 3; break; // RA2: as above
-			case 0: Time = 1; break; // RA2: as above
-			default: Time = 1; break; // RA2: as above
-		} // RA2: as above
+		switch (territory->Time) {
+			case 2: Time = 0; break;
+			case 1: Time = 2; break;
+			case 3: Time = 3; break;
+			case 0: Time = 1; break;
+			default: Time = 1; break;
+		}
 
-		MapType = territory->MapType; // RA2: as above
-		Biome = territory->Theater; // RA2: as above
-		Cliffs = territory->CliffsDefault; // RA2: as above
-		Accessibility = territory->AccessibilityDefault; // RA2: as above
-		Hills = territory->HillsDefault; // RA2: as above
-		WaterAmount = territory->WaterDefault; // RA2: as above
-		Tiberium = territory->TiberiumAmountDefault; // RA2: as above
-		TiberiumLayout = territory->TiberiumFieldsDefault; // RA2: as above
-		Vegetation = territory->VegetationDefault; // RA2: as above
-		Cities = territory->CitiesDefault; // RA2: as above
-		Resources = territory->Resources; // RA2: as above
-	} // RA2: as above
+		MapType = territory->MapType;
+		Biome = territory->Theater;
+		Cliffs = territory->CliffsDefault;
+		Accessibility = territory->AccessibilityDefault;
+		Hills = territory->HillsDefault;
+		WaterAmount = territory->WaterDefault;
+		Tiberium = territory->TiberiumAmountDefault;
+		TiberiumLayout = territory->TiberiumFieldsDefault;
+		Vegetation = territory->VegetationDefault;
+		Cities = territory->CitiesDefault;
+		Resources = territory->Resources;
+	}
 }
 
 
@@ -4152,19 +4154,19 @@ void MapSeedClass::Fixup_WDT_Settings(void)
 void MapSeedClass::Fixup_Settings(void)
 {
 	if (Resources >= 4) { // RA2: Fixup_Settings at 0x578D80 matches only so
-		Resources = 3; // RA2: as above
-	} else if (Resources < 0) { // RA2: as above
-		Resources = 0; // RA2: as above
+		Resources = 3;
+	} else if (Resources < 0) {
+		Resources = 0;
 	}
-	if (MapType >= 5) { // RA2: as above
-		MapType = 4; // RA2: as above
-	} else if (MapType < 0) { // RA2: as above
-		MapType = 0; // RA2: as above
+	if (MapType >= 5) {
+		MapType = 4;
+	} else if (MapType < 0) {
+		MapType = 0;
 	}
-	if (Time >= 4) { // RA2: as above
-		Time = 3; // RA2: as above
-	} else if (Time < 0) { // RA2: as above
-		Time = 0; // RA2: as above
+	if (Time >= 4) {
+		Time = 3;
+	} else if (Time < 0) {
+		Time = 0;
 	}
 	if (Hills > 100) { // RA2: Fixup_Settings at 0x578D80 has no Biome, Time
 		Hills = 100;
@@ -4176,8 +4178,8 @@ void MapSeedClass::Fixup_Settings(void)
 	} else if (WaterAmount < 0) {
 		WaterAmount = 0;
 	}
-	if (NumPlayers > 8) { // RA2: as above
-		NumPlayers = 8; // RA2: as above
+	if (NumPlayers > 8) {
+		NumPlayers = 8;
 	} else if (NumPlayers < 2) {
 		NumPlayers = 2;
 	}
@@ -4202,12 +4204,12 @@ void MapSeedClass::Fixup_Settings(void)
 		Cities = 0;
 	}
 	if (Width >= 4) {
-		Width = 3; // RA2: as above
+		Width = 3;
 	} else if (Width < 0) {
 		Width = 0;
 	}
 	if (Height >= 4) {
-		Height = 3; // RA2: as above
+		Height = 3;
 	} else if (Height < 0) {
 		Height = 0;
 	}
@@ -4323,13 +4325,13 @@ bool MapSeedClass::Load_File(const char * file_name)
 		INIClass ini;
 
 		if (ini.Load(file, false)) { // RA2: RA2's seed file keys (YR's form; TibSun's does not compile against RA2's declaration)
-			ini.Get_UnicodeString("RandomMap", "Description", StringTable::LoadString("TXT_RANDOM_MAP_DESCRIPTION", NULL, RA2_SOURCE, 5275), MapDescription, 128); // RA2: as above
+			ini.Get_UnicodeString("RandomMap", "Description", StringTable::LoadString("TXT_RANDOM_MAP_DESCRIPTION", NULL, RA2_SOURCE, 5275), MapDescription, 128);
 			Width = ini.Get_Int("RandomMap", "Width", Width);
 			Height = ini.Get_Int("RandomMap", "Height", Height);
 			NumPlayers = ini.Get_Int("RandomMap", "NumPlayers", NumPlayers);
 			Seed = ini.Get_Int("RandomMap", "Seed", Seed);
-			MapType = ini.Get_Int("RandomMap", "MapType", MapType); // RA2: as above
-			Biome = ini.Get_Int("RandomMap", "Theater", Biome); // RA2: as above
+			MapType = ini.Get_Int("RandomMap", "MapType", MapType);
+			Biome = ini.Get_Int("RandomMap", "Theater", Biome);
 			Time = ini.Get_Int("RandomMap", "Time", Time);
 			Cliffs = ini.Get_Int("RandomMap", "RegionSize", Cliffs);
 			Hills = ini.Get_Int("RandomMap", "Ruggedness", Hills);
@@ -4339,10 +4341,10 @@ bool MapSeedClass::Load_File(const char * file_name)
 			TiberiumLayout = ini.Get_Int("RandomMap", "TiberiumLayout", TiberiumLayout);
 			Vegetation = ini.Get_Int("RandomMap", "Vegetation", Vegetation);
 			Cities = ini.Get_Int("RandomMap", "UrbanPresence", Cities);
-			Resources = ini.Get_Int("RandomMap", "Resources", Resources); // RA2: as above
+			Resources = ini.Get_Int("RandomMap", "Resources", Resources);
 			return(true);
 		}
-		return(false); // RA2: as above
+		return(false);
 	}
 	return(false);
 }
@@ -4387,24 +4389,24 @@ bool MapSeedClass::Read_File(FileEntryClass * entry, WIN32_FIND_DATAA * ff)
 	wchar_t buffer[128]; // RA2: a wide description, lastmap.sed skipped (YR's form; TibSun's does not compile against RA2's declaration)
 
 	if (entry != NULL && ff != NULL) {
-		if (stricmp(ff->cFileName, RANDOM_MAP_FILE_NAME) && stricmp(ff->cFileName, "lastmap.sed")) { // RA2: as above
+		if (stricmp(ff->cFileName, RANDOM_MAP_FILE_NAME) && stricmp(ff->cFileName, "lastmap.sed")) {
 			CCFileClass file(ff->cFileName);
 			INIClass ini;
-			if (ini.Load(file, false)) { // RA2: as above
-				if (ini.Get_UnicodeString("RandomMap", "Description", L"", buffer, 128) > 0) { // RA2: as above
-					wcsncpy(entry->Descr, buffer, 128); // RA2: as above
-					entry->Old = false; // RA2: as above
-					entry->Valid = true; // RA2: as above
-				} else { // RA2: as above
-					entry->Descr[0] = L'\0'; // RA2: as above
-					entry->Old = true; // RA2: as above
-					entry->Valid = false; // RA2: as above
-				} // RA2: as above
+			if (ini.Load(file, false)) {
+				if (ini.Get_UnicodeString("RandomMap", "Description", L"", buffer, 128) > 0) {
+					wcsncpy(entry->Descr, buffer, 128);
+					entry->Old = false;
+					entry->Valid = true;
+				} else {
+					entry->Descr[0] = L'\0';
+					entry->Old = true;
+					entry->Valid = false;
+				}
 				entry->Scenario = 0;
 				entry->House = HOUSE_FIRST;
-				strncpy(entry->Filename, ff->cFileName, 32); // RA2: as above
+				strncpy(entry->Filename, ff->cFileName, 32);
 				if (!strlen(entry->Filename)) {
-					strncpy(entry->Filename, ff->cAlternateFileName, 32); // RA2: as above
+					strncpy(entry->Filename, ff->cAlternateFileName, 32);
 				}
 				entry->DateTime.dwHighDateTime = ff->ftLastWriteTime.dwHighDateTime;
 				entry->DateTime.dwLowDateTime = ff->ftLastWriteTime.dwLowDateTime;
@@ -4421,7 +4423,7 @@ bool MapSeedClass::Read_File(FileEntryClass * entry, WIN32_FIND_DATAA * ff)
 /// </summary>
 wchar_t const * MapSeedClass::Load_Caption(void) const // RA2: not in TibSun, at 0x5796F0
 {
-	return(StringTable::LoadString("GUI:LoadMapMenu", NULL, RA2_SOURCE, 5414)); // RA2
+	return(StringTable::LoadString("GUI:LoadMapMenu", NULL, RA2_SOURCE, 5414));
 }
 
 
@@ -4430,7 +4432,7 @@ wchar_t const * MapSeedClass::Load_Caption(void) const // RA2: not in TibSun, at
 /// </summary>
 wchar_t const * MapSeedClass::Save_Caption(void) const // RA2: not in TibSun, at 0x579710
 {
-	return(StringTable::LoadString("GUI:SaveMapMenu", NULL, RA2_SOURCE, 5420)); // RA2
+	return(StringTable::LoadString("GUI:SaveMapMenu", NULL, RA2_SOURCE, 5420));
 }
 
 
@@ -4439,7 +4441,7 @@ wchar_t const * MapSeedClass::Save_Caption(void) const // RA2: not in TibSun, at
 /// </summary>
 wchar_t const * MapSeedClass::Delete_Caption(void) const // RA2: not in TibSun, at 0x579730
 {
-	return(StringTable::LoadString("GUI:DeleteMapMenu", NULL, RA2_SOURCE, 5426)); // RA2
+	return(StringTable::LoadString("GUI:DeleteMapMenu", NULL, RA2_SOURCE, 5426));
 }
 
 
@@ -4448,7 +4450,7 @@ wchar_t const * MapSeedClass::Delete_Caption(void) const // RA2: not in TibSun, 
 /// </summary>
 wchar_t const * MapSeedClass::Saved_Message(void) const // RA2: not in TibSun, at 0x579750
 {
-	return(StringTable::LoadString("GUI:MapSaved", NULL, RA2_SOURCE, 5432)); // RA2
+	return(StringTable::LoadString("GUI:MapSaved", NULL, RA2_SOURCE, 5432));
 }
 
 
@@ -4539,11 +4541,11 @@ double NormalDistribution::operator ()(void)
 
 	double l = log(s);
 	double f = fastmath::sqrt((-l - l) / s); // RA2: YR's form: TibSun's matches at 0x579830 by itself, but VC6 then inlines it into Sample_Normal 0x5798D0, which in RA2 calls it
-	double r1 = f * u; // RA2: as above
-	double r2 = f * v; // RA2: as above
-	Spare = r2; // RA2: as above
+	double r1 = f * u;
+	double r2 = f * v;
+	Spare = r2;
 	HasSpare = true;
-	return(r1); // RA2: as above
+	return(r1);
 }
 
 
@@ -4613,48 +4615,45 @@ inline double Sample_Truncated_Normal_Inline(double mean, double scale, double l
 /// Reads the random map generator's settings from RMG.INI's General section: the tiberium limits, the level light
 /// and theater ambient light lists, the vegetation limits, the tree count and the buildings that light ore patches.
 /// </summary>
-#ifdef RA2_NON_MATCHING // not exact: against the image bound (1,897 B) 1,429 bytes differ (was 1,536 with its references bound; the lamp lists through a scoped const reference as ra2-decomp's rules.cpp reads its type lists; left: the temporary cleanup at four integer keys); main: best 61.57, tried once
+#ifdef RA2_NON_MATCHING // not exact: 127 of 1897 bytes differ against the image-derived bound 00579960 (was 1,429; the three scalar reads through once-used int locals and the two ore-patch lamp lists assigned directly, as RobinDigitalPro/ra2-1001-decomp 0e7d050 src/m85/src/mapgen.cpp has them: reference-borne once-used copies, flag reference-borne if it lands; 81 of 83 calls in order); main: best 61.57, tried once
 void MapGeneratorClass::Read_RMG_INI(void) // RA2: not in TibSun, at 0x579960
 {
 	static char const * section = "General"; // RA2: the section name is a static pointer (0x7E0BE4), read for every key
-	CCFileClass file("RMG.INI"); // RA2: as above
-	CCINIClass * ini = new CCINIClass; // RA2: as above
-	ini->Load(file, false); // RA2: as above
+	CCFileClass file("RMG.INI");
+	CCINIClass * ini = new CCINIClass;
+	ini->Load(file, false);
 
-	RMGLevelLightSettings.Clear(); // RA2: as above
-	RMGVegetationMinimums.Clear(); // RA2: as above
-	RMGVegetationMaximums.Clear(); // RA2: as above
-	TemperateOrePatchLamps.Clear(); // RA2: as above
-	SnowOrePatchLamps.Clear(); // RA2: as above
-	TemperateAmbientLight.Clear(); // RA2: as above
-	SnowAmbientLight.Clear(); // RA2: as above
+	RMGLevelLightSettings.Clear();
+	RMGVegetationMinimums.Clear();
+	RMGVegetationMaximums.Clear();
+	TemperateOrePatchLamps.Clear();
+	SnowOrePatchLamps.Clear();
+	TemperateAmbientLight.Clear();
+	SnowAmbientLight.Clear();
 
-	RMGMinimumTiberium = ini->Get_Int(section, "RMGMinimumTiberium", RMGMinimumTiberium); // RA2: as above
-	RMGMaximumTiberium = ini->Get_Int(section, "RMGMaximumTiberium", RMGMaximumTiberium); // RA2: as above
-	RMGLevelLightSettings = ini->Get_IntList(section, "RMGLevelLightSettings", RMGLevelLightSettings); // RA2: as above
-	RMGVegetationMinimums = ini->Get_IntList(section, "RMGVegetationMinimums", RMGVegetationMinimums); // RA2: as above
-	RMGVegetationMaximums = ini->Get_IntList(section, "RMGVegetationMaximums", RMGVegetationMaximums); // RA2: as above
-	TemperateAmbientLight = ini->Get_IntList(section, "TemperateAmbientLight", TemperateAmbientLight); // RA2: as above
-	SnowAmbientLight = ini->Get_IntList(section, "SnowAmbientLight", SnowAmbientLight); // RA2: as above
-	TemperateAmbientRed = ini->Get_IntList(section, "TemperateAmbientRed", TemperateAmbientRed); // RA2: as above
-	TemperateAmbientGreen = ini->Get_IntList(section, "TemperateAmbientGreen", TemperateAmbientGreen); // RA2: as above
-	TemperateAmbientBlue = ini->Get_IntList(section, "TemperateAmbientBlue", TemperateAmbientBlue); // RA2: as above
-	SnowAmbientRed = ini->Get_IntList(section, "SnowAmbientRed", SnowAmbientRed); // RA2: as above
-	SnowAmbientGreen = ini->Get_IntList(section, "SnowAmbientGreen", SnowAmbientGreen); // RA2: as above
-	SnowAmbientBlue = ini->Get_IntList(section, "SnowAmbientBlue", SnowAmbientBlue); // RA2: as above
-	MaxTrees = ini->Get_Int(section, "MaxTrees", MaxTrees); // RA2: as above
+	int minimum = ini->Get_Int(section, "RMGMinimumTiberium", RMGMinimumTiberium);
+	RMGMinimumTiberium = minimum;
+	int maximum = ini->Get_Int(section, "RMGMaximumTiberium", RMGMaximumTiberium);
+	RMGMaximumTiberium = maximum;
+	RMGLevelLightSettings = ini->Get_IntList(section, "RMGLevelLightSettings", RMGLevelLightSettings);
+	RMGVegetationMinimums = ini->Get_IntList(section, "RMGVegetationMinimums", RMGVegetationMinimums);
+	RMGVegetationMaximums = ini->Get_IntList(section, "RMGVegetationMaximums", RMGVegetationMaximums);
+	TemperateAmbientLight = ini->Get_IntList(section, "TemperateAmbientLight", TemperateAmbientLight);
+	SnowAmbientLight = ini->Get_IntList(section, "SnowAmbientLight", SnowAmbientLight);
+	TemperateAmbientRed = ini->Get_IntList(section, "TemperateAmbientRed", TemperateAmbientRed);
+	TemperateAmbientGreen = ini->Get_IntList(section, "TemperateAmbientGreen", TemperateAmbientGreen);
+	TemperateAmbientBlue = ini->Get_IntList(section, "TemperateAmbientBlue", TemperateAmbientBlue);
+	SnowAmbientRed = ini->Get_IntList(section, "SnowAmbientRed", SnowAmbientRed);
+	SnowAmbientGreen = ini->Get_IntList(section, "SnowAmbientGreen", SnowAmbientGreen);
+	SnowAmbientBlue = ini->Get_IntList(section, "SnowAmbientBlue", SnowAmbientBlue);
+	int trees = ini->Get_Int(section, "MaxTrees", MaxTrees);
+	MaxTrees = trees;
 
-	{
-		TypeList<BuildingTypeClass const *> const & parsed = TGet_TypeList<BuildingTypeClass>(*ini, section, "TemperateOrePatchLamps", TemperateOrePatchLamps);
-		TemperateOrePatchLamps = parsed;
-	}
-	{
-		TypeList<BuildingTypeClass const *> const & parsed = TGet_TypeList<BuildingTypeClass>(*ini, section, "SnowOrePatchLamps", SnowOrePatchLamps);
-		SnowOrePatchLamps = parsed;
-	}
+	TemperateOrePatchLamps = TGet_TypeList<BuildingTypeClass>(*ini, section, "TemperateOrePatchLamps", TemperateOrePatchLamps);
+	SnowOrePatchLamps = TGet_TypeList<BuildingTypeClass>(*ini, section, "SnowOrePatchLamps", SnowOrePatchLamps);
 
-	delete ini; // RA2: as above
-	file.Close(); // RA2: as above
+	delete ini;
+	file.Close();
 }
 #endif
 
@@ -4673,7 +4672,7 @@ void MapGeneratorClass::Read_RMG_INI(void) // RA2: not in TibSun, at 0x579960
 void MapGeneratorClass::Generate_Random_Map(bool full_init, HWND dialog) // RA2: RA2's form (0x57A0D0): no ice smoothing, veinholes, lights or urban areas; RMG.INI read here; the preview goes to the guests of a tour game
 {
 	int index; // RA2: counters shared by the loops below
-	CellClass * cptr; // RA2: as above
+	CellClass * cptr;
 
 	if (RMGCallback != NULL) RMGCallback();
 
@@ -4689,8 +4688,8 @@ void MapGeneratorClass::Generate_Random_Map(bool full_init, HWND dialog) // RA2:
 		Progress.Set_Layout(Point2D(-1, -1), NULL, false, true); // RA2: the layout is set apart
 		Progress.Display_Progress();
 		HWND control = GetDlgItem(dialog, 0x638); // RA2: a control of the dialog, shown while the map is made
-		if (control != NULL) { // RA2: as above
-			ShowWindow(control, SW_SHOW); // RA2: as above
+		if (control != NULL) {
+			ShowWindow(control, SW_SHOW);
 		}
 	}
 
@@ -4702,13 +4701,13 @@ void MapGeneratorClass::Generate_Random_Map(bool full_init, HWND dialog) // RA2:
 
 	if (RMGCallback != NULL) RMGCallback();
 
-	ScenarioInit++; // RA2: as above
+	ScenarioInit++;
 
-	if (full_init) { // RA2: as above
-		RandomMapGen.MapPreview->Create_Preview(); // RA2: as above
-		SendMessage(dialog, WM_PAINT, 0, 0); // RA2: as above
+	if (full_init) {
+		RandomMapGen.MapPreview->Create_Preview();
+		SendMessage(dialog, WM_PAINT, 0, 0);
 		if (Session.Type == GAME_INTERNET && Session.TournamentState == 2) { // RA2: a tour game sends each new preview to the guests
-			Send_Map_Preview(RandomMapGen.MapPreview); // RA2: as above
+			Send_Map_Preview(RandomMapGen.MapPreview);
 		}
 	}
 
@@ -4719,8 +4718,8 @@ void MapGeneratorClass::Generate_Random_Map(bool full_init, HWND dialog) // RA2:
 	DebugString("RMG: Seeding water\n");
 
 	if (SeedData.MapType == 3 || SeedData.MapType == 4) { // RA2: the inland and mountainous maps keep their water apart from the land
-		if (SeedData.WaterAmount != 0) { // RA2: as above
-			Seed_Water(); // RA2: as above
+		if (SeedData.WaterAmount != 0) {
+			Seed_Water();
 		}
 	} else {
 		Seed_Land(); // RA2: the other maps lay land down first
@@ -4732,11 +4731,11 @@ void MapGeneratorClass::Generate_Random_Map(bool full_init, HWND dialog) // RA2:
 
 	if (RMGCallback != NULL) RMGCallback();
 
-	if (full_init) { // RA2: as above
-		RandomMapGen.MapPreview->Create_Preview(); // RA2: as above
-		SendMessage(dialog, WM_PAINT, 0, 0); // RA2: as above
+	if (full_init) {
+		RandomMapGen.MapPreview->Create_Preview();
+		SendMessage(dialog, WM_PAINT, 0, 0);
 		if (Session.Type == GAME_INTERNET && Session.TournamentState == 2) { // RA2: a tour game sends each new preview to the guests
-			Send_Map_Preview(RandomMapGen.MapPreview); // RA2: as above
+			Send_Map_Preview(RandomMapGen.MapPreview);
 		}
 	}
 
@@ -4746,11 +4745,11 @@ void MapGeneratorClass::Generate_Random_Map(bool full_init, HWND dialog) // RA2:
 
 	if (RMGCallback != NULL) RMGCallback();
 
-	if (full_init) { // RA2: as above
-		RandomMapGen.MapPreview->Create_Preview(); // RA2: as above
-		SendMessage(dialog, WM_PAINT, 0, 0); // RA2: as above
+	if (full_init) {
+		RandomMapGen.MapPreview->Create_Preview();
+		SendMessage(dialog, WM_PAINT, 0, 0);
 		if (Session.Type == GAME_INTERNET && Session.TournamentState == 2) { // RA2: a tour game sends each new preview to the guests
-			Send_Map_Preview(RandomMapGen.MapPreview); // RA2: as above
+			Send_Map_Preview(RandomMapGen.MapPreview);
 		}
 	}
 
@@ -4766,11 +4765,11 @@ void MapGeneratorClass::Generate_Random_Map(bool full_init, HWND dialog) // RA2:
 
 	DebugString("RMG: Making regions\n");
 
-	if (Is_Mountain_Or_Inland_Map(SeedData.MapType)) { // RA2: as above
-		MapRegionClass::Make_Ice_Regions(); // RA2: as above
-		MapRegionClass::Make_Regions(); // RA2: as above
+	if (Is_Mountain_Or_Inland_Map(SeedData.MapType)) {
+		MapRegionClass::Make_Ice_Regions();
+		MapRegionClass::Make_Regions();
 		Fixup_Cliff_Corners(); // RA2: 0x5831C0
-		Map.Build_All_Cliffs(0, -1); // RA2: as above
+		Map.Build_All_Cliffs(0, -1);
 		Vary_Cliff_Runs(); // RA2: 0x582FD0
 	}
 
@@ -4778,11 +4777,11 @@ void MapGeneratorClass::Generate_Random_Map(bool full_init, HWND dialog) // RA2:
 
 	if (RMGCallback != NULL) RMGCallback();
 
-	if (full_init) { // RA2: as above
-		RandomMapGen.MapPreview->Create_Preview(); // RA2: as above
-		SendMessage(dialog, WM_PAINT, 0, 0); // RA2: as above
+	if (full_init) {
+		RandomMapGen.MapPreview->Create_Preview();
+		SendMessage(dialog, WM_PAINT, 0, 0);
 		if (Session.Type == GAME_INTERNET && Session.TournamentState == 2) { // RA2: a tour game sends each new preview to the guests
-			Send_Map_Preview(RandomMapGen.MapPreview); // RA2: as above
+			Send_Map_Preview(RandomMapGen.MapPreview);
 		}
 	}
 
@@ -4791,9 +4790,9 @@ void MapGeneratorClass::Generate_Random_Map(bool full_init, HWND dialog) // RA2:
 	Scatter_Green_Tiles(); // RA2: 0x57CF20
 
 	DebugString("RMG: Recalculating cell attributes\n");
-	Map.Reset_Iterator(); // RA2: as above
-	for (cptr = Map.Iterate(); cptr != NULL; cptr = Map.Iterate()) { // RA2: as above
-		cptr->Recalc_Attributes(-1); // RA2: as above
+	Map.Reset_Iterator();
+	for (cptr = Map.Iterate(); cptr != NULL; cptr = Map.Iterate()) {
+		cptr->Recalc_Attributes(-1);
 	}
 
 	if (RMGCallback != NULL) RMGCallback();
@@ -4811,7 +4810,7 @@ void MapGeneratorClass::Generate_Random_Map(bool full_init, HWND dialog) // RA2:
 	}
 
 	DebugString("RMG: Adding tech buildings\n"); // RA2: the neutral buildings stand in for the lights and urban areas
-	if (SeedData.MapType != 0) { // RA2: as above
+	if (SeedData.MapType != 0) {
 		Generate_Neutral_Buildings(); // RA2: 0x58AD90
 	}
 
@@ -4820,40 +4819,40 @@ void MapGeneratorClass::Generate_Random_Map(bool full_init, HWND dialog) // RA2:
 	DebugString("RMG: Creating tiberium\n");
 	Create_Tiberium();
 
-	if (RMGCallback != NULL) RMGCallback(); // RA2: as above
+	if (RMGCallback != NULL) RMGCallback();
 
 	if (RMGCellData != NULL) { // RA2: the work cells are reset for the next stage
-		int size = MapCellStride * MapCellStride; // RA2: as above
-		for (index = 0; index < size; index++) { // RA2: as above
-			RMGCellData[index].RegionID = -1; // RA2: as above
-			RMGCellData[index].SpreadID = -1; // RA2: as above
+		int size = MapCellStride * MapCellStride;
+		for (index = 0; index < size; index++) {
+			RMGCellData[index].RegionID = -1;
+			RMGCellData[index].SpreadID = -1;
 		}
 	}
 
 	for (index = MapRegionClass::MapRegions.Count() - 1; index >= 0; index--) { // RA2: the regions are dropped here as well as at the end
-		MapRegionClass * region = MapRegionClass::MapRegions[index]; // RA2: as above
-		if (region != NULL) { // RA2: as above
-			delete region; // RA2: as above
+		MapRegionClass * region = MapRegionClass::MapRegions[index];
+		if (region != NULL) {
+			delete region;
 		}
 	}
 
-	MapRegionClass::TotalCount = 0; // RA2: as above
+	MapRegionClass::TotalCount = 0;
 
 	DebugString("RMG: Recalculating cell attributes\n");
-	Map.Reset_Iterator(); // RA2: as above
-	for (cptr = Map.Iterate(); cptr != NULL; cptr = Map.Iterate()) { // RA2: as above
-		cptr->Recalc_Attributes(-1); // RA2: as above
+	Map.Reset_Iterator();
+	for (cptr = Map.Iterate(); cptr != NULL; cptr = Map.Iterate()) {
+		cptr->Recalc_Attributes(-1);
 	}
 
 	Update_Progress(80);
 
 	if (RMGCallback != NULL) RMGCallback();
 
-	if (full_init) { // RA2: as above
-		RandomMapGen.MapPreview->Create_Preview(); // RA2: as above
-		SendMessage(dialog, WM_PAINT, 0, 0); // RA2: as above
+	if (full_init) {
+		RandomMapGen.MapPreview->Create_Preview();
+		SendMessage(dialog, WM_PAINT, 0, 0);
 		if (Session.Type == GAME_INTERNET && Session.TournamentState == 2) { // RA2: a tour game sends each new preview to the guests
-			Send_Map_Preview(RandomMapGen.MapPreview); // RA2: as above
+			Send_Map_Preview(RandomMapGen.MapPreview);
 		}
 	}
 
@@ -4863,20 +4862,20 @@ void MapGeneratorClass::Generate_Random_Map(bool full_init, HWND dialog) // RA2:
 
 	if (RMGCallback != NULL) RMGCallback();
 
-	if (full_init) { // RA2: as above
-		RandomMapGen.MapPreview->Create_Preview(); // RA2: as above
-		SendMessage(dialog, WM_PAINT, 0, 0); // RA2: as above
+	if (full_init) {
+		RandomMapGen.MapPreview->Create_Preview();
+		SendMessage(dialog, WM_PAINT, 0, 0);
 		if (Session.Type == GAME_INTERNET && Session.TournamentState == 2) { // RA2: a tour game sends each new preview to the guests
-			Send_Map_Preview(RandomMapGen.MapPreview); // RA2: as above
+			Send_Map_Preview(RandomMapGen.MapPreview);
 		}
 	}
 
 	if (RMGCallback != NULL) RMGCallback();
 
 	DebugString("RMG: Recalculating cell attributes\n");
-	Map.Reset_Iterator(); // RA2: as above
-	for (cptr = Map.Iterate(); cptr != NULL; cptr = Map.Iterate()) { // RA2: as above
-		cptr->Recalc_Attributes(-1); // RA2: as above
+	Map.Reset_Iterator();
+	for (cptr = Map.Iterate(); cptr != NULL; cptr = Map.Iterate()) {
+		cptr->Recalc_Attributes(-1);
 	}
 
 	if (RMGCallback != NULL) RMGCallback();
@@ -4888,11 +4887,11 @@ void MapGeneratorClass::Generate_Random_Map(bool full_init, HWND dialog) // RA2:
 
 	if (RMGCallback != NULL) RMGCallback();
 
-	if (full_init) { // RA2: as above
-		RandomMapGen.MapPreview->Create_Preview(); // RA2: as above
-		SendMessage(dialog, WM_PAINT, 0, 0); // RA2: as above
+	if (full_init) {
+		RandomMapGen.MapPreview->Create_Preview();
+		SendMessage(dialog, WM_PAINT, 0, 0);
 		if (Session.Type == GAME_INTERNET && Session.TournamentState == 2) { // RA2: a tour game sends each new preview to the guests
-			Send_Map_Preview(RandomMapGen.MapPreview); // RA2: as above
+			Send_Map_Preview(RandomMapGen.MapPreview);
 		}
 	}
 
@@ -4914,11 +4913,11 @@ void MapGeneratorClass::Generate_Random_Map(bool full_init, HWND dialog) // RA2:
 
 	if (RMGCallback != NULL) RMGCallback();
 
-	if (full_init) { // RA2: as above
-		RandomMapGen.MapPreview->Create_Preview(); // RA2: as above
-		SendMessage(dialog, WM_PAINT, 0, 0); // RA2: as above
+	if (full_init) {
+		RandomMapGen.MapPreview->Create_Preview();
+		SendMessage(dialog, WM_PAINT, 0, 0);
 		if (Session.Type == GAME_INTERNET && Session.TournamentState == 2) { // RA2: a tour game sends each new preview to the guests
-			Send_Map_Preview(RandomMapGen.MapPreview); // RA2: as above
+			Send_Map_Preview(RandomMapGen.MapPreview);
 		}
 	}
 
@@ -4927,9 +4926,9 @@ void MapGeneratorClass::Generate_Random_Map(bool full_init, HWND dialog) // RA2:
 	if (RMGCallback != NULL) RMGCallback();
 
 	DebugString("RMG: Recalculating cell attributes\n");
-	Map.Reset_Iterator(); // RA2: as above
-	for (cptr = Map.Iterate(); cptr != NULL; cptr = Map.Iterate()) { // RA2: as above
-		cptr->Recalc_Attributes(-1); // RA2: as above
+	Map.Reset_Iterator();
+	for (cptr = Map.Iterate(); cptr != NULL; cptr = Map.Iterate()) {
+		cptr->Recalc_Attributes(-1);
 	}
 
 	if (RMGCallback != NULL) RMGCallback();
@@ -4947,8 +4946,8 @@ void MapGeneratorClass::Generate_Random_Map(bool full_init, HWND dialog) // RA2:
 		RMGCellData = NULL;
 	}
 
-	for (index = MapRegionClass::MapRegions.Count() - 1; index >= 0; index--) { // RA2: as above
-		MapRegionClass * region = MapRegionClass::MapRegions[index]; // RA2: as above
+	for (index = MapRegionClass::MapRegions.Count() - 1; index >= 0; index--) {
+		MapRegionClass * region = MapRegionClass::MapRegions[index];
 		if (region != NULL) {
 			delete region;
 		}
@@ -4965,11 +4964,11 @@ void MapGeneratorClass::Generate_Random_Map(bool full_init, HWND dialog) // RA2:
 	DebugString("RMG: Done\n");
 
 	if (show_progress) { // RA2: the progress screen is closed again
-		HWND control = GetDlgItem(dialog, 0x638); // RA2: as above
-		if (control != NULL) { // RA2: as above
-			ShowWindow(control, SW_HIDE); // RA2: as above
+		HWND control = GetDlgItem(dialog, 0x638);
+		if (control != NULL) {
+			ShowWindow(control, SW_HIDE);
 		}
-		Update_Progress(0); // RA2: as above
+		Update_Progress(0);
 		Progress.Clear_Dialog(); // RA2: 0x6203D0, the window is forgotten
 	}
 }
@@ -5020,15 +5019,15 @@ static float const _waterfall_chance = 0.25f; // RA2: ra2-decomp's file-scope co
 void MapGeneratorClass::Init_Map(bool full_init) // RA2: RA2's form (0x57AE00): the sizes, lighting and theater come from RA2's own tables, the map is rebuilt in RA2's order
 {
 	int index; // RA2: shared by the loops below
-	int size_index = SeedData.NumPlayers - 2; // RA2: as above
-	float width_frac = SeedData.Width * (1.0f / 3.0f); // RA2: as above
-	float height_frac = SeedData.Height * (1.0f / 3.0f); // RA2: as above
+	int size_index = SeedData.NumPlayers - 2;
+	float width_frac = SeedData.Width * (1.0f / 3.0f);
+	float height_frac = SeedData.Height * (1.0f / 3.0f);
 
 	Read_RMG_INI(); // RA2: RMG.INI is read first
 
 	if (SeedData.MapType != 3 && SeedData.MapType != 4) { // RA2: only the maps with land are cut down to a size
-		width_frac = width_frac < 1.2 ? width_frac : 1.2; // RA2: as above
-		height_frac = height_frac < 1.2 ? height_frac : 1.2; // RA2: as above
+		width_frac = width_frac < 1.2 ? width_frac : 1.2;
+		height_frac = height_frac < 1.2 ? height_frac : 1.2;
 	}
 
 	/*
@@ -5046,9 +5045,9 @@ void MapGeneratorClass::Init_Map(bool full_init) // RA2: RA2's form (0x57AE00): 
 	Rect size(0, 0, LocalWidth + 4, LocalHeight + 12);
 	Rect lsize(2, 5, LocalWidth, LocalHeight);
 
-	CellHeight = 4; // RA2: as above
+	CellHeight = 4;
 
-	CCINIClass ini; // RA2: as above
+	CCINIClass ini;
 
 	ini.Clear();
 
@@ -5061,18 +5060,18 @@ void MapGeneratorClass::Init_Map(bool full_init) // RA2: RA2's form (0x57AE00): 
 	ini.Put_String(HouseTypes[HOUSE_GOOD]->IniName, "TechLevel", "0");
 	ini.Put_String("Basic", "Player", HouseTypes[HOUSE_GOOD]->IniName);
 	double ambient = (SeedData.Biome == 0 ? TemperateAmbientLight[SeedData.Time] : SnowAmbientLight[SeedData.Time]) * 0.01; // RA2: the ambient light comes from RMG.INI
-	ini.Put_Float("Lighting", "Ambient", ambient); // RA2: as above
+	ini.Put_Float("Lighting", "Ambient", ambient);
 	ini.Put_Float("Lighting", "RedTint", 1.0);
 	ini.Put_Float("Lighting", "GreenTint", 1.0);
 	ini.Put_Float("Lighting", "BlueTint", 1.0);
 	ini.Put_Float("Lighting", "Ground", 0.0);
-	ini.Put_Float("Lighting", "Level", (double)(RMGLevelLightSettings[SeedData.Time] / 100)); // RA2: as above
+	ini.Put_Float("Lighting", "Level", (double)(RMGLevelLightSettings[SeedData.Time] / 100));
 	ini.Put_Float("Lighting", "IonAmbient", ambient); // RA2: the ion storm lighting is written too
-	ini.Put_Float("Lighting", "IonRed", 0.3); // RA2: as above
-	ini.Put_Float("Lighting", "IonGreen", 0.4); // RA2: as above
-	ini.Put_Float("Lighting", "IonBlue", 0.75); // RA2: as above
-	ini.Put_Float("Lighting", "IonGround", 0.0); // RA2: as above
-	ini.Put_Float("Lighting", "IonLevel", 0.0); // RA2: as above
+	ini.Put_Float("Lighting", "IonRed", 0.3);
+	ini.Put_Float("Lighting", "IonGreen", 0.4);
+	ini.Put_Float("Lighting", "IonBlue", 0.75);
+	ini.Put_Float("Lighting", "IonGround", 0.0);
+	ini.Put_Float("Lighting", "IonLevel", 0.0);
 
 	if (!Scen->IsReadingScenario) {
 		Progress.Set_Progress_Percent(0, 1);
@@ -5107,10 +5106,10 @@ void MapGeneratorClass::Init_Map(bool full_init) // RA2: RA2's form (0x57AE00): 
 
 		int theater = SeedData.Biome; // RA2: the biome is the theater
 		bool changed = true;
-		int last = Scen->Theater; // RA2: as above
+		int last = Scen->Theater;
 
 		if (MapSeeder != NULL) {
-			last = MapSeeder->Biome; // RA2: as above
+			last = MapSeeder->Biome;
 			if (MapSeeder->Width == SeedData.Width && MapSeeder->Height == SeedData.Height && last == theater
 					&& MapSeeder->NumPlayers == SeedData.NumPlayers) {
 				changed = false;
@@ -5137,8 +5136,8 @@ void MapGeneratorClass::Init_Map(bool full_init) // RA2: RA2's form (0x57AE00): 
 
 			if (RMGCallback != NULL) RMGCallback();
 
-			for (index = 0; index < IsometricTileTypes.Count(); index++) { // RA2: as above
-				AbstractTypes.Add(IsometricTileTypes[index]); // RA2: as above
+			for (index = 0; index < IsometricTileTypes.Count(); index++) {
+				AbstractTypes.Add(IsometricTileTypes[index]);
 			}
 		}
 
@@ -5205,8 +5204,8 @@ void MapGeneratorClass::Init_Map(bool full_init) // RA2: RA2's form (0x57AE00): 
 		Cell c(Map.PlayRect.Width / 2 + Map.PlayRect.Height / 2 + 1, Map.PlayRect.Width / 2 + Map.PlayRect.Height / 2); // RA2: built from both coordinates at once
 		Scen->Set_Waypoint(WAYPT_REINF, c);
 		Scen->Set_Waypoint(WAYPT_HOME, Scen->Get_Waypoint_Cell(WAYPT_REINF)); // RA2: the home waypoint itself, not Scen->Home
-		Map[Scen->Get_Waypoint_Cell(WAYPT_HOME)].IsWaypoint = true; // RA2: as above
-		Map.Set_Tactical_Position(Scen->Get_Waypoint_Coord(WAYPT_HOME)); // RA2: as above
+		Map[Scen->Get_Waypoint_Cell(WAYPT_HOME)].IsWaypoint = true;
+		Map.Set_Tactical_Position(Scen->Get_Waypoint_Coord(WAYPT_HOME));
 
 		Update_Progress(25);
 
@@ -5215,8 +5214,8 @@ void MapGeneratorClass::Init_Map(bool full_init) // RA2: RA2's form (0x57AE00): 
 		ScenarioInit++;
 
 		if (theater != Scen->Theater) {
-			Init_Theater((TheaterType)theater); // RA2: as above
-			Scen->Theater = (TheaterType)theater; // RA2: as above
+			Init_Theater((TheaterType)theater);
+			Scen->Theater = (TheaterType)theater;
 		}
 
 		Update_Progress(30);
@@ -5236,8 +5235,8 @@ void MapGeneratorClass::Init_Map(bool full_init) // RA2: RA2's form (0x57AE00): 
 
 			if (Houses.Count() == 0) {
 				for (index = 0; index < HouseTypes.Count(); index++) { // RA2: a house for every house type
-					HouseClass * hptr = new HouseClass(HouseTypes[index]); // RA2: as above
-					hptr->Read_INI(ini); // RA2: as above
+					HouseClass * hptr = new HouseClass(HouseTypes[index]);
+					hptr->Read_INI(ini);
 				}
 			}
 
@@ -5279,7 +5278,7 @@ void MapGeneratorClass::Init_Map(bool full_init) // RA2: RA2's form (0x57AE00): 
 	if (RMGCallback != NULL) RMGCallback();
 
 	if (RMGCellData != NULL) { // RA2: the old cells are only freed when there are some
-		delete [] RMGCellData; // RA2: as above
+		delete[] RMGCellData;
 	}
 
 	RMGCellData = new MapRegionClass::CellData[MapCellStride * MapCellStride];
@@ -5308,20 +5307,20 @@ void MapGeneratorClass::Init_Map(bool full_init) // RA2: RA2's form (0x57AE00): 
 	Map.Compute_Radar_Image();
 
 	Scen->AmbientLight = SeedData.Biome == 0 ? TemperateAmbientLight[SeedData.Time] : SnowAmbientLight[SeedData.Time]; // RA2: the lighting comes from RMG.INI
-	Scen->LevelLight = RMGLevelLightSettings[SeedData.Time]; // RA2: as above
-	Scen->RedTint = SeedData.Biome == 0 ? TemperateAmbientRed[SeedData.Time] : SnowAmbientRed[SeedData.Time]; // RA2: as above
-	Scen->GreenTint = SeedData.Biome == 0 ? TemperateAmbientGreen[SeedData.Time] : SnowAmbientGreen[SeedData.Time]; // RA2: as above
-	Scen->BlueTint = SeedData.Biome == 0 ? TemperateAmbientBlue[SeedData.Time] : SnowAmbientBlue[SeedData.Time]; // RA2: as above
+	Scen->LevelLight = RMGLevelLightSettings[SeedData.Time];
+	Scen->RedTint = SeedData.Biome == 0 ? TemperateAmbientRed[SeedData.Time] : SnowAmbientRed[SeedData.Time];
+	Scen->GreenTint = SeedData.Biome == 0 ? TemperateAmbientGreen[SeedData.Time] : SnowAmbientGreen[SeedData.Time];
+	Scen->BlueTint = SeedData.Biome == 0 ? TemperateAmbientBlue[SeedData.Time] : SnowAmbientBlue[SeedData.Time];
 	Scen->IonAmbientLight = 87; // RA2: the ion storm lighting
-	Scen->IonRedTint = 30; // RA2: as above
-	Scen->IonGreenTint = 40; // RA2: as above
-	Scen->IonBlueTint = 75; // RA2: as above
-	Scen->IonGroundLight = 0; // RA2: as above
-	Scen->IonLevelLight = 0; // RA2: as above
+	Scen->IonRedTint = 30;
+	Scen->IonGreenTint = 40;
+	Scen->IonBlueTint = 75;
+	Scen->IonGroundLight = 0;
+	Scen->IonLevelLight = 0;
 
 	Update_Progress(50); // RA2: no UseTransitions (not in RA2's layout)
 	if (wcslen(SeedData.MapDescription) == 0) { // RA2: an empty description gets the default one
-		wcscpy(SeedData.MapDescription, StringTable::LoadString("TXT_RANDOM_MAP_DESCRIPTION", NULL, RA2_SOURCE, 6581)); // RA2: as above
+		wcscpy(SeedData.MapDescription, StringTable::LoadString("TXT_RANDOM_MAP_DESCRIPTION", NULL, RA2_SOURCE, 6581));
 	}
 }
 
@@ -5477,41 +5476,41 @@ void MapGeneratorClass::Partition_Rect(DynamicVectorClass<Rect> & rects, int cou
 /// </summary>
 void MapGeneratorClass::Seed_Land_Type0(void) // RA2: RA2's form of Seed_Land_Type0 (0x57C4F0); ra2-decomp's twin (Yuri's Revenge 0x0059AD10)
 {
-	WorkingRegionID = 1; // RA2: as above
-	DynamicVectorClass<Rect> regions; // RA2: as above
+	WorkingRegionID = 1;
+	DynamicVectorClass<Rect> regions;
 
 	unsigned int range = 2 > SeedData.NumPlayers / 2 ? 2 : SeedData.NumPlayers / 2; // RA2: a signed compare and quotient, not MAX of unsigned values
 	double span = (double)range; // RA2: converted once before the loop
-	unsigned int selected; // RA2: as above
+	unsigned int selected;
 	do {
-		selected = (unsigned int)(((unsigned int)RMGRandom() * span) * (1.0 / 4294967295.0) + 1.0); // RA2: as above
-	} while (selected > range); // RA2: as above
+		selected = (unsigned int)(((unsigned int)RMGRandom() * span) * (1.0 / 4294967295.0) + 1.0);
+	} while (selected > range);
 
 	Rect area = Map.LocalRect; // RA2: the rectangle is copied to a local first
-	Partition_Rect(regions, SeedData.NumPlayers + selected, area); // RA2: as above
+	Partition_Rect(regions, SeedData.NumPlayers + selected, area);
 
 	Map.Reset_Iterator();
-	for (CellClass * cptr = Map.Iterate(); cptr != NULL; cptr = Map.Iterate()) { // RA2: as above
+	for (CellClass * cptr = Map.Iterate(); cptr != NULL; cptr = Map.Iterate()) {
 		Cell position = cptr->CellID; // RA2: indexes the cell data directly instead of calling Get_Cell_Data
-		RMGCellData[position.Y * MapCellStride + position.X].SpreadID = 0; // RA2: as above
+		RMGCellData[position.Y * MapCellStride + position.X].SpreadID = 0;
 	}
 
-	while (regions.Count() > 0) { // RA2: as above
-		Rect region = regions[0]; // RA2: as above
+	while (regions.Count() > 0) {
+		Rect region = regions[0];
 		int count = (int)(((unsigned int)RMGRandom() * RMGRandomScale * 0.05 + RMGRegionFillFloor) * (region.Width * region.Height * 2)); // RA2: ra2-decomp's twin text (src/mapgen.cpp:3977): the 1/UINT_MAX scale (0x7A5DD0) and the 0.45 floor (0x7A5ED0) as named memory constants
 		Point2D center; // RA2: assigned member by member
-		center.X = region.Width / 2 + region.Height / 2 + region.Y + region.X + 1; // RA2: as above
-		center.Y = region.Height / 2 - region.Width / 2 - region.X + Map.PlayRect.Width + region.Y; // RA2: as above
+		center.X = region.Width / 2 + region.Height / 2 + region.Y + region.X + 1;
+		center.Y = region.Height / 2 - region.Width / 2 - region.X + Map.PlayRect.Width + region.Y;
 		int attempt = 0;
-		int result = 0; // RA2: as above
+		int result = 0;
 		while (!result && attempt < 10) { // RA2: a while loop
-			result = Spread_Land(count, region, center, true, Cell(center.X, center.Y), 0.25, false); // RA2: as above
+			result = Spread_Land(count, region, center, true, Cell(center.X, center.Y), 0.25, false);
 			if (!result) {
-				++WorkingRegionID; // RA2: as above
+				++WorkingRegionID;
 			}
-			++attempt; // RA2: as above
+			++attempt;
 		}
-		regions.Delete_Index(0); // RA2: as above
+		regions.Delete_Index(0);
 	}
 }
 
@@ -5524,18 +5523,18 @@ void MapGeneratorClass::Seed_Land_Type0(void) // RA2: RA2's form of Seed_Land_Ty
 void MapGeneratorClass::Seed_Land_Type1(void) // RA2: RA2's form of Seed_Land_Type1 (0x57C780): the land fraction bounds and chunk size are static constants
 {
 	static const double _land_minimum = 0.45; // RA2: static constants (0x7A5C58, 0x7A5C60, 0x7A5C68), not folded literals
-	static const double _land_maximum = 0.5; // RA2: as above
-	static const double _land_chunk = 0.03; // RA2: as above
-	WorkingRegionID = 1; // RA2: as above
-	int total = Map_Cell_Count(); // RA2: as above
+	static const double _land_maximum = 0.5;
+	static const double _land_chunk = 0.03;
+	WorkingRegionID = 1;
+	int total = Map_Cell_Count();
 	int placed = 0;
 	int tries = 0;
-	double current = 0.0; // RA2: as above
+	double current = 0.0;
 	double target = (1.0 - SeedData.WaterAmount * 0.01) * (_land_maximum - _land_minimum) + _land_minimum; // RA2: the bounds are static constants, not folded literals (0x7A5C60 / 0x7A5C58)
 	int maximum = (int)((double)total * _land_chunk * target); // RA2: a static constant instead of the literal
-	Point2D origin(Map.PlayRect.Width / 2 + Map.PlayRect.Height / 2 + 1, // RA2: as above
-				   Map.PlayRect.Width / 2 + Map.PlayRect.Height / 2); // RA2: as above
-	Point2D seed = origin; // RA2: as above
+	Point2D origin(Map.PlayRect.Width / 2 + Map.PlayRect.Height / 2 + 1,
+		Map.PlayRect.Width / 2 + Map.PlayRect.Height / 2);
+	Point2D seed = origin;
 
 	Map.Reset_Iterator();
 	CellClass * cptr = Map.Iterate();
@@ -5544,32 +5543,32 @@ void MapGeneratorClass::Seed_Land_Type1(void) // RA2: RA2's form of Seed_Land_Ty
 		cptr = Map.Iterate();
 	}
 
-	Rect bounds = Map.LocalRect; // RA2: as above
-	bounds.X++; // RA2: as above
-	bounds.Y++; // RA2: as above
-	bounds.Width -= 2; // RA2: as above
-	bounds.Height -= 2; // RA2: as above
-	while (current < target && tries < 100) { // RA2: as above
-		int size = (int)((target - current) * (double)total); // RA2: as above
-		size = MIN(size, maximum); // RA2: as above
-		current = (double)(placed += Spread_Land(size, bounds, seed, true, Cell(origin.X, origin.Y), 0.75, true)) / (double)total; // RA2: as above
+	Rect bounds = Map.LocalRect;
+	bounds.X++;
+	bounds.Y++;
+	bounds.Width -= 2;
+	bounds.Height -= 2;
+	while (current < target && tries < 100) {
+		int size = (int)((target - current) * (double)total);
+		size = MIN(size, maximum);
+		current = (double)(placed += Spread_Land(size, bounds, seed, true, Cell(origin.X, origin.Y), 0.75, true)) / (double)total;
 		tries++;
 
-		int nearest = 50000; // RA2: as above
-		Cell closest(0, 0); // RA2: as above
+		int nearest = 50000;
+		Cell closest(0, 0);
 		Map.Reset_Iterator();
 		cptr = Map.Iterate();
 		while (cptr != NULL) {
-			if (MapRegionClass::Get_Cell_Data(cptr->CellID).SpreadID == 0) { // RA2: as above
-				int distance = abs(cptr->CellID.X - origin.X) + abs(cptr->CellID.Y - origin.Y); // RA2: as above
-				if (distance < nearest) { // RA2: as above
-					nearest = distance; // RA2: as above
-					closest = cptr->CellID; // RA2: as above
+			if (MapRegionClass::Get_Cell_Data(cptr->CellID).SpreadID == 0) {
+				int distance = abs(cptr->CellID.X - origin.X) + abs(cptr->CellID.Y - origin.Y);
+				if (distance < nearest) {
+					nearest = distance;
+					closest = cptr->CellID;
 				}
 			}
 			cptr = Map.Iterate();
 		}
-		seed = Point2D(closest.X, closest.Y); // RA2: as above
+		seed = Point2D(closest.X, closest.Y);
 	}
 }
 
@@ -5582,10 +5581,10 @@ void MapGeneratorClass::Seed_Land_Type1(void) // RA2: RA2's form of Seed_Land_Ty
 void MapGeneratorClass::Seed_Land_Type2(void) // RA2: RA2's form of Seed_Land_Type2 (0x57C9E0): the land fraction bounds and chunk size are static constants
 {
 	static const double _land_minimum = 0.15; // RA2: static constants (0x7A5C78, 0x7A5C80, 0x7A5C88), not folded literals
-	static const double _land_maximum = 0.2; // RA2: as above
-	static const double _land_chunk = 0.06; // RA2: as above
-	WorkingRegionID = 1; // RA2: as above
-	int total = Map_Cell_Count(); // RA2: as above
+	static const double _land_maximum = 0.2;
+	static const double _land_chunk = 0.06;
+	WorkingRegionID = 1;
+	int total = Map_Cell_Count();
 	int tries = 0;
 	double target = (1.0 - SeedData.WaterAmount * 0.01) * (_land_maximum - _land_minimum) + _land_minimum; // RA2: the bounds are static constants, not folded literals (0x7A5C80 / 0x7A5C78)
 	int maximum = (int)((double)total * _land_chunk * target); // RA2: a static constant instead of the literal
@@ -5597,65 +5596,65 @@ void MapGeneratorClass::Seed_Land_Type2(void) // RA2: RA2's form of Seed_Land_Ty
 		cptr = Map.Iterate();
 	}
 
-	Rect halves[2]; // RA2: as above
-	if (Random_Fraction() < 0.5) { // RA2: as above
-		halves[0] = Rect(Map.LocalRect.X, Map.LocalRect.Y, Map.LocalRect.Width / 2 - 1, Map.LocalRect.Height); // RA2: as above
-		halves[1] = Rect(Map.LocalRect.X + Map.LocalRect.Width / 2 + 1, Map.LocalRect.Y, Map.LocalRect.Width / 2 - 1, Map.LocalRect.Height); // RA2: as above
+	Rect halves[2];
+	if (Random_Fraction() < 0.5) {
+		halves[0] = Rect(Map.LocalRect.X, Map.LocalRect.Y, Map.LocalRect.Width / 2 - 1, Map.LocalRect.Height);
+		halves[1] = Rect(Map.LocalRect.X + Map.LocalRect.Width / 2 + 1, Map.LocalRect.Y, Map.LocalRect.Width / 2 - 1, Map.LocalRect.Height);
 	} else {
-		halves[0] = Rect(Map.LocalRect.X, Map.LocalRect.Y, Map.LocalRect.Width, Map.LocalRect.Height / 2 - 1); // RA2: as above
-		halves[1] = Rect(Map.LocalRect.X, Map.LocalRect.Y + Map.LocalRect.Height / 2 + 1, Map.LocalRect.Width, Map.LocalRect.Height / 2 - 1); // RA2: as above
+		halves[0] = Rect(Map.LocalRect.X, Map.LocalRect.Y, Map.LocalRect.Width, Map.LocalRect.Height / 2 - 1);
+		halves[1] = Rect(Map.LocalRect.X, Map.LocalRect.Y + Map.LocalRect.Height / 2 + 1, Map.LocalRect.Width, Map.LocalRect.Height / 2 - 1);
 	}
 
-	for (int half = 0; half < 2; half++) { // RA2: as above
+	for (int half = 0; half < 2; half++) {
 		int placed = 0;
-		double current = 0.0; // RA2: as above
-		Rect bounds = halves[half]; // RA2: as above
-		Point2D origin(bounds.X + bounds.Width / 2 + bounds.Height / 2 + bounds.Y + 1, // RA2: as above
-					   bounds.Y + Map.PlayRect.Width + bounds.Height / 2 - bounds.Width / 2 - bounds.X); // RA2: as above
-		Point2D seed = origin; // RA2: as above
-		double x_scale; // RA2: as above
-		double y_scale; // RA2: as above
-		if (bounds.Height > bounds.Width) { // RA2: as above
-			x_scale = (double)bounds.Height / (double)bounds.Width * 1.2; // RA2: as above
-			y_scale = 1.0; // RA2: as above
+		double current = 0.0;
+		Rect bounds = halves[half];
+		Point2D origin(bounds.X + bounds.Width / 2 + bounds.Height / 2 + bounds.Y + 1,
+			bounds.Y + Map.PlayRect.Width + bounds.Height / 2 - bounds.Width / 2 - bounds.X);
+		Point2D seed = origin;
+		double x_scale;
+		double y_scale;
+		if (bounds.Height > bounds.Width) {
+			x_scale = (double)bounds.Height / (double)bounds.Width * 1.2;
+			y_scale = 1.0;
 		} else {
-			x_scale = 1.0; // RA2: as above
-			y_scale = (double)bounds.Width / (double)bounds.Height * 1.2; // RA2: as above
+			x_scale = 1.0;
+			y_scale = (double)bounds.Width / (double)bounds.Height * 1.2;
 		}
-		double half_width = (double)bounds.Width * 0.5; // RA2: as above
-		double inverse_x = 1.0 / (half_width * half_width); // RA2: as above
-		double half_height = (double)bounds.Height * 0.5; // RA2: as above
-		double inverse_y = 1.0 / (half_height * half_height); // RA2: as above
+		double half_width = (double)bounds.Width * 0.5;
+		double inverse_x = 1.0 / (half_width * half_width);
+		double half_height = (double)bounds.Height * 0.5;
+		double inverse_y = 1.0 / (half_height * half_height);
 
-		while (current < target && tries < 100) { // RA2: as above
-			int size = (int)((target - current) * (double)total); // RA2: as above
-			size = MIN(size, maximum); // RA2: as above
-			current = (double)(placed += Spread_Land(size, bounds, seed, true, Cell(origin.X, origin.Y), 0.75, true)) / (double)total; // RA2: as above
+		while (current < target && tries < 100) {
+			int size = (int)((target - current) * (double)total);
+			size = MIN(size, maximum);
+			current = (double)(placed += Spread_Land(size, bounds, seed, true, Cell(origin.X, origin.Y), 0.75, true)) / (double)total;
 			tries++;
 
-			int nearest = 50000; // RA2: as above
-			Cell closest(0, 0); // RA2: as above
-			int count = MapCellStride * MapCellStride; // RA2: as above
-			int minimum_diagonal = bounds.X * 2 - Map.PlayRect.Width + 1; // RA2: as above
-			int maximum_diagonal = minimum_diagonal + bounds.Width * 2 + 2; // RA2: as above
-			int minimum_sum = Map.PlayRect.Width + bounds.Y * 2 + 1; // RA2: as above
-			int maximum_sum = minimum_sum + bounds.Height * 2 + 2; // RA2: as above
-			for (int index = 0; index < count; index++) { // RA2: as above
-				MapRegionClass::CellData & data = MapRegionClass::Get_Cell_Data(index); // RA2: as above
-				Cell const & candidate = data.CellID; // RA2: as above
-				int sum = candidate.X + candidate.Y; // RA2: as above
-				int diagonal = candidate.X - candidate.Y; // RA2: as above
-				if (sum >= minimum_sum && sum <= maximum_sum && diagonal >= minimum_diagonal && diagonal <= maximum_diagonal && data.SpreadID == 0 && Cell_In_Generation_Shape(candidate, bounds, true, inverse_x, inverse_y)) { // RA2: as above
-					double dy = (double)abs(candidate.Y - origin.Y) * y_scale; // RA2: as above
-					double dx = (double)abs(candidate.X - origin.X) * x_scale; // RA2: as above
-					int distance = (int)(dy + dx); // RA2: as above
-					if (distance < nearest) { // RA2: as above
-						nearest = distance; // RA2: as above
-						closest = candidate; // RA2: as above
+			int nearest = 50000;
+			Cell closest(0, 0);
+			int count = MapCellStride * MapCellStride;
+			int minimum_diagonal = bounds.X * 2 - Map.PlayRect.Width + 1;
+			int maximum_diagonal = minimum_diagonal + bounds.Width * 2 + 2;
+			int minimum_sum = Map.PlayRect.Width + bounds.Y * 2 + 1;
+			int maximum_sum = minimum_sum + bounds.Height * 2 + 2;
+			for (int index = 0; index < count; index++) {
+				MapRegionClass::CellData & data = MapRegionClass::Get_Cell_Data(index);
+				Cell const & candidate = data.CellID;
+				int sum = candidate.X + candidate.Y;
+				int diagonal = candidate.X - candidate.Y;
+				if (sum >= minimum_sum && sum <= maximum_sum && diagonal >= minimum_diagonal && diagonal <= maximum_diagonal && data.SpreadID == 0 && Cell_In_Generation_Shape(candidate, bounds, true, inverse_x, inverse_y)) {
+					double dy = (double)abs(candidate.Y - origin.Y) * y_scale;
+					double dx = (double)abs(candidate.X - origin.X) * x_scale;
+					int distance = (int)(dy + dx);
+					if (distance < nearest) {
+						nearest = distance;
+						closest = candidate;
 					}
 				}
 			}
-			seed = Point2D(closest.X, closest.Y); // RA2: as above
+			seed = Point2D(closest.X, closest.Y);
 		}
 	}
 }
@@ -5934,7 +5933,7 @@ void MapGeneratorClass::Seed_Water(void)
 		i = 0;
 		river_seeded = false;
 		while (!river_seeded && i < 10) {
-			river_seeded = Seed_River(Cell(0, 0), 0.0, 0); // RA2: as above
+			river_seeded = Seed_River(Cell(0, 0), 0.0, 0);
 			i++;
 		}
 		if (river_seeded) {
@@ -5945,7 +5944,7 @@ void MapGeneratorClass::Seed_Water(void)
 	j = 0;
 	lake_seeded = false;
 	while (!lake_seeded && j < 10) {
-		lake_seeded = Seed_Lake(Cell(0, 0)); // RA2: as above
+		lake_seeded = Seed_Lake(Cell(0, 0));
 		j++;
 	}
 	if (lake_seeded) {
@@ -6092,8 +6091,8 @@ bool MapGeneratorClass::Seed_Lake(const Cell & cell) // RA2: RA2's form of Seed_
 
 	Map.Reset_Iterator();
 	for (CellClass *iter = Map.Iterate(); iter; iter = Map.Iterate()) { // RA2: indexes the cell data directly
-		Cell position = iter->CellID; // RA2: as above
-		RMGCellData[position.Y * MapCellStride + position.X].SpreadID = 0; // RA2: as above
+		Cell position = iter->CellID;
+		RMGCellData[position.Y * MapCellStride + position.X].SpreadID = 0;
 	}
 
 	int grid_size = MapCellStride * MapCellStride;
@@ -6108,10 +6107,10 @@ bool MapGeneratorClass::Seed_Lake(const Cell & cell) // RA2: RA2's form of Seed_
 
 		for (i = 0; i < grid_size; i++) {
 			int stored_region = MapRegionClass::Get_Cell_Data(i).RegionID; // RA2: the region is read into a local first
-			if (stored_region == 0 || stored_region == WorkingRegionID) { // RA2: as above
+			if (stored_region == 0 || stored_region == WorkingRegionID) {
 				MapRegionClass::Get_Cell_Data(i).Interior = true;
-			} else if (stored_region == -2) { // RA2: as above
-				MapRegionClass::Get_Cell_Data(i).RegionID = 0; // RA2: as above
+			} else if (stored_region == -2) {
+				MapRegionClass::Get_Cell_Data(i).RegionID = 0;
 			}
 		}
 	} else {
@@ -6123,12 +6122,12 @@ bool MapGeneratorClass::Seed_Lake(const Cell & cell) // RA2: RA2's form of Seed_
 	int tries = 0;
 	Cell seed_cell;
 	if (cell == Cell(0, 0)) {
-		for (;;) { // RA2: as above
-			int x = Pick_Random_UInt(0, Map.PlayRect.Width - 1); // RA2: as above
-			int y = Pick_Random_UInt(0, Map.PlayRect.Height - 1); // RA2: as above
+		for (;;) {
+			int x = Pick_Random_UInt(0, Map.PlayRect.Width - 1);
+			int y = Pick_Random_UInt(0, Map.PlayRect.Height - 1);
 
 			Cell first_offset = Cell(1, (short)Map.PlayRect.Width) + Cell((short)x, (short)(0u - (unsigned)x)); // RA2: explicit short conversions, in two steps
-			seed_cell = first_offset + Cell((short)y, (short)y); // RA2: as above
+			seed_cell = first_offset + Cell((short)y, (short)y);
 
 			if (++tries >= 200) {
 				return(false);
@@ -6165,7 +6164,7 @@ bool MapGeneratorClass::Seed_Lake(const Cell & cell) // RA2: RA2's form of Seed_
 
 	CellNode *node = queue->Extract_Min();
 	while (seeded_count < spread_count) { // RA2: no tile randomization and no cell list
-		if (node == NULL || !success) { // RA2: as above
+		if (node == NULL || !success) {
 			break;
 		}
 
@@ -6173,21 +6172,21 @@ bool MapGeneratorClass::Seed_Lake(const Cell & cell) // RA2: RA2's form of Seed_
 
 		CellClass *cellptr = &Map[node->Element];
 		cellptr->ITType = IsometricTileTypeClass::WaterSet; // RA2: always the first water tile
-		cellptr->SubTile = 0; // RA2: as above
+		cellptr->SubTile = 0;
 
-		int facing = 0; // RA2: as above
-		CellNode *newnode = nodes + marker_index; // RA2: as above
-		for (; facing < 8; facing += 2) { // RA2: as above
-			Cell newcell = Adjacent_Cell(node->Element, (FacingType)facing); // RA2: as above
+		int facing = 0;
+		CellNode * newnode = nodes + marker_index;
+		for (; facing < 8; facing += 2) {
+			Cell newcell = Adjacent_Cell(node->Element, (FacingType)facing);
 			if (My_In_Radar(newcell)) {
-				MapRegionClass::CellData &data = RMGCellData[newcell.Y * MapCellStride + newcell.X]; // RA2: as above
-				if (data.RegionID == 0 && data.SpreadID != WorkingRegionID && Map[newcell].Is_Tile_Clear() && data.Interior) { // RA2: as above
+				MapRegionClass::CellData & data = RMGCellData[newcell.Y * MapCellStride + newcell.X];
+				if (data.RegionID == 0 && data.SpreadID != WorkingRegionID && Map[newcell].Is_Tile_Clear() && data.Interior) {
 					newnode->Element = newcell;
-					newnode->Score = (float)Get_Spread_Score(seed_cell, newcell, seeded_count); // RA2: as above
+					newnode->Score = (float)Get_Spread_Score(seed_cell, newcell, seeded_count);
 					data.SpreadID = WorkingRegionID;
 					marker_index++;
 					queue->Insert(*newnode++);
-				} else if (data.RegionID != 0 && data.RegionID != WorkingRegionID) { // RA2: as above
+				} else if (data.RegionID != 0 && data.RegionID != WorkingRegionID) {
 					success = false;
 				}
 			}
@@ -6198,15 +6197,15 @@ bool MapGeneratorClass::Seed_Lake(const Cell & cell) // RA2: RA2's form of Seed_
 	}
 
 	CellNode *remaining = queue->Extract_Min();
-	while (remaining) { // RA2: as above
+	while (remaining) {
 		if (!success) {
 			break;
 		}
 
 		CellClass *cellptr = &Map[remaining->Element];
-		MapRegionClass::CellData &data = RMGCellData[remaining->Element.Y * MapCellStride + remaining->Element.X]; // RA2: as above
-		if (data.RegionID == 0 && cellptr->Is_Tile_Clear() && data.Interior) { // RA2: as above
-			cellptr->ITType = IsometricTileTypeClass::WaterSet; // RA2: as above
+		MapRegionClass::CellData & data = RMGCellData[remaining->Element.Y * MapCellStride + remaining->Element.X];
+		if (data.RegionID == 0 && cellptr->Is_Tile_Clear() && data.Interior) {
+			cellptr->ITType = IsometricTileTypeClass::WaterSet;
 			cellptr->SubTile = 0;
 			data.RegionID = WorkingRegionID;
 		} else {
@@ -6229,14 +6228,14 @@ bool MapGeneratorClass::Seed_Lake(const Cell & cell) // RA2: RA2's form of Seed_
 	}
 
 	if (success && cell == Cell(0, 0)) {
-		success = Grow_Region(WorkingRegionID, 1, Rect(0, 0, 512, 512), 0, 0); // RA2: as above
+		success = Grow_Region(WorkingRegionID, 1, Rect(0, 0, 512, 512), 0, 0);
 		if (success) {
 			int region = WorkingRegionID;
 			Map.Reset_Iterator();
 			for (CellClass *iter = Map.Iterate(); iter; iter = Map.Iterate()) {
-				int index = MapRegionClass::CellData::Get_Region(iter->CellID); // RA2: as above
-				if (index == region && (iter->ITType == ISOTILE_CLEAR || iter->ITType == (IsometricTileType)ISOTILE_NONE)) { // RA2: as above
-					iter->ITType = IsometricTileTypeClass::GreenTile; // RA2: as above
+				int index = MapRegionClass::CellData::Get_Region(iter->CellID);
+				if (index == region && (iter->ITType == ISOTILE_CLEAR || iter->ITType == (IsometricTileType)ISOTILE_NONE)) {
+					iter->ITType = IsometricTileTypeClass::GreenTile;
 				}
 			}
 			success = true;
@@ -6565,7 +6564,7 @@ void MapGeneratorClass::Set_Height_Of_ID(int id, char cell_height)
 	Map.Reset_Iterator();
 	CellClass * cptr = Map.Iterate(); // RA2: Set_Height_Of_ID at 0x57FE20 matches only so
 	while (cptr != NULL) {
-		if (MapRegionClass::CellData::Get_Region(cptr->Fetch_CellID()) == id) { // RA2: as above
+		if (MapRegionClass::CellData::Get_Region(cptr->Fetch_CellID()) == id) {
 			cptr->Height = cell_height;
 		}
 		cptr = Map.Iterate();
@@ -6585,7 +6584,7 @@ void MapGeneratorClass::Increase_Height_Of_ID(int id, char cell_height)
 	Map.Reset_Iterator();
 	CellClass * cptr = Map.Iterate(); // RA2: Increase_Height_Of_ID at 0x57FEA0 matches only so
 	while (cptr != NULL) {
-		if (MapRegionClass::CellData::Get_Region(cptr->Fetch_CellID()) == id) { // RA2: as above
+		if (MapRegionClass::CellData::Get_Region(cptr->Fetch_CellID()) == id) {
 			cptr->Height += cell_height;
 		}
 		cptr = Map.Iterate();
@@ -7149,7 +7148,7 @@ DynamicVectorClass<Cell> *MapGeneratorClass::Build_Region_Border_Cell_List(int i
 		if (cell != Cell(0, 0) && MapRegionClass::CellData::Get_Region(cell) == id) {
 			bool add = false;
 			for (FacingType facing = FACING_FIRST; facing < FACING_COUNT; facing++) { // RA2: Build_Region_Border_Cell_List at 0x581EE0 matches only so
-				Cell ncell = Adjacent_Cell(cell, facing); // RA2: as above
+				Cell ncell = Adjacent_Cell(cell, facing);
 				if (My_In_Radar(ncell)) {
 					if (MapRegionClass::CellData::Get_Region(ncell) != id) {
 						add = true;
@@ -7441,7 +7440,7 @@ void MapGeneratorClass::Vary_Cliff_Runs(void)
 				if (tile != cptr->ITType) {
 					int subtile = south.SubTile;
 					IsometricTileTypeClass * type = IsometricTileTypes[cptr->ITType];
-					Cell origin = south.CellID - Cell(subtile % type->Width, subtile / type->Width); // RA2: RA2's form
+					Cell origin = south.CellID - Cell(subtile % type->Width, subtile / type->Width);
 					Place_Tile(tile, origin, Get_Cell_Data_Region(origin), -1);
 				}
 			}
@@ -7450,7 +7449,7 @@ void MapGeneratorClass::Vary_Cliff_Runs(void)
 				if (tile != cptr->ITType) {
 					IsometricTileTypeClass * type = IsometricTileTypes[cptr->ITType];
 					int subtile = east.SubTile;
-					Cell origin = east.CellID - Cell(subtile % type->Width, subtile / type->Width); // RA2: as above
+					Cell origin = east.CellID - Cell(subtile % type->Width, subtile / type->Width);
 					Place_Tile(tile, origin, Get_Cell_Data_Region(origin), -1);
 				}
 			}
@@ -7477,45 +7476,45 @@ void MapGeneratorClass::Vary_Cliff_Runs(void)
 /// </summary>
 void MapGeneratorClass::Fixup_Cliff_Corners(void) // RA2: not in TibSun, at 0x5831C0
 {
-	Map.Reset_Iterator(); // RA2
-	CellClass * cptr = Map.Iterate(); // RA2
-	while (cptr != NULL) { // RA2
-		CellClass & south_west = (CellClass &)cptr->Adjacent_Cell(FACING_SW); // RA2
-		CellClass & north_east = (CellClass &)cptr->Adjacent_Cell(FACING_NE); // RA2
-		CellClass & south_east = (CellClass &)cptr->Adjacent_Cell(FACING_SE); // RA2
-		CellClass & east = (CellClass &)cptr->Adjacent_Cell(FACING_E); // RA2
-		CellClass & west = (CellClass &)cptr->Adjacent_Cell(FACING_W); // RA2
-		unsigned int mask = Map.Get_High_Ground_Mask(cptr); // RA2
-		if (mask == 0x83) { // RA2
-			if (Map.Get_High_Ground_Mask(&south_east) == 0x83 && east.Is_Tile_Clear()) { // RA2
-				unsigned int choice; // RA2
-				do { // RA2
-					choice = (unsigned int)RMGRandom() * (2.0 / 4294967295.0); // RA2
-				} while (choice > 1); // RA2
-				if (choice == 0) { // RA2
-					east.Height = east.Height - 4; // RA2
-					MapRegionClass::CellData::Set_Region(east.CellID, MapRegionClass::CellData::Get_Region(cptr->CellID)); // RA2
-				} // RA2
-			} // RA2
-		} else if (mask == 0x38) { // RA2
-			if (Map.Get_High_Ground_Mask(&south_east) == 0x38 && west.Is_Tile_Clear()) { // RA2
-				unsigned int choice; // RA2
-				do { // RA2
-					choice = (unsigned int)RMGRandom() * (2.0 / 4294967295.0); // RA2
-				} while (choice > 1); // RA2
-				if (choice == 0) { // RA2
-					west.Height = west.Height - 4; // RA2
-					MapRegionClass::CellData::Set_Region(west.CellID, MapRegionClass::CellData::Get_Region(cptr->CellID)); // RA2
-				} // RA2
-			} // RA2
-		} else if (mask == 0xE0) { // RA2
-			if (Map.Get_High_Ground_Mask(&south_west) == 0xE0 && Map.Get_High_Ground_Mask(&north_east) == 0xE0 && cptr->Is_Tile_Clear()) { // RA2
-				cptr->Height = cptr->Height + 4; // RA2
-				MapRegionClass::CellData::Set_Region(cptr->CellID, MapRegionClass::CellData::Get_Region(west.CellID)); // RA2
-			} // RA2
-		} // RA2
-		cptr = Map.Iterate(); // RA2
-	} // RA2
+	Map.Reset_Iterator();
+	CellClass * cptr = Map.Iterate();
+	while (cptr != NULL) {
+		CellClass & south_west = (CellClass &)cptr->Adjacent_Cell(FACING_SW);
+		CellClass & north_east = (CellClass &)cptr->Adjacent_Cell(FACING_NE);
+		CellClass & south_east = (CellClass &)cptr->Adjacent_Cell(FACING_SE);
+		CellClass & east = (CellClass &)cptr->Adjacent_Cell(FACING_E);
+		CellClass & west = (CellClass &)cptr->Adjacent_Cell(FACING_W);
+		unsigned int mask = Map.Get_High_Ground_Mask(cptr);
+		if (mask == 0x83) {
+			if (Map.Get_High_Ground_Mask(&south_east) == 0x83 && east.Is_Tile_Clear()) {
+				unsigned int choice;
+				do {
+					choice = (unsigned int)RMGRandom() * (2.0 / 4294967295.0);
+				} while (choice > 1);
+				if (choice == 0) {
+					east.Height = east.Height - 4;
+					MapRegionClass::CellData::Set_Region(east.CellID, MapRegionClass::CellData::Get_Region(cptr->CellID));
+				}
+			}
+		} else if (mask == 0x38) {
+			if (Map.Get_High_Ground_Mask(&south_east) == 0x38 && west.Is_Tile_Clear()) {
+				unsigned int choice;
+				do {
+					choice = (unsigned int)RMGRandom() * (2.0 / 4294967295.0);
+				} while (choice > 1);
+				if (choice == 0) {
+					west.Height = west.Height - 4;
+					MapRegionClass::CellData::Set_Region(west.CellID, MapRegionClass::CellData::Get_Region(cptr->CellID));
+				}
+			}
+		} else if (mask == 0xE0) {
+			if (Map.Get_High_Ground_Mask(&south_west) == 0xE0 && Map.Get_High_Ground_Mask(&north_east) == 0xE0 && cptr->Is_Tile_Clear()) {
+				cptr->Height = cptr->Height + 4;
+				MapRegionClass::CellData::Set_Region(cptr->CellID, MapRegionClass::CellData::Get_Region(west.CellID));
+			}
+		}
+		cptr = Map.Iterate();
+	}
 }
 
 
@@ -7553,12 +7552,12 @@ void MapGeneratorClass::Init_Regions(void)
 void MapGeneratorClass::Make_Regions(void) // RA2: returns nothing
 {
 	if (Is_Mountain_Or_Inland_Map(SeedData.MapType)) { // RA2: only the inland and mountain maps
-		MapRegionClass::Make_Ice_Regions(); // RA2: as above
+		MapRegionClass::Make_Ice_Regions();
 		MapRegionClass::Make_Regions();
-		Fixup_Cliff_Corners(); // RA2
-		Map.Build_All_Cliffs(0, -1); // RA2
-		Vary_Cliff_Runs(); // RA2
-	} // RA2
+		Fixup_Cliff_Corners();
+		Map.Build_All_Cliffs(0, -1);
+		Vary_Cliff_Runs();
+	}
 }
 
 
@@ -7637,23 +7636,23 @@ bool MapGeneratorClass::Init_Start_Points(void)
 			PriorityQueueClass<CellNode> * queue = new PriorityQueueClass<CellNode>(800);
 
 			Clear_Cell_Data_Spreads();
-			int spread_count = 0; // RA2: as above
-			player_index++; // RA2: as above
+			int spread_count = 0;
+			player_index++;
 			queue->Clear();
 
 			int node_count = 1; // RA2: Init_Start_Points at 0x583790 has no int patch_id = player_index + 1;
 			nodes[0].Element = seed; // RA2: Init_Start_Points at 0x583790 has no int spread_count = 0;
 			nodes[0].Score = 0.0f;
-			MapRegionClass::Get_Cell_Data(seed).SpreadID = player_index; // RA2: as above
+			MapRegionClass::Get_Cell_Data(seed).SpreadID = player_index;
 			queue->Insert(nodes[0]);
 
 			CellNode * node = queue->Extract_Min();
-			while (node != NULL && spread_count < 400) { // RA2: as above
+			while (node != NULL && spread_count < 400) {
 				MapRegionClass::Get_Cell_Data(node->Element).Inviolate = true;
 
-				FacingType dir = FACING_FIRST; // RA2: as above
+				FacingType dir = FACING_FIRST;
 				CellNode * newnode = &nodes[node_count];
-				for (; dir < FACING_COUNT; dir++) { // RA2: as above
+				for (; dir < FACING_COUNT; dir++) {
 					Cell ncell = Adjacent_Cell(node->Element, dir);
 					if (My_In_Radar(ncell) && MapRegionClass::Get_Cell_Data(ncell).SpreadID == 0) {
 						if (Map[ncell].Is_Tile_Clear()) {
@@ -7661,7 +7660,7 @@ bool MapGeneratorClass::Init_Start_Points(void)
 							int dx = ncell.X - seed.X;
 							int dy = ncell.Y - seed.Y;
 							newnode->Score = fastmath::sqrt((double)(dx * dx + dy * dy));
-							MapRegionClass::Get_Cell_Data(ncell).SpreadID = player_index; // RA2: as above
+							MapRegionClass::Get_Cell_Data(ncell).SpreadID = player_index;
 							node_count++;
 							queue->Insert(*newnode++);
 						}
@@ -7675,7 +7674,7 @@ bool MapGeneratorClass::Init_Start_Points(void)
 			delete[] nodes;
 			delete queue;
 
-		} while (player_index < SeedData.NumPlayers); // RA2: as above
+		} while (player_index < SeedData.NumPlayers);
 	}
 	return(true);
 }
@@ -7720,80 +7719,80 @@ static inline double Cell_Distance(Cell const & c, int x, int y)
 void MapGeneratorClass::Create_Tiberium(void)
 {
 	int waypoint = 0; // RA2: Create_Tiberium at 0x583B80, RA2's form (fields per region, grown from its StartCells)
-	int resources = SeedData.Resources; // RA2: as above
-	bool seek_center = Seeks_Start_Center(SeedData.MapType, resources); // RA2: as above
+	int resources = SeedData.Resources;
+	bool seek_center = Seeks_Start_Center(SeedData.MapType, resources);
 
-	for (int index = 0; index < MapRegionClass::MapRegions.Count(); index++) { // RA2: as above
-		MapRegionClass * region = MapRegionClass::MapRegions[index]; // RA2: as above
-		if (region->StartCells == NULL) continue; // RA2: as above
+	for (int index = 0; index < MapRegionClass::MapRegions.Count(); index++) {
+		MapRegionClass * region = MapRegionClass::MapRegions[index];
+		if (region->StartCells == NULL) continue;
 
-		int nearest = -1; // RA2: as above
-		if (seek_center) { // RA2: as above
-			Cell center(0, 0); // RA2: as above
-			if (region->StartCount > 0) { // RA2: as above
-				for (int player = 0; player < region->StartCount; player++) { // RA2: as above
-					Cell start = Scen->Get_Waypoint_Cell((WAYPOINT)(player + waypoint)); // RA2: as above
-					center.Y += start.Y; // RA2: as above
-					center.X += start.X; // RA2: as above
-				} // RA2: as above
-				center.X = center.X / region->StartCount; // RA2: as above
-				center.Y = center.Y / region->StartCount; // RA2: as above
-			} else { // RA2: as above
-				center = region->Cells[Pick_Random_UInt(0, region->Cells.Count() - 1)]; // RA2: as above
-			} // RA2: as above
-			int best = 500000; // RA2: as above
-			for (int i = 0; i < region->StartCells->Count(); i++) { // RA2: as above
-				Cell c = (*region->StartCells)[i]; // RA2: as above
-				double distance = fastmath::sqrt((double)((c.Y - center.Y) * (c.Y - center.Y) + (c.X - center.X) * (c.X - center.X))); // RA2: as above
-				if (distance < (double)best) { // RA2: as above
-					best = (int)distance; // RA2: as above
-					nearest = i; // RA2: as above
-				} // RA2: as above
-			} // RA2: as above
-		} // RA2: as above
+		int nearest = -1;
+		if (seek_center) {
+			Cell center(0, 0);
+			if (region->StartCount > 0) {
+				for (int player = 0; player < region->StartCount; player++) {
+					Cell start = Scen->Get_Waypoint_Cell((WAYPOINT)(player + waypoint));
+					center.Y += start.Y;
+					center.X += start.X;
+				}
+				center.X = center.X / region->StartCount;
+				center.Y = center.Y / region->StartCount;
+			} else {
+				center = region->Cells[Pick_Random_UInt(0, region->Cells.Count() - 1)];
+			}
+			int best = 500000;
+			for (int i = 0; i < region->StartCells->Count(); i++) {
+				Cell c = (*region->StartCells)[i];
+				double distance = fastmath::sqrt((double)((c.Y - center.Y) * (c.Y - center.Y) + (c.X - center.X) * (c.X - center.X)));
+				if (distance < (double)best) {
+					best = (int)distance;
+					nearest = i;
+				}
+			}
+		}
 
-		double percent = SeedData.Tiberium * 0.01; // RA2: as above
-		int total = (int)(percent * (RMGMaximumTiberium - RMGMinimumTiberium) + RMGMinimumTiberium); // RA2: as above
-		double players = region->StartCount; // RA2: as above
-		int amount = (int)((double)total * (0.5 > players ? 0.5 : players)); // RA2: as above
-		if (region->StartCells->Count() == 0 || amount == 0) continue; // RA2: as above
+		double percent = SeedData.Tiberium * 0.01;
+		int total = (int)(percent * (RMGMaximumTiberium - RMGMinimumTiberium) + RMGMinimumTiberium);
+		double players = region->StartCount;
+		int amount = (int)((double)total * (0.5 > players ? 0.5 : players));
+		if (region->StartCells->Count() == 0 || amount == 0) continue;
 
-		int per_field = amount / region->StartCells->Count(); // RA2: as above
-		for (int field = 0; field < region->StartCells->Count(); field++) { // RA2: as above
-			int size = (int)((double)per_field + Sample_Truncated_Normal_Inline(0.0, 50.0, -100.0, 100.0)); // RA2: as above
-			if (size >= 0) { // RA2: as above
-				Create_Tiberium_Patch((*region->StartCells)[field], size, field + waypoint + 1, field == nearest); // RA2: as above
-			} // RA2: as above
-		} // RA2: as above
+		int per_field = amount / region->StartCells->Count();
+		for (int field = 0; field < region->StartCells->Count(); field++) {
+			int size = (int)((double)per_field + Sample_Truncated_Normal_Inline(0.0, 50.0, -100.0, 100.0));
+			if (size >= 0) {
+				Create_Tiberium_Patch((*region->StartCells)[field], size, field + waypoint + 1, field == nearest);
+			}
+		}
 
 		/*
 		**	Every player starting in this region gets a field of their own, the bigger the
 		**	further they sit from the fields already grown.
 		*/
-		DynamicVectorClass<double> distances; // RA2: as above
-		for (int player = 0; player < Start_Count(region); player++) { // RA2: as above
-			double total_distance = 0.0; // RA2: as above
-			Cell start = Scen->Get_Waypoint_Cell((WAYPOINT)(player + waypoint)); // RA2: as above
-			for (int i = 0; i < region->StartCells->Count(); i++) { // RA2: as above
-				Cell c = (*region->StartCells)[i]; // RA2: as above
-				total_distance += Cell_Distance(c, start.X, start.Y); // RA2: as above
-			} // RA2: as above
-			distances.Add(total_distance / (double)region->StartCells->Count()); // RA2: as above
-		} // RA2: as above
+		DynamicVectorClass<double> distances;
+		for (int player = 0; player < Start_Count(region); player++) {
+			double total_distance = 0.0;
+			Cell start = Scen->Get_Waypoint_Cell((WAYPOINT)(player + waypoint));
+			for (int i = 0; i < region->StartCells->Count(); i++) {
+				Cell c = (*region->StartCells)[i];
+				total_distance += Cell_Distance(c, start.X, start.Y);
+			}
+			distances.Add(total_distance / (double)region->StartCells->Count());
+		}
 
-		double closest = 9999999.0; // RA2: as above
-		for (int i = 0; i < Start_Count(region); i++) { // RA2: as above
-			if (distances[i] < closest) closest = distances[i]; // RA2: as above
-		} // RA2: as above
+		double closest = 9999999.0;
+		for (int i = 0; i < Start_Count(region); i++) {
+			if (distances[i] < closest) closest = distances[i];
+		}
 
 		static const double _distance_scale = 15.0; // RA2: the extra field cells per cell of distance beyond the closest start
-		bool rich = Rich_Starts(SeedData); // RA2: as above
-		for (int spot = 0; spot < Start_Count(region); spot++) { // RA2: as above
+		bool rich = Rich_Starts(SeedData);
+		for (int spot = 0; spot < Start_Count(region); spot++) {
 			int size = (int)((distances[spot] - closest) * _distance_scale); // RA2: a named constant of the function: the executable reads this 15.0 at 0x7A5CE8, among the function statics, while the literal 15.0 elsewhere in this file is the copy kept from an earlier object (0x7A5398)
-			Create_Tiberium_Patch(Scen->Get_Waypoint_Cell((WAYPOINT)(spot + waypoint)), size + 500, spot + waypoint + 1, rich); // RA2: as above
-		} // RA2: as above
-		waypoint += Start_Count(region); // RA2: as above
-	} // RA2: as above
+			Create_Tiberium_Patch(Scen->Get_Waypoint_Cell((WAYPOINT)(spot + waypoint)), size + 500, spot + waypoint + 1, rich);
+		}
+		waypoint += Start_Count(region);
+	}
 }
 
 
@@ -7816,7 +7815,7 @@ void MapGeneratorClass::Create_Tiberium_Patch(Cell const &cell, int count, int p
 
 	bool queue_was_reset_for_spread = false;
 	Cell spread_origin = cell;
-	int placed_count = 0; // RA2
+	int placed_count = 0;
 	int restart_count = 0;
 	int overlay_base = rich ? 27 : 102; // RA2: gems, or ore
 
@@ -7842,7 +7841,7 @@ void MapGeneratorClass::Create_Tiberium_Patch(Cell const &cell, int count, int p
 			marker_index = 1;
 			float & score = nodes[0].Score; // RA2: score written after the cell
 			nodes[0].Element = cell;
-			score = 0; // RA2: as above
+			score = 0;
 			Set_Cell_Data_Spread(cell, patch_id);
 			queue->Insert(nodes[0]);
 			node = queue->Extract_Min();
@@ -7868,14 +7867,14 @@ void MapGeneratorClass::Create_Tiberium_Patch(Cell const &cell, int count, int p
 				queue->Clear();
 				marker_index = 0;
 				if (!rich) { // RA2: an ore tree where the field starts
-					char name[20]; // RA2: as above
-					sprintf(name, "TIBTRE0%d", (int)Pick_Random_UInt(1, 3) % 10); // RA2: as above
-					new TerrainClass(TerrainTypes[TerrainTypeClass::From_Name(name)], spread_origin); // RA2: as above
-				} // RA2: as above
+					char name[20];
+					sprintf(name, "TIBTRE0%d", (int)Pick_Random_UInt(1, 3) % 10);
+					new TerrainClass(TerrainTypes[TerrainTypeClass::From_Name(name)], spread_origin);
+				}
 			}
 
 			if (cellptr->Overlay == OVERLAY_NONE) {
-				cellptr->Overlay = OverlayType(Pick_Random_UInt(0, 11) + overlay_base); // RA2
+				cellptr->Overlay = OverlayType(Pick_Random_UInt(0, 11) + overlay_base);
 				placed_count++;
 			} else {
 				if (cellptr->OverlayData < OVERLAYDATA_TIBERIUM_MAX) {
@@ -7943,16 +7942,16 @@ void MapGeneratorClass::Seed_Hill_Heights(void)
 
 	int i;
 	int grid_size = MapCellStride * MapCellStride;
-	double height_step = SeedData.Hills * 0.0001 + 0.1; // RA2: as above
+	double height_step = SeedData.Hills * 0.0001 + 0.1;
 	double min_volatility = SeedData.Hills * 0.0025;
 	double max_volatility = SeedData.Hills * 0.005;
 
 	if (min_volatility >= scale) {
 		for (i = 0; i < grid_size; i++) {
-			MapRegionClass::CellData * pdata = &MapRegionClass::Get_Cell_Data(i); // RA2: as above
-			MapRegionClass::CellData & data = *pdata; // RA2: as above
+			MapRegionClass::CellData * pdata = &MapRegionClass::Get_Cell_Data(i);
+			MapRegionClass::CellData & data = *pdata;
 			Cell cell = data.CellID;
-			if (cell.X != 0 || cell.Y != 0) { // RA2: as above
+			if (cell.X != 0 || cell.Y != 0) {
 				data.HillVolatility = 0;
 				double up_height = 0.0;
 				double height_trend = 0.0;
@@ -7964,24 +7963,24 @@ void MapGeneratorClass::Seed_Hill_Heights(void)
 				Cell newcell = cell - Cell(1, 0);
 				if (My_In_Radar(newcell)) {
 					MapRegionClass::CellData & data2 = MapRegionClass::Get_Cell_Data(newcell);
-					pdata->HillHeight += data2.HillHeight; // RA2: as above
+					pdata->HillHeight += data2.HillHeight;
 					data.HillVolatility = data2.HillVolatility;
 					height_trend += data2.HillHeight - up_height;
 				} else {
-					pdata->HillHeight = data.HillHeight; // RA2: as above
+					pdata->HillHeight = data.HillHeight;
 					data.HillVolatility = min_volatility;
 				}
 
 				newcell = cell - Cell(0, 1);
 				if (My_In_Radar(newcell)) {
 					MapRegionClass::CellData & data2 = MapRegionClass::Get_Cell_Data(newcell);
-					double height2 = data2.HillHeight; // RA2: as above
-					data.HillHeight = height2 + data.HillHeight; // RA2: as above
-					data.HillVolatility = data2.HillVolatility + data.HillVolatility; // RA2: as above
+					double height2 = data2.HillHeight;
+					data.HillHeight = height2 + data.HillHeight;
+					data.HillVolatility = data2.HillVolatility + data.HillVolatility;
 					height_trend += data2.HillHeight - up_height;
 				} else {
-					pdata->HillHeight = data.HillHeight; // RA2: as above
-					data.HillVolatility = min_volatility + data.HillVolatility; // RA2: as above
+					pdata->HillHeight = data.HillHeight;
+					data.HillVolatility = min_volatility + data.HillVolatility;
 				}
 
 				data.HillHeight *= 0.5;
@@ -7991,24 +7990,24 @@ void MapGeneratorClass::Seed_Hill_Heights(void)
 				} else if (height_trend < 0.0) {
 					height_trend = -height_step;
 				}
-				if (data.Inviolate) { // RA2: as above
-					data.HillHeight = (data.HillHeight <= 0.0) ? 0.0 : data.HillHeight; // RA2: as above
-					data.HillVolatility = 0.0025; // RA2: as above
+				if (data.Inviolate) {
+					data.HillHeight = (data.HillHeight <= 0.0) ? 0.0 : data.HillHeight;
+					data.HillVolatility = 0.0025;
 				}
 				const double mean = 0.0;
-				data.HillVolatility += Sample_Truncated_Normal_Inline(mean, scale, -data.HillVolatility, max_volatility - data.HillVolatility); // RA2: as above
+				data.HillVolatility += Sample_Truncated_Normal_Inline(mean, scale, -data.HillVolatility, max_volatility - data.HillVolatility);
 
-				double min_height = -2.0 - data.HillHeight; // RA2: as above
-				double max_height = 2.0 - data.HillHeight; // RA2: as above
-				double trend; // RA2: as above
-				if (height_trend < min_height) { // RA2: as above
-					trend = min_height; // RA2: as above
-				} else if (height_trend > max_height) { // RA2: as above
-					trend = max_height; // RA2: as above
+				double min_height = -2.0 - data.HillHeight;
+				double max_height = 2.0 - data.HillHeight;
+				double trend;
+				if (height_trend < min_height) {
+					trend = min_height;
+				} else if (height_trend > max_height) {
+					trend = max_height;
 				} else {
-					trend = height_trend; // RA2: as above
+					trend = height_trend;
 				}
-				data.HillHeight += Sample_Truncated_Normal_Inline(trend, data.HillVolatility, min_height, max_height); // RA2: as above
+				data.HillHeight += Sample_Truncated_Normal_Inline(trend, data.HillVolatility, min_height, max_height);
 			}
 		}
 
@@ -8016,7 +8015,7 @@ void MapGeneratorClass::Seed_Hill_Heights(void)
 			MapRegionClass::CellData & data = MapRegionClass::Get_Cell_Data(i);
 			if (data.HillHeight < 0) {
 				data.HillHeight = (int)(data.HillHeight - 0.5);
-			} else if (data.HillHeight > 0) { // RA2: as above
+			} else if (data.HillHeight > 0) {
 				data.HillHeight = (int)(data.HillHeight + 0.5);
 			}
 		}
@@ -8142,8 +8141,8 @@ void MapGeneratorClass::Seed_Vegetation(void)
 	CellClass * cptr = Map.Iterate();
 
 	static const double rough = 0.005; // RA2: Seed_Vegetation at 0x5850A0 matches only so
-	static const double green = 0.02; // RA2: as above
-	static const double sand = 0.005; // RA2: as above
+	static const double green = 0.02;
+	static const double sand = 0.005;
 	double density = SeedData.Vegetation * 0.01;
 
 	while (cptr != NULL) { // RA2: Seed_Vegetation at 0x5850A0 has no double chances[3][4] = {
@@ -8152,16 +8151,16 @@ void MapGeneratorClass::Seed_Vegetation(void)
 			for (int x = cptr->Fetch_CellID().X - 2; x < cptr->Fetch_CellID().X + 3; x++) {
 				for (int y = cptr->Fetch_CellID().Y - 2; y < cptr->Fetch_CellID().Y + 3; y++) {
 					if (My_In_Radar(Cell(x, y))) {
-						data.RoughTileChance = rough; // RA2: as above
-						data.GreenTileChance = density * green * 10.0; // RA2: as above
+						data.RoughTileChance = rough;
+						data.GreenTileChance = density * green * 10.0;
 						data.SandTileChance = 0;
 					} // RA2: Seed_Vegetation at 0x5850A0 has no ForestChance
 				}
 			}
 		} else if (data.RoughTileChance == 0.0) {
-			data.RoughTileChance = rough; // RA2: as above
-			data.GreenTileChance = density * green; // RA2: as above
-			data.SandTileChance = sand; // RA2: as above
+			data.RoughTileChance = rough;
+			data.GreenTileChance = density * green;
+			data.SandTileChance = sand;
 		}
 		cptr = Map.Iterate();
 	}
@@ -8176,15 +8175,15 @@ void MapGeneratorClass::Seed_Vegetation(void)
 void MapGeneratorClass::Seed_Arctic_Vegetation(void)
 {
 	static const double rough = 0.005; // RA2: Seed_Arctic_Vegetation at 0x585240 matches only so
-	static const double sand = 0.001; // RA2: as above
+	static const double sand = 0.001;
 
 	Map.Reset_Iterator();
 	CellClass * cptr = Map.Iterate();
 
 	while (cptr != NULL) { // RA2: Seed_Arctic_Vegetation at 0x585240 has no SeedData, Vegetation
 		MapRegionClass::CellData & data = MapRegionClass::Get_Cell_Data(cptr->Fetch_CellID());
-		data.RoughTileChance = rough; // RA2: as above
-		data.SandTileChance = sand; // RA2: as above
+		data.RoughTileChance = rough;
+		data.SandTileChance = sand;
 		cptr = Map.Iterate();
 	}
 }
@@ -8206,8 +8205,8 @@ void MapGeneratorClass::Generate_Vegetation(void)
 	cptr = Map.Iterate();
 
 	int rough_mean = Pick_Random_UInt(20, 40); // RA2: Generate_Vegetation at 0x5852C0 matches only so
-	int sand_mean = Pick_Random_UInt(20, 40); // RA2: as above
-	int green_mean = Pick_Random_UInt(20, 40); // RA2: as above
+	int sand_mean = Pick_Random_UInt(20, 40);
+	int green_mean = Pick_Random_UInt(20, 40);
 
 	while (cptr != NULL) {
 		MapRegionClass::CellData & data = MapRegionClass::Get_Cell_Data(cptr->Fetch_CellID());
@@ -8215,13 +8214,13 @@ void MapGeneratorClass::Generate_Vegetation(void)
 			Cell cell = cptr->Fetch_CellID();
 			int origin_id = cell.X + cell.Y * MAP_CELL_W;
 			if (Random_Fraction() < data.GreenTileChance) {
-				Place_Tile_Patch(cptr, IsometricTileTypeClass::RoughTile, Sample_Truncated_Normal_Inline(rough_mean, 20, 4, 80), origin_id, false); // RA2: as above
+				Place_Tile_Patch(cptr, IsometricTileTypeClass::RoughTile, Sample_Truncated_Normal_Inline(rough_mean, 20, 4, 80), origin_id, false);
 			} else {
 				if (Random_Fraction() < data.RoughTileChance) {
-					Place_Tile_Patch(cptr, IsometricTileTypeClass::SandTile, Sample_Truncated_Normal_Inline(sand_mean, 20, 4, 80), origin_id, false); // RA2: as above
+					Place_Tile_Patch(cptr, IsometricTileTypeClass::SandTile, Sample_Truncated_Normal_Inline(sand_mean, 20, 4, 80), origin_id, false);
 				} else {
 					if (Random_Fraction() < data.SandTileChance) {
-						Place_Tile_Patch(cptr, IsometricTileTypeClass::GreenTile, Sample_Truncated_Normal_Inline(green_mean, 20, 4, 80), origin_id, false); // RA2: as above
+						Place_Tile_Patch(cptr, IsometricTileTypeClass::GreenTile, Sample_Truncated_Normal_Inline(green_mean, 20, 4, 80), origin_id, false);
 					}
 				}
 			}
@@ -8236,19 +8235,19 @@ void MapGeneratorClass::Generate_Vegetation(void)
 		cptr = Map.Iterate();
 	}
 
-	int tree_count = (int)((SeedData.Width * 0.1 + 0.7) * (SeedData.Vegetation * 0.01) * MaxTrees); // RA2: as above
-	for (int tries = 0; tree_count > 0 && tries < 100; tries++) { // RA2: as above
-		Cell cell = MapRegionClass::Pick_Random_Clear_Map_Cell(); // RA2: as above
-		tree_count -= Place_Forest(&Map[cell], Sample_Truncated_Normal_Inline(25, 10, 10, 35), Sample_Truncated_Normal_Inline(0.2, 0.1, 0.05, 0.4)); // RA2: as above
+	int tree_count = (int)((SeedData.Width * 0.1 + 0.7) * (SeedData.Vegetation * 0.01) * MaxTrees);
+	for (int tries = 0; tree_count > 0 && tries < 100; tries++) {
+		Cell cell = MapRegionClass::Pick_Random_Clear_Map_Cell();
+		tree_count -= Place_Forest(&Map[cell], Sample_Truncated_Normal_Inline(25, 10, 10, 35), Sample_Truncated_Normal_Inline(0.2, 0.1, 0.05, 0.4));
 	}
 
-	int overlay_count = Pick_Random_UInt(0, Map_Cell_Count() / 200); // RA2: as above
+	int overlay_count = Pick_Random_UInt(0, Map_Cell_Count() / 200);
 
 	int placed = 0;
-	for (tries = 0; tries < overlay_count * 5 && placed < overlay_count; tries++) { // RA2: as above
-		Cell cell = MapRegionClass::Pick_Random_Map_Cell(); // RA2: as above
-		CellClass * cellptr = &Map[cell]; // RA2: as above
-		MapRegionClass::CellData & data = MapRegionClass::Get_Cell_Data(cell); // RA2: as above
+	for (tries = 0; tries < overlay_count * 5 && placed < overlay_count; tries++) {
+		Cell cell = MapRegionClass::Pick_Random_Map_Cell();
+		CellClass * cellptr = &Map[cell];
+		MapRegionClass::CellData & data = MapRegionClass::Get_Cell_Data(cell);
 		if (cellptr->Overlay == OVERLAY_NONE) {
 			if (cellptr->Is_Tile_Clear_To_Sand_LAT()) {
 				cellptr->Overlay = OverlayType(Pick_Random_UInt(0, 4) + OVERLAY_SAND_ROCK_01);
@@ -8285,9 +8284,9 @@ void MapGeneratorClass::Generate_Arctic_Vegetation(void)
 		if (cptr->Is_Tile_Clear() && cptr->Ramp == RAMP_NONE && !data.Inviolate) {
 			Cell cell = cptr->Fetch_CellID(); // RA2: Generate_Arctic_Vegetation at 0x585A60 matches only so
 			int origin_id = cell.X + cell.Y * MAP_CELL_W;
-			if ((unsigned int)RMGRandom() * (1.0 / 4294967295.0) < data.RoughTileChance) { // RA2: as above
-				double patch_size = Sample_Truncated_Normal_Inline(20, 15, 4, 60); // RA2: as above
-				Place_Tile_Patch(cptr, IsometricTileTypeClass::RoughTile, patch_size, origin_id, false); // RA2: as above
+			if ((unsigned int)RMGRandom() * (1.0 / 4294967295.0) < data.RoughTileChance) {
+				double patch_size = Sample_Truncated_Normal_Inline(20, 15, 4, 60);
+				Place_Tile_Patch(cptr, IsometricTileTypeClass::RoughTile, patch_size, origin_id, false);
 			}
 		}
 		cptr = Map.Iterate();
@@ -8300,10 +8299,10 @@ void MapGeneratorClass::Generate_Arctic_Vegetation(void)
 		cptr = Map.Iterate();
 	}
 
-	int tree_count = (int)((SeedData.Width * 0.1 + 0.7) * (SeedData.Vegetation * 0.01) * MaxTrees); // RA2: as above
-	for (int tries = 0; tree_count > 0 && tries < 100; tries++) { // RA2: as above
-		Cell cell = MapRegionClass::Pick_Random_Clear_Map_Cell(); // RA2: as above
-		tree_count -= Place_Forest(&Map[cell], Sample_Truncated_Normal_Inline(25, 10, 10, 35), Sample_Truncated_Normal_Inline(0.2, 0.1, 0.05, 0.4)); // RA2: as above
+	int tree_count = (int)((SeedData.Width * 0.1 + 0.7) * (SeedData.Vegetation * 0.01) * MaxTrees);
+	for (int tries = 0; tree_count > 0 && tries < 100; tries++) {
+		Cell cell = MapRegionClass::Pick_Random_Clear_Map_Cell();
+		tree_count -= Place_Forest(&Map[cell], Sample_Truncated_Normal_Inline(25, 10, 10, 35), Sample_Truncated_Normal_Inline(0.2, 0.1, 0.05, 0.4));
 	}
 }
 
@@ -8329,16 +8328,16 @@ static inline void Delete_Forest_Search(CellNode * nodes, PriorityQueueClass<Cel
 /// <param name="density">The chance, from 0 to 1, that a cell reached is given a tree.</param>
 int MapGeneratorClass::Place_Forest(CellClass const * cellptr, int count, double density) // RA2: Place_Forest at 0x585DC0 matches only so
 {
-	CellNode * nodes = new CellNode[25 * count]; // RA2: as above
-	PriorityQueueClass<CellNode> * queue = new PriorityQueueClass<CellNode>(25 * count); // RA2: as above
+	CellNode * nodes = new CellNode[25 * count];
+	PriorityQueueClass<CellNode> * queue = new PriorityQueueClass<CellNode>(25 * count);
 
 	queue->Clear();
 
-	int node_count = 0; // RA2: as above
+	int node_count = 0;
 	Cell cell = cellptr->Fetch_CellID();
-	nodes[node_count].Element = cell; // RA2: as above
-	nodes[node_count].Score = 0; // RA2: as above
-	node_count++; // RA2: as above
+	nodes[node_count].Element = cell;
+	nodes[node_count].Score = 0;
+	node_count++;
 
 	MapRegionClass::Get_Cell_Data(cellptr->Fetch_CellID()).Forested = true;
 
@@ -8346,27 +8345,27 @@ int MapGeneratorClass::Place_Forest(CellClass const * cellptr, int count, double
 
 	CellNode * node = queue->Extract_Min();
 
-	int i = 0; // RA2: as above
-	while (i < count && node != NULL && node_count < 25 * count) { // RA2: as above
+	int i = 0;
+	while (i < count && node != NULL && node_count < 25 * count) {
 		CellClass * cptr = &Map[node->Element];
 		if (cptr->Is_Tile_Clear() && cptr->Cell_Occupier() == NULL && cptr->Overlay == OVERLAY_NONE && cptr->Land_Type() != LAND_ROCK) {
 			if (Random_Fraction() < density) {
 				char tree_name[20];
-				int tree_index = Pick_Random_UInt(1, 25); // RA2: as above
+				int tree_index = Pick_Random_UInt(1, 25);
 				sprintf(tree_name, "TREE%d%d", tree_index / 10, tree_index % 10);
 				new TerrainClass(TerrainTypes[TerrainTypeClass::From_Name(tree_name)], cptr->Fetch_CellID());
-				i++; // RA2: as above
+				i++;
 			}
 		}
 
-		FacingType dir = FACING_FIRST; // RA2: as above
+		FacingType dir = FACING_FIRST;
 		CellNode * newnode = &nodes[node_count];
-		for (; dir < FACING_COUNT; dir++) { // RA2: as above
-			Cell const & offset = AdjacentCell[(int)dir & 7]; // RA2: as above
-			Cell newcell(offset.X + node->Element.X, offset.Y + node->Element.Y); // RA2: as above
+		for (; dir < FACING_COUNT; dir++) {
+			Cell const & offset = AdjacentCell[(int)dir & 7];
+			Cell newcell(offset.X + node->Element.X, offset.Y + node->Element.Y);
 			if (My_In_Radar(newcell)) {
 				MapRegionClass::CellData & data = MapRegionClass::Get_Cell_Data(newcell);
-				if (!data.Forested && !data.Inviolate && node_count < 25 * count) { // RA2: as above
+				if (!data.Forested && !data.Inviolate && node_count < 25 * count) {
 					newnode->Element = newcell;
 					newnode->Score = Get_Forest_Score(cellptr->Fetch_CellID(), newcell);
 					data.Forested = true;
@@ -8379,8 +8378,8 @@ int MapGeneratorClass::Place_Forest(CellClass const * cellptr, int count, double
 		node = queue->Extract_Min(); // RA2: Place_Forest at 0x585DC0 has no i++;
 	}
 
-	Delete_Forest_Search(nodes, queue); // RA2: as above
-	return i; // RA2: as above
+	Delete_Forest_Search(nodes, queue);
+	return i;
 }
 
 
@@ -8404,24 +8403,24 @@ void MapGeneratorClass::Place_Tile_Patch(CellClass * cellptr, IsometricTileType 
 	int i = 0;
 	queue->Clear();
 
-	int node_count = 0; // RA2: as above
+	int node_count = 0;
 	Cell cell = cellptr->Fetch_CellID();
-	nodes[node_count].Element = cell; // RA2: as above
-	nodes[node_count].Score = 0; // RA2: as above
-	node_count++; // RA2: as above
+	nodes[node_count].Element = cell;
+	nodes[node_count].Score = 0;
+	node_count++;
 
 	MapRegionClass::Get_Cell_Data(cellptr->Fetch_CellID()).SpreadID = origin_id;
 
 	queue->Insert(*nodes);
 
-	node = queue->Extract_Min(); // RA2: as above
+	node = queue->Extract_Min();
 	while (i < count && node != NULL) {
 		CellClass * cptr = &Map[node->Element];
 		cptr->ITType = ittype;
 
-		FacingType dir = FACING_FIRST; // RA2: as above
+		FacingType dir = FACING_FIRST;
 		CellNode * newnode = &nodes[node_count];
-		for (; dir < FACING_COUNT; dir++) { // RA2: as above
+		for (; dir < FACING_COUNT; dir++) {
 			Cell newcell = Adjacent_Cell(node->Element, dir);
 			if (My_In_Radar(newcell)) {
 				CellClass * newcellptr = &Map[newcell];
@@ -8519,7 +8518,7 @@ DynamicVectorClass<Cell> * MapGeneratorClass::Create_Urban_Area(Cell const & cel
 	DynamicVectorClass<Cell> * cells; // RA2: Create_Urban_Area at 0x586B40 matches only so
 	CellNode * nodes = new CellNode[10 * size];
 	PriorityQueueClass<CellNode> * queue = new PriorityQueueClass<CellNode>(10 * size);
-	int processed = 0; // RA2: as above
+	int processed = 0;
 	queue->Clear();
 
 	Map.Reset_Iterator(); // RA2: Create_Urban_Area at 0x586B40 has no int processed = 0;
@@ -8530,19 +8529,19 @@ DynamicVectorClass<Cell> * MapGeneratorClass::Create_Urban_Area(Cell const & cel
 		cptr = Map.Iterate();
 	}
 
-	int node_count = 0; // RA2: as above
-	nodes[node_count].Element = cell; // RA2: as above
-	nodes[node_count].Score = 0; // RA2: as above
+	int node_count = 0;
+	nodes[node_count].Element = cell;
+	nodes[node_count].Score = 0;
 	Set_Cell_Data_Spread(cell, 1);
-	node_count++; // RA2: as above
+	node_count++;
 	queue->Insert(nodes[0]);
 
 	CellNode * node = queue->Extract_Min();
 
-	cells = new DynamicVectorClass<Cell>; // RA2: as above
+	cells = new DynamicVectorClass<Cell>;
 	cells->Set_Growth_Step(size + 2);
 
-	while (processed < size && node != NULL) { // RA2: as above
+	while (processed < size && node != NULL) {
 		Map[node->Element].ITType = IsometricTileTypeClass::PaveTile;
 		cells->Add(node->Element);
 
@@ -8552,7 +8551,7 @@ DynamicVectorClass<Cell> * MapGeneratorClass::Create_Urban_Area(Cell const & cel
 			if (My_In_Radar(newcell)) {
 				CellClass * newcellptr = &Map[newcell];
 				if (newcellptr->Is_Tile_Clear() && newcellptr->Overlay == OVERLAY_NONE) {
-					if (Get_Cell_Data_Spread(newcell) != 1 && MapRegionClass::CellData::Is_Not_Inviolate(newcell)) { // RA2: as above
+					if (Get_Cell_Data_Spread(newcell) != 1 && MapRegionClass::CellData::Is_Not_Inviolate(newcell)) {
 						newnode->Element = newcell;
 						newnode->Score = Get_Urban_Score(cell, newcell);
 						Set_Cell_Data_Spread(newcell, 1);
@@ -8603,7 +8602,7 @@ DynamicVectorClass<Cell> * MapGeneratorClass::Create_Urban_Area(Cell const & cel
 		if (tile_variant > 3) {
 			for (int m = 0; m < 2; m++) {
 				for (int n = 0; n < 2; n++) {
-					Cell c = base + Cell(m, n); // RA2: as above
+					Cell c = base + Cell(m, n);
 					if (!MapRegionClass::Get_Cell_Data(c).Inviolate || Map[c].ITType != IsometricTileTypeClass::PaveTile) {
 						place = false;
 					}
@@ -8649,7 +8648,7 @@ double MapGeneratorClass::Get_Urban_Score(const Cell & cell1, const Cell & cell2
 /// <param name="cells">The cells of the urban area the road grid is fitted to.</param>
 void MapGeneratorClass::Generate_Urban_Roads(const DynamicVectorClass<Cell> & cells)
 {
-	Cell start; // RA2: RA2's form
+	Cell start;
 	Rect bounds = Get_Cell_Bounding_Rect(cells);
 
 	/// Horizontal east-west road bands
@@ -8663,15 +8662,15 @@ void MapGeneratorClass::Generate_Urban_Roads(const DynamicVectorClass<Cell> & ce
 			Cell junction = Plan_Paved_Road_Junction(start, bounds, FACING_E);
 			Cell end = Plan_Paved_Road(junction, bounds, FACING_E);
 
-			bool valid = false; // RA2: as above
-			int first; // RA2: as above
+			bool valid = false;
+			int first;
 
-			if (end != Cell(0, 0) && start != Cell(0, 0)) { // RA2: as above
-				first = start.X; // RA2: as above
-				valid = true; // RA2: as above
+			if (end != Cell(0, 0) && start != Cell(0, 0)) {
+				first = start.X;
+				valid = true;
 			}
 
-			if (valid && end.X - first >= 6) { // RA2: as above
+			if (valid && end.X - first >= 6) {
 
 				/// Left road cap / start piece
 				if (Can_Place_Paved_Road(Rect(junction.X - 4, junction.Y, 4, 3), false, false) && Pick_Random_UInt(0, 1)) {
@@ -8704,14 +8703,14 @@ void MapGeneratorClass::Generate_Urban_Roads(const DynamicVectorClass<Cell> & ce
 	/// Vertical north-south road bands
 	if (bounds.Width > 8) {
 		int remaining = bounds.Height - 5;
-		start.X = bounds.X + 5; // RA2: as above
-		start.Y = bounds.Y; // RA2: as above
+		start.X = bounds.X + 5;
+		start.Y = bounds.Y;
 
 		while (remaining > 3) {
 			Cell cursor = Plan_Paved_Road_Junction(start, bounds, FACING_S);
 			Cell end = Plan_Paved_Road(cursor, bounds, FACING_S);
 
-			if (end != Cell(0, 0) && start != Cell(0, 0) && end.Y - start.Y >= 6) { // RA2: as above
+			if (end != Cell(0, 0) && start != Cell(0, 0) && end.Y - start.Y >= 6) {
 				bool in_segment = false;
 				bool initial = true;
 				bool median_pending = false;
@@ -8722,10 +8721,10 @@ void MapGeneratorClass::Generate_Urban_Roads(const DynamicVectorClass<Cell> & ce
 					if (!in_segment) {
 						Rect road_rect;
 						Rect junction_rect;
-						road_rect = Rect(cursor.X, cursor.Y, 3, 2); // RA2: as above
-						junction_rect = Rect(cursor.X, cursor.Y - 3, 3, 4); // RA2: as above
+						road_rect = Rect(cursor.X, cursor.Y, 3, 2);
+						junction_rect = Rect(cursor.X, cursor.Y - 3, 3, 4);
 
-						if (end.Y - cursor.Y < 2) { // RA2: as above
+						if (end.Y - cursor.Y < 2) {
 							skip_tail = true;
 							break;
 						}
@@ -8766,14 +8765,14 @@ void MapGeneratorClass::Generate_Urban_Roads(const DynamicVectorClass<Cell> & ce
 							if (Can_Place_Paved_Road_Junction(junction_rect)) {
 								int bottom = end.Y;
 
-								if (bottom - cursor.Y < 4) { // RA2: as above
+								if (bottom - cursor.Y < 4) {
 									Place_Tile((IsometricTileType)(IsometricTileTypeClass::PavedRoads + 7), cursor);
 									skip_tail = true;
 									break;
 								}
 
 								if (Can_Place_Paved_Road(Rect(cursor.X, cursor.Y + 3, 3, 2), false, false)) {
-									if (bottom - cursor.Y > 5) { // RA2: as above
+									if (bottom - cursor.Y > 5) {
 										median_pending = true;
 										median_flip = true;
 									}
@@ -8846,15 +8845,15 @@ void MapGeneratorClass::Generate_Urban_Roads(const DynamicVectorClass<Cell> & ce
 /// <param name="cells">The cells of the urban area available to build on.</param>
 void MapGeneratorClass::Generate_Urban_Buildings(const DynamicVectorClass<Cell> & cells)
 {
-	static char * building_names[18] = {"CITY01", "CITY02", "CITY03", "CITY04", "CITY05", "CITY06", "CITY07", "CITY08", "CITY09", "CITY10", "CITY11", "CITY12", "CITY13", "CITY14", "CITY15", "CITY16", "CITY17", "CITY18"}; // RA2: RA2's form
+	static char * building_names[18] = { "CITY01", "CITY02", "CITY03", "CITY04", "CITY05", "CITY06", "CITY07", "CITY08", "CITY09", "CITY10", "CITY11", "CITY12", "CITY13", "CITY14", "CITY15", "CITY16", "CITY17", "CITY18" };
 
 	int count = Pick_Random_UInt(cells.Count() / 20, cells.Count() / 10) / 2;
 	int tries = 0;
 	int placed = 0;
 
 	DynamicVectorClass<char *> names;
-	for (int index = 0; index < 18; ++index) { // RA2: as above
-		names.Add(building_names[index]); // RA2: as above
+	for (int index = 0; index < 18; ++index) {
+		names.Add(building_names[index]);
 	}
 
 	HouseClass * neutral = House_From_HousesType(HouseTypeClass::From_Name("Neutral"));
@@ -8864,51 +8863,51 @@ void MapGeneratorClass::Generate_Urban_Buildings(const DynamicVectorClass<Cell> 
 			if (tries >= 2 * count || names.Count() <= 1) {
 				break;
 			}
-			int nameIndex = Pick_Random_UInt(0, names.Count() - 1); // RA2: as above
-			StructType typeIndex = BuildingTypeClass::From_Name(names[nameIndex]); // RA2: as above
+			int nameIndex = Pick_Random_UInt(0, names.Count() - 1);
+			StructType typeIndex = BuildingTypeClass::From_Name(names[nameIndex]);
 			{
-				BuildingClass * building = new BuildingClass(BuildingTypes[typeIndex], neutral); // RA2: as above
+				BuildingClass * building = new BuildingClass(BuildingTypes[typeIndex], neutral);
 
-				int attempts = 0; // RA2: as above
-				bool wasPlaced = false; // RA2: as above
-				while (!wasPlaced) { // RA2: as above
-					if (attempts >= 60) { // RA2: as above
-						break; // RA2: as above
+				int attempts = 0;
+				bool wasPlaced = false;
+				while (!wasPlaced) {
+					if (attempts >= 60) {
+						break;
 					}
-					Cell position = cells[Pick_Random_UInt(0, cells.Count() - 1)]; // RA2: as above
-					Cell const * list = building->Class->Occupy_List(1); // RA2: as above
-					bool clear = true; // RA2: as above
-					while (list->X != 0x7fff || list->Y != 0x7fff) { // RA2: as above
-						Cell next = (position + *list); // RA2: as above
-						CellClass * cell = &Map[next]; // RA2: as above
-						if ((!cell->Is_Tile_Pavement() && !cell->Is_Tile_Misc_Pavement()) || cell->Cell_Occupier() != NULL || cell->Land_Type() == LAND_ROCK || !Map.In_Local_Radar(cell, true)) { // RA2: as above
-							clear = false; // RA2: as above
+					Cell position = cells[Pick_Random_UInt(0, cells.Count() - 1)];
+					Cell const * list = building->Class->Occupy_List(1);
+					bool clear = true;
+					while (list->X != 0x7fff || list->Y != 0x7fff) {
+						Cell next = (position + *list);
+						CellClass * cell = &Map[next];
+						if ((!cell->Is_Tile_Pavement() && !cell->Is_Tile_Misc_Pavement()) || cell->Cell_Occupier() != NULL || cell->Land_Type() == LAND_ROCK || !Map.In_Local_Radar(cell, true)) {
+							clear = false;
 						}
-						++list; // RA2: as above
-						if (!clear) { // RA2: as above
-							break; // RA2: as above
+						++list;
+						if (!clear) {
+							break;
 						}
 					}
-					if (clear) { // RA2: as above
-						Coord point(position.X * 256 + 128, position.Y * 256 + 128, 0); // RA2: as above
-						if (building->Unlimbo(point, DIR_N)) { // RA2: as above
-							int strength = building->Class->MaxStrength; // RA2: as above
-							building->Strength = strength; // RA2: as above
-							building->EstimatedHealth = strength; // RA2: as above
-							building->Mark(MARK_CHANGE); // RA2: as above
-							wasPlaced = true; // RA2: as above
-							++placed; // RA2: as above
-							if (nameIndex > 17) { // RA2: as above
-								names.Delete_Index((int)nameIndex); // RA2: as above
+					if (clear) {
+						Coord point(position.X * 256 + 128, position.Y * 256 + 128, 0);
+						if (building->Unlimbo(point, DIR_N)) {
+							int strength = building->Class->MaxStrength;
+							building->Strength = strength;
+							building->EstimatedHealth = strength;
+							building->Mark(MARK_CHANGE);
+							wasPlaced = true;
+							++placed;
+							if (nameIndex > 17) {
+								names.Delete_Index((int)nameIndex);
 							}
 						}
 					}
-					++attempts; // RA2: as above
+					++attempts;
 				}
-				if (!wasPlaced) { // RA2: as above
-					delete building; // RA2: as above
+				if (!wasPlaced) {
+					delete building;
 				}
-				++tries; // RA2: as above
+				++tries;
 			}
 			if (placed >= count) {
 				break;
@@ -8928,7 +8927,7 @@ void MapGeneratorClass::Generate_Urban_Buildings(const DynamicVectorClass<Cell> 
 /// <param name="cells">The cells of the urban area the civilians may occupy.</param>
 void MapGeneratorClass::Generate_Urban_Units(const DynamicVectorClass<Cell> & cells)
 {
-	static char const * names[7] = { // RA2: RA2's form
+	static char const * names[7] = {
 		"CIV1",
 		"CIV2",
 		"CIV3",
@@ -8939,7 +8938,7 @@ void MapGeneratorClass::Generate_Urban_Units(const DynamicVectorClass<Cell> & ce
 	};
 
 	HouseClass * neutral = House_From_HousesType(HouseTypeClass::From_Name("Neutral"));
-	int count = Pick_Random_UInt(1, 5); // RA2: as above
+	int count = Pick_Random_UInt(1, 5);
 
 	int tries = 0;
 	int placed = 0;
@@ -8950,12 +8949,12 @@ void MapGeneratorClass::Generate_Urban_Units(const DynamicVectorClass<Cell> & ce
 				break;
 			}
 
-			int unit_index = Pick_Random_UInt(0, 6); // RA2: as above
-			FootClass * foot; // RA2: as above
+			int unit_index = Pick_Random_UInt(0, 6);
+			FootClass * foot;
 			if (unit_index <= 2) {
-				foot = new InfantryClass(InfantryTypes[InfantryTypeClass::From_Name(names[unit_index])], neutral); // RA2: as above
+				foot = new InfantryClass(InfantryTypes[InfantryTypeClass::From_Name(names[unit_index])], neutral);
 			} else {
-				foot = new UnitClass(UnitTypes[UnitTypeClass::From_Name(names[unit_index])], neutral); // RA2: as above
+				foot = new UnitClass(UnitTypes[UnitTypeClass::From_Name(names[unit_index])], neutral);
 			}
 
 			int tries_here = 0;
@@ -8965,11 +8964,11 @@ void MapGeneratorClass::Generate_Urban_Units(const DynamicVectorClass<Cell> & ce
 					break;
 				}
 				Cell unit_cell = cells[Pick_Random_UInt(0, cells.Count() - 1)];
-				if (Map.In_Local_Radar(unit_cell, true) && Map[unit_cell].Cell_Occupier() == NULL) { // RA2: as above
-					if (foot->Unlimbo(Coord(unit_cell), (Dir256)(Pick_Random_UInt(0, 7) * 32))) { // RA2: as above
-						int strength = foot->TClass->MaxStrength; // RA2: as above
-						foot->Strength = strength; // RA2: as above
-						foot->EstimatedHealth = strength; // RA2: as above
+				if (Map.In_Local_Radar(unit_cell, true) && Map[unit_cell].Cell_Occupier() == NULL) {
+					if (foot->Unlimbo(Coord(unit_cell), (Dir256)(Pick_Random_UInt(0, 7) * 32))) {
+						int strength = foot->TClass->MaxStrength;
+						foot->Strength = strength;
+						foot->EstimatedHealth = strength;
 						foot->Mark(MARK_CHANGE);
 						was_placed = true;
 						placed++;
@@ -9138,27 +9137,27 @@ Cell MapGeneratorClass::Plan_Paved_Road(Cell const & cell, Rect const & rect, Fa
 	Cell wcell = cell;
 
 	int margin_x = 0; // RA2: Plan_Paved_Road at 0x588850 matches only so
-	int margin_y = 0; // RA2: as above
-	int margin_width = 0; // RA2: as above
-	int margin_height = 0; // RA2: as above
-	Rect tile_size; // RA2: as above
+	int margin_y = 0;
+	int margin_width = 0;
+	int margin_height = 0;
+	Rect tile_size;
 
 	if (dir == FACING_E) {
 		tile_size = Rect(0, 0, 1, 3);
-		margin_y = -3; // RA2: as above
-		margin_height = 6; // RA2: as above
+		margin_y = -3;
+		margin_height = 6;
 	} else {
 		tile_size = Rect(0, 0, 3, 1);
-		margin_x = -3; // RA2: as above
-		margin_width = 6; // RA2: as above
+		margin_x = -3;
+		margin_width = 6;
 	}
 
 	while (true) {
 		if (!(wcell.X < rect.X + rect.Width + 1 && wcell.Y < rect.Y + rect.Height + 1)) break;
-		if (!Can_Place_Paved_Road(Rect(margin_x + wcell.X, margin_y + wcell.Y, margin_width + tile_size.Width, margin_height + tile_size.Height), south, south)) { // RA2: as above
+		if (!Can_Place_Paved_Road(Rect(margin_x + wcell.X, margin_y + wcell.Y, margin_width + tile_size.Width, margin_height + tile_size.Height), south, south)) {
 			break;
 		}
-		{ Cell next = Adjacent_Cell(wcell, dir); wcell = next; } // RA2: as above
+		{ Cell next = Adjacent_Cell(wcell, dir); wcell = next; }
 	}
 
 	wcell = Adjacent_Cell(wcell, Facing_Sub(dir, FACING_180));
@@ -9588,11 +9587,11 @@ void MapGeneratorClass::Generate_Rural_Buildings(const Cell & cell)
 	int placed = 0;
 
 	CellClass & center = Map[cell]; // RA2: Generate_Rural_Buildings at 0x589AC0 matches only so
-	int height = center.Height; // RA2: as above
+	int height = center.Height;
 
 	int min_building = 0;
 	int max_building = ARRAY_SIZE(_names) - 1;
-	if (SeedData.Biome == BIOME_TUNDRA) { // RA2: as above
+	if (SeedData.Biome == BIOME_TUNDRA) {
 		min_building = 15;
 	}
 
@@ -9604,7 +9603,7 @@ void MapGeneratorClass::Generate_Rural_Buildings(const Cell & cell)
 	HouseClass * neutral = House_From_HousesType(HouseTypeClass::From_Name("Neutral"));
 
 	if (count > 0) {
-		while (placed < count) { // RA2: as above
+		while (placed < count) {
 			if (tries >= 2 * count) {
 				break;
 			}
@@ -9683,12 +9682,12 @@ void MapGeneratorClass::Generate_Rural_Units(const Cell & cell)
 			break;
 		}
 
-		int unit_index = Pick_Random_UInt(0, ARRAY_SIZE(_names) - 1); // RA2: as above
+		int unit_index = Pick_Random_UInt(0, ARRAY_SIZE(_names) - 1);
 		FootClass * foot = NULL;
-		if (unit_index <= 2) { // RA2: as above
-			foot = new InfantryClass(InfantryTypes[InfantryTypeClass::From_Name(_names[unit_index])], neutral); // RA2: as above
+		if (unit_index <= 2) {
+			foot = new InfantryClass(InfantryTypes[InfantryTypeClass::From_Name(_names[unit_index])], neutral);
 		} else {
-			foot = new UnitClass(UnitTypes[UnitTypeClass::From_Name(_names[unit_index])], neutral); // RA2: as above
+			foot = new UnitClass(UnitTypes[UnitTypeClass::From_Name(_names[unit_index])], neutral);
 		}
 
 		int tries_here = 0;
@@ -9699,9 +9698,9 @@ void MapGeneratorClass::Generate_Rural_Units(const Cell & cell)
 			}
 			Cell unit_cell = cell + Cell(Pick_Random_UInt(0, 16) - 8, Pick_Random_UInt(0, 16) - 8);
 			if (Map.In_Local_Radar(unit_cell) && Map[unit_cell].Cell_Occupier() == NULL) {
-				if (foot->Unlimbo(Coord(unit_cell), (Dir256)(Pick_Random_UInt(0, 7) * 32))) { // RA2: as above
-					foot->Strength = foot->Techno_Type_Class()->MaxStrength; // RA2: as above
-					foot->EstimatedHealth = foot->Strength; // RA2: as above
+				if (foot->Unlimbo(Coord(unit_cell), (Dir256)(Pick_Random_UInt(0, 7) * 32))) {
+					foot->Strength = foot->Techno_Type_Class()->MaxStrength;
+					foot->EstimatedHealth = foot->Strength;
 					foot->Mark(MARK_CHANGE);
 					was_placed = true;
 					placed++;
@@ -10001,8 +10000,8 @@ bool MapGeneratorClass::Find_Dirt_Road_Tile(FacingType facing, Cell const & targ
 	initial_conn_count = current_conn_count = 1;
 	if (max_connections > 1) {
 		double roll = Sample_Truncated_Normal(2.0, 0.5, 2.0, max_connections);
-		current_conn_count = roll; // RA2: RA2's form
-		initial_conn_count = current_conn_count; // RA2: as above
+		current_conn_count = roll;
+		initial_conn_count = current_conn_count;
 	}
 	static const double _offset_chance = 0.7; // RA2: the chance that a two-way piece is looked for from the eighth piece on
 	while (true) {
@@ -10018,8 +10017,8 @@ bool MapGeneratorClass::Find_Dirt_Road_Tile(FacingType facing, Cell const & targ
 			DirtRoadTile & tile = DirtRoadTiles[tile_list[(i + start_index) % tile_count]];
 			int link_index;
 			for (link_index = 0; link_index < tile.Count; link_index++) {
-				DirtRoadLink connection = tile.Links[link_index]; // RA2: as above
-				if (connection.Facing == facing) { // RA2: as above
+				DirtRoadLink connection = tile.Links[link_index];
+				if (connection.Facing == facing) {
 					break;
 				}
 			}
@@ -10080,7 +10079,7 @@ void MapGeneratorClass::Generate_Lights(void)
 
 					for (j = 0; j < light_count; j++) {
 						Coord pc = Move_Coord(Coord(waypoint), j * DEG_TO_RAD(360) / light_count + angle, 8 * CELL_LEPTON); // RA2: Generate_Lights at 0x58A9C0 matches only so
-						Cell place_cell = pc.As_Cell(); // RA2: as above
+						Cell place_cell = pc.As_Cell();
 						if (!BuildingTypes[glite]->Legal_Placement(place_cell, hptr) || !Map.In_Radar(place_cell)) {
 							can_place = false;
 							break;
@@ -10089,8 +10088,8 @@ void MapGeneratorClass::Generate_Lights(void)
 
 					if (can_place) {
 						for (j = 0; j < light_count; j++) {
-							Coord pc = Move_Coord(Coord(waypoint), j * DEG_TO_RAD(360) / light_count + angle, 8 * CELL_LEPTON); // RA2: as above
-						Cell place_cell = pc.As_Cell(); // RA2: as above
+							Coord pc = Move_Coord(Coord(waypoint), j * DEG_TO_RAD(360) / light_count + angle, 8 * CELL_LEPTON);
+							Cell place_cell = pc.As_Cell();
 							BuildingClass * light = new BuildingClass(BuildingTypes[glite], hptr);
 							if (!light->Unlimbo(Coord(place_cell))) {
 								delete light;
@@ -10463,10 +10462,10 @@ int Dirt_Road_Tile_Index(IsometricTileType ittype)
 	if (ittype >= IsometricTileTypeClass::DirtRoadCurve && ittype < IsometricTileTypeClass::DirtRoadCurve + 101) { // RA2: Dirt_Road_Tile_Index at 0x58D9A0 matches only so
 		return(ittype - IsometricTileTypeClass::DirtRoadCurve);
 	}
-	if (ittype < IsometricTileTypeClass::DirtRoadSlopes || ittype >= IsometricTileTypeClass::DirtRoadSlopes + 8) { // RA2: as above
+	if (ittype < IsometricTileTypeClass::DirtRoadSlopes || ittype >= IsometricTileTypeClass::DirtRoadSlopes + 8) {
 		return(0);
 	}
-	return(ittype - IsometricTileTypeClass::DirtRoadSlopes + 101); // RA2: as above
+	return(ittype - IsometricTileTypeClass::DirtRoadSlopes + 101);
 }
 
 
@@ -10482,8 +10481,8 @@ void Init_Dirt_Roads(void)
 	for (i = 0; i < 101; i++) { // RA2: Init_Dirt_Roads at 0x58D9D0 matches only so
 		DirtRoadTiles[i].ITType = IsometricTileType(IsometricTileTypeClass::DirtRoadCurve + i);
 	}
-	for (i = 0; i < FACING_COUNT; i++) { // RA2: as above
-		DirtRoadTiles[i + 101].ITType = IsometricTileType(IsometricTileTypeClass::DirtRoadSlopes + i); // RA2: as above
+	for (i = 0; i < FACING_COUNT; i++) {
+		DirtRoadTiles[i + 101].ITType = IsometricTileType(IsometricTileTypeClass::DirtRoadSlopes + i);
 	}
 }
 

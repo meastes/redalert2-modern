@@ -69,8 +69,8 @@
 #include "always.h"
 
 #include "ini.h"
-#include "stringtable.h" // RA2
-#include "widewstring.h" // RA2
+#include "stringtable.h"
+#include "widewstring.h"
 
 #include "b64pipe.h"
 #include "b64straw.h"
@@ -1679,9 +1679,9 @@ int INIClass::ReadStringtableEntry(char const * section, char const * entry, wch
 	char text[1024];
 	Get_String(section, entry, NULL, text, sizeof(text));
 	if (strlen(text) == 0) {
-		wcsncpy(buffer, StringTable::LoadString(deflabel, NULL, "D:\\Ra2\\Ini.CPP", 1841), size); // RA2: as above
+		wcsncpy(buffer, StringTable::LoadString(deflabel, NULL, "D:\\Ra2\\Ini.CPP", 1841), size);
 	} else {
-		wcsncpy(buffer, StringTable::LoadString(text, NULL, "D:\\Ra2\\Ini.CPP", 1843), size); // RA2: as above
+		wcsncpy(buffer, StringTable::LoadString(text, NULL, "D:\\Ra2\\Ini.CPP", 1843), size);
 	}
 	buffer[size - 1] = L'\0';
 	return(wcslen(buffer));

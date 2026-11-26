@@ -5,7 +5,7 @@
 The rebuild counterpart of tools/data_globals.py: the same rules, keyed by the rebuild's
 names. Each undefined data symbol of the rebuild link (link_closure.py --list-undefined) is bound to
 its original address through the rebuild catalog's reference tables (vendor/ra2-rebuild/symbols.tsv,
-derived from rebuild/manifest/catalog at the vendored commit by tools/make_symbols.py; MSVC name ->
+derived from manifests/catalog at the vendored commit by tools/make_symbols.py; MSVC name ->
 address) or an address-suffixed name, and to its section through the target's section layout
 (ra2/data/target_sections.tsv, or --exe: the pinned target's PE section headers, hash-checked).
 

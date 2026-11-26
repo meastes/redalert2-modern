@@ -105,19 +105,19 @@
 #include "voc.h"
 #include "vox.h"
 #include "vqa.h"
-#include "audplay.h" // RA2
-#include "beacon.h" // RA2
-#include "cctooltip.h" // RA2
-#include "data.h" // RA2
-#include "multiplayer.h" // RA2
+#include "audplay.h"
+#include "beacon.h"
+#include "cctooltip.h"
+#include "data.h"
+#include "multiplayer.h"
 #include "ownrdraw.h" // RA2: the diplomacy dialog
-#include "scenario.h" // RA2
-#include "session.h" // RA2
-#include "stringtable.h" // RA2
-#include "tooltip.h" // RA2
-#include "_tooltip.h" // RA2
-#include "_zbuffer.h" // RA2
-#include "zbuffer.h" // RA2
+#include "scenario.h"
+#include "session.h"
+#include "stringtable.h"
+#include "tooltip.h"
+#include "_tooltip.h"
+#include "_zbuffer.h"
+#include "zbuffer.h"
 #include "globals.h"
 
 #define RA2_SOURCE "D:\\Ra2\\Radar.CPP"
@@ -230,7 +230,7 @@ RadarClass::RadarClass(void) :
 /// </summary>
 RadarClass::~RadarClass(void)
 {
-	MovieSound.Release(); // RA2
+	MovieSound.Release();
 	Clear_Radar();
 }
 
@@ -266,17 +266,17 @@ void RadarClass::One_Time(void)
 {
 	DebugString("RadarClass::One_Time()\n");
 	RadX = 0;
-	RadY = 16; // RA2
-	RadWidth = 48; // RA2
-	RadIHeight = 140; // RA2
-	RadPWidth = 108; // RA2
-	RadOffY = 140; // RA2
-	RadIWidth = 108; // RA2
-	RadOffX = 49; // RA2
+	RadY = 16;
+	RadWidth = 48;
+	RadIHeight = 140;
+	RadPWidth = 108;
+	RadOffY = 140;
+	RadIWidth = 108;
+	RadOffX = 49;
 
 	BASECLASS::One_Time();
 
-	RadarButton.Y = RadOffX; // RA2
+	RadarButton.Y = RadOffX;
 	RadarButton.Width = RadIHeight;
 	RadarButton.Height = RadPWidth;
 	RadarButton.Set_Flags(GadgetClass::FlagEnum(GadgetClass::FlagEnum::LEFTPRESS |
@@ -286,14 +286,14 @@ void RadarClass::One_Time(void)
 														GadgetClass::FlagEnum::RIGHTPRESS |
 														GadgetClass::FlagEnum::RIGHTRELEASE |
 														GadgetClass::FlagEnum::RIGHTUP));
-	TransmissionVoice = Vox_From_Name("EVA_IncomingTransmission"); // RA2
+	TransmissionVoice = Vox_From_Name("EVA_IncomingTransmission");
 }
 
 
 /// <summary>
 /// Frees the artwork of the two buttons beside the radar.
 /// </summary>
-void RadarClass::DisposeOfArt(void) // RA2
+void RadarClass::DisposeOfArt(void)
 {
 	if (IsBriefingButtonShapeLoaded) {
 		delete BriefingButtonShape;
@@ -330,8 +330,8 @@ void RadarClass::Init_Clear(void)
 
 	RadarState 				= RSTATE_INACTIVE;
 	RadarMode 				= RMODE_UNAVAILABLE;
-	IsMoviePlaying 			= false; // RA2
-	IsScenarioHeld 			= false; // RA2
+	IsMoviePlaying = false;
+	IsScenarioHeld = false;
 	RadarAnimFrame 			= 0;
 	DoesRadarExist 			= false;
 	IsToRedraw 				= true;
@@ -345,7 +345,7 @@ void RadarClass::Init_Clear(void)
 /// <summary>
 /// Adds or removes the two buttons beside the radar.
 /// </summary>
-void RadarClass::Set_Buttons(bool on) // RA2
+void RadarClass::Set_Buttons(bool on)
 {
 	if (on) {
 		Add_A_Button(BriefingButton);
@@ -366,7 +366,7 @@ void RadarClass::Init_For_House(void)
 	DebugString("RadarClass::Init_For_House()\n");
 	DisposeOfArt();
 
-	if (Scen->IsGDI) { // RA2
+	if (Scen->IsGDI) {
 		RadHeight = (SidebarWidth - 144) / 2 + 4;
 		BriefingButtonRect.X = RadX + 11;
 		BriefingButtonRect.Y = RadY + 4;
@@ -395,7 +395,7 @@ void RadarClass::Init_For_House(void)
 /// <summary>
 /// Sets up the two buttons beside the radar.
 /// </summary>
-void RadarClass::Init_IO(void) // RA2
+void RadarClass::Init_IO(void)
 {
 	BASECLASS::Init_IO();
 
@@ -619,7 +619,7 @@ bool RadarClass::Map_Cell(Cell const & cell, HouseClass * house)
 /// <summary>
 /// Hands the cell to the base class unchanged.
 /// </summary>
-bool RadarClass::RevealFogShroud(Cell const & cell, HouseClass * house, bool increase) // RA2
+bool RadarClass::RevealFogShroud(Cell const & cell, HouseClass * house, bool increase)
 {
 	if (BASECLASS::RevealFogShroud(cell, house, increase)) {
 		return(true);
@@ -653,7 +653,7 @@ void RadarClass::AI(KeyNumType & input, Point2D const & xy)
 {
 	BASECLASS::AI(input, xy);
 
-	int offset = Options.IsSidebarOnRight ? TacticalRect.Width : 0; // RA2
+	int offset = Options.IsSidebarOnRight ? TacticalRect.Width : 0;
 
 	Rect r1 = BriefingButtonRect;
 	r1.X += offset;
@@ -767,13 +767,13 @@ int RadarClass::RTacticalClass::Action(unsigned flags, KeyNumType & key)
 		**	If a super weapon is being aimed or there is a currently selected object, then the
 		**	action to perform if the left mouse button were clicked must be determined.
 		*/
-		ActionType action = ACTION_NONE; // RA2
-		bool multi_missile = Map.IsTargettingMode == SUPER_MULTI_MISSILE; // RA2
+		ActionType action = ACTION_NONE;
+		bool multi_missile = Map.IsTargettingMode == SUPER_MULTI_MISSILE;
 		bool iron_curtain = Map.IsTargettingMode == SUPER_IRON_CURTAIN;
 		bool lightning_storm = Map.IsTargettingMode == SUPER_LIGHTNING_STORM;
 		bool para_drop = Map.IsTargettingMode == SUPER_PARA_DROP;
 		bool amer_para_drop = Map.IsTargettingMode == SUPER_AMER_PARA_DROP;
-		bool right = (flags & (RIGHTPRESS|RIGHTRELEASE)) != 0; // RA2
+		bool right = (flags & (RIGHTPRESS | RIGHTRELEASE)) != 0;
 		if (!right && (CurrentObject.Count() || multi_missile || iron_curtain || lightning_storm || para_drop || amer_para_drop)) {
 			if (multi_missile) {
 				action = ACTION_NUKE_BOMB;
@@ -885,10 +885,10 @@ int RadarClass::RTacticalClass::Action(unsigned flags, KeyNumType & key)
 					}
 
 					Coord coord = Map[cell].Cell_Coord();
-					TacticalMap->Set_Tactical_Position(coord); // RA2
+					TacticalMap->Set_Tactical_Position(coord);
 					Map.Flag_To_Redraw(GS_REDRAW_TACTICAL);
 					if (DepthBuffer) {
-						DepthBuffer->Set_Scroll(ZBUFFER_MAX); // RA2
+						DepthBuffer->Set_Scroll(ZBUFFER_MAX);
 					}
 				}
 			}
@@ -1069,7 +1069,7 @@ void RadarClass::Reposition_Sidebar(void)
 {
 	BASECLASS::Reposition_Sidebar();
 
-	int offset = Options.IsSidebarOnRight ? TacticalRect.Width : 0; // RA2
+	int offset = Options.IsSidebarOnRight ? TacticalRect.Width : 0;
 
 	BriefingButton.DrawOffsetX = -offset;
 	BriefingButton.Set_Position(BriefingButtonRect.X + offset, BriefingButtonRect.Y);
@@ -1748,7 +1748,7 @@ void RadarClass::Plot_Radar_Pixel(Point2D const & point)
 	Coord coord = Radar_Pixel_To_Cell(point);
 	coord.Z = Map.Get_Height_GL(coord);
 	bool shadow = MainWindow && Map.Is_Shrouded(coord);
-	bool fog = MainWindow && Map.Is_Under_Fog(coord); // RA2
+	bool fog = MainWindow && Map.Is_Under_Fog(coord);
 
 	int hash = (point.X - 5 * point.Y) & 0xFF;
 	RADAR_HASH_TABLE::BucketType & bucket = RadarTrackingTable->Buckets[hash];
@@ -1823,7 +1823,7 @@ void RadarClass::Render_Tracked_Objects(void)
 
 				ColorScheme *scheme = ColorSchemes[tech->House->Scheme];
 
-				if (tech->IsDisguised()) { // RA2
+				if (tech->IsDisguised()) {
 					if (tech->GetDisguiseHouse(false) != NULL) {
 						scheme = ColorSchemes[tech->GetDisguiseHouse(false)->Scheme];
 					} else {
@@ -2450,12 +2450,12 @@ void RadarClass::Render_Radar(void)
 		PixelStack.Clear();
 
 		RadarEventClass::Draw_Events();
-		BeaconManager.Draw_On_Radar(RadarSurface, RadarSurface->Get_Rect()); // RA2
+		BeaconManager.Draw_On_Radar(RadarSurface, RadarSurface->Get_Rect());
 
 		if (is_tactical) {
 			if (FullRedraw) {
 				LastDrawRect = RadarRect;
-				Draw_Shape(*SidebarSurface, *SidebarDrawer, (ShapeSet const *)RadarAnim, 32, Point2D(RadX, RadWidth), SidebarSurface->Get_Rect()); // RA2
+				Draw_Shape(*SidebarSurface, *SidebarDrawer, (ShapeSet const *)RadarAnim, 32, Point2D(RadX, RadWidth), SidebarSurface->Get_Rect());
 			}
 
 			if (LastDrawRect.Is_Valid()) {
@@ -2492,7 +2492,7 @@ void RadarClass::Render_Radar(void)
 /// The EVA announcement plays first. Once it is done, and the other sound has faded, the
 /// radar switches over to movie mode.
 /// </summary>
-void RadarClass::Update_Transmission(void) // RA2
+void RadarClass::Update_Transmission(void)
 {
 	switch (TransmissionState) {
 		case 0:
@@ -2648,39 +2648,39 @@ namespace OwnerDraw { void __fastcall Set_Control_Image(HWND control, Surface * 
 
 static inline bool Is_Control(int const * table, int id) // RA2: the diplomacy dialog's test whether a control ID is in one of its tables
 {
-	for (int index = 0; index < 8; index++) { // RA2: as above
-		if (table[index] == id) { // RA2: as above
-			return(true); // RA2: as above
+	for (int index = 0; index < 8; index++) {
+		if (table[index] == id) {
+			return(true);
 		}
 	}
-	return(false); // RA2: as above
+	return(false);
 }
 
 static inline int Control_Index(int const * table, int id) // RA2: the row of a control ID in one of the tables
 {
-	for (int index = 0; index < 8; index++) { // RA2: as above
-		if (table[index] == id) { // RA2: as above
-			return(index); // RA2: as above
+	for (int index = 0; index < 8; index++) {
+		if (table[index] == id) {
+			return(index);
 		}
 	}
-	return(-1); // RA2: as above
+	return(-1);
 }
 
 
 static inline HWND Get_Item(HWND window, int id) // RA2: GetDlgItem as the diplomacy dialog calls it
 {
-	return(GetDlgItem(window, id)); // RA2: as above
+	return(GetDlgItem(window, id));
 }
 
 static inline LRESULT Send_Dlg_Item_Message(HWND dialog, int id, UINT message, WPARAM wparam, LPARAM lparam) // RA2: SendMessage to a control of the dialog by ID
 {
-	HWND control = Get_Item(dialog, id); // RA2: as above
-	return(SendMessage(control, message, wparam, lparam)); // RA2: as above
+	HWND control = Get_Item(dialog, id);
+	return(SendMessage(control, message, wparam, lparam));
 }
 
 static inline BOOL Show_Window(HWND window, int show) // RA2: ShowWindow as the diplomacy dialog calls it for its optional controls
 {
-	return(ShowWindow(window, show)); // RA2: as above
+	return(ShowWindow(window, show));
 }
 
 
@@ -2690,7 +2690,7 @@ static inline BOOL Show_Window(HWND window, int show) // RA2: ShowWindow as the 
 **	data-free class derived from the radar, and not in radar.h: declared there they change the code other files
 **	compile to (base.cpp BaseClass::Read_INI 0x42C460, wonline.cpp Draw_Player_List 0x73FEE0).
 */
-struct RadarDiplomacy : public RadarClass { // RA2: as above
+struct RadarDiplomacy : public RadarClass {
 	void Update_Diplomacy_Row(HWND window, int row, HouseClass * house); // RA2: 0x00634670, fills one player row
 	void Update_Diplomacy_Rows(HWND window); // RA2: 0x00634970, fills all rows
 };
@@ -2705,99 +2705,99 @@ struct RadarDiplomacy : public RadarClass { // RA2: as above
 BOOL CALLBACK Diplomacy_Dialog_Proc(HWND window, UINT message, WPARAM wparam, LPARAM lparam) // RA2: at 0x006340F0
 {
 	int result = OwnerDraw::Default_Dialog_Proc(window, message, wparam, lparam); // RA2: the dialog first offers every message to the owner draw system, as the other dialog procedures do
-	if (result) { // RA2: as above
-		return(result); // RA2: as above
+	if (result) {
+		return(result);
 	}
 
-	switch (message) { // RA2: as above
+	switch (message) {
 		case OD_SUBCLASSED: { // RA2: the dialog opened (message 0x497): rows are set up
 			int index; // RA2: both loops of this message share one counter
-			for (index = 0; index < 8; index++) { // RA2: as above
+			for (index = 0; index < 8; index++) {
 				Send_Dlg_Item_Message(window, Diplomacy_Name_Controls[index], OD_SETTEXTW, 0, (LPARAM)L""); // RA2: all eight name and kill labels start out empty
-				Send_Dlg_Item_Message(window, Diplomacy_Kill_Controls[index], OD_SETTEXTW, 0, (LPARAM)L""); // RA2: as above
+				Send_Dlg_Item_Message(window, Diplomacy_Kill_Controls[index], OD_SETTEXTW, 0, (LPARAM)L"");
 			}
 
 			bool any_ally = false; // RA2: remembers whether any alliance check box stays visible
 			bool any_chat = false; // RA2: remembers whether any chat check box stays visible
 			int count = Houses.Count(); // RA2: the house count is read once before the row loop
-			for (index = 1; index < 8; index++) { // RA2: as above
+			for (index = 1; index < 8; index++) {
 				HWND ally = Get_Item(window, Diplomacy_Ally_Controls[index]); // RA2: rows 1 to 7: the alliance and chat check boxes of the row
-				HWND chat = Get_Item(window, Diplomacy_Chat_Controls[index]); // RA2: as above
+				HWND chat = Get_Item(window, Diplomacy_Chat_Controls[index]);
 				int slot = index; // RA2: the row that is the local player's own house index is shown as house 0
-				if (index == PlayerPtr->HeapID) { // RA2: as above
-					slot = 0; // RA2: as above
+				if (index == PlayerPtr->HeapID) {
+					slot = 0;
 				}
 				HouseClass * house; // RA2: the house of the row, if there is a multiplayer house in that slot
-				if (slot < count && (house = Houses[slot]) != NULL && house->Class->IsMultiplay) { // RA2: as above
+				if (slot < count && (house = Houses[slot]) != NULL && house->Class->IsMultiplay) {
 					if (Rule->AlliesAllowed && house->Is_Human_Player()) { // RA2: alliances can only be changed with a human house when the rules allow them and the local player is no observer
-						if (ObserverHouse != PlayerPtr) { // RA2: as above
-							Send_Control_Value(ally, 1); // RA2: as above
-							bool allied = PlayerPtr->Is_Ally(house); // RA2: as above
-							SendMessage(ally, BM_SETCHECK, allied, 0); // RA2: as above
-							Send_Control_Flag(ally, house->Is_Ally(PlayerPtr)); // RA2: as above
-							any_ally = true; // RA2: as above
-							if (MuteSWLaunches) { // RA2: as above
-								EnableWindow(ally, FALSE); // RA2: as above
+						if (ObserverHouse != PlayerPtr) {
+							Send_Control_Value(ally, 1);
+							bool allied = PlayerPtr->Is_Ally(house);
+							SendMessage(ally, BM_SETCHECK, allied, 0);
+							Send_Control_Flag(ally, house->Is_Ally(PlayerPtr));
+							any_ally = true;
+							if (MuteSWLaunches) {
+								EnableWindow(ally, FALSE);
 							}
 						} else {
-							ShowWindow(ally, SW_HIDE); // RA2: as above
+							ShowWindow(ally, SW_HIDE);
 						}
 					} else {
-						ShowWindow(ally, SW_HIDE); // RA2: as above
+						ShowWindow(ally, SW_HIDE);
 					}
 
-					if (!house->Is_Human_Player()) { // RA2: as above
+					if (!house->Is_Human_Player()) {
 						ShowWindow(chat, SW_HIDE); // RA2: a computer house has no chat box
 					} else {
-						if (!MuteSWLaunches) { // RA2: as above
+						if (!MuteSWLaunches) {
 							SendMessage(chat, BM_SETCHECK, DiplomacyChatFlags[slot], 0); // RA2: the chat box shows whether that player's chat is listened to
 						} else {
-							SendMessage(chat, BM_SETCHECK, BST_CHECKED, 0); // RA2: as above
-							EnableWindow(chat, FALSE); // RA2: as above
+							SendMessage(chat, BM_SETCHECK, BST_CHECKED, 0);
+							EnableWindow(chat, FALSE);
 						}
-						any_chat = true; // RA2: as above
+						any_chat = true;
 					}
 				} else {
 					HWND flag = Get_Item(window, Player_Control_ID(index)); // RA2: a row without a house hides its flag, name, alliance, chat and kill controls
-					EnableWindow(flag, FALSE); // RA2: as above
-					ShowWindow(flag, SW_HIDE); // RA2: as above
-					HWND name = Get_Item(window, Diplomacy_Name_Controls[index]); // RA2: as above
-					EnableWindow(name, FALSE); // RA2: as above
-					ShowWindow(name, SW_HIDE); // RA2: as above
-					EnableWindow(ally, FALSE); // RA2: as above
-					ShowWindow(ally, SW_HIDE); // RA2: as above
-					EnableWindow(chat, FALSE); // RA2: as above
-					ShowWindow(chat, SW_HIDE); // RA2: as above
-					HWND kills = Get_Item(window, Diplomacy_Kill_Controls[index]); // RA2: as above
-					EnableWindow(kills, FALSE); // RA2: as above
-					ShowWindow(kills, SW_HIDE); // RA2: as above
+					EnableWindow(flag, FALSE);
+					ShowWindow(flag, SW_HIDE);
+					HWND name = Get_Item(window, Diplomacy_Name_Controls[index]);
+					EnableWindow(name, FALSE);
+					ShowWindow(name, SW_HIDE);
+					EnableWindow(ally, FALSE);
+					ShowWindow(ally, SW_HIDE);
+					EnableWindow(chat, FALSE);
+					ShowWindow(chat, SW_HIDE);
+					HWND kills = Get_Item(window, Diplomacy_Kill_Controls[index]);
+					EnableWindow(kills, FALSE);
+					ShowWindow(kills, SW_HIDE);
 				}
 			}
 
-			if (!any_ally) { // RA2: as above
+			if (!any_ally) {
 				Show_Window(Get_Item(window, 1431), SW_HIDE); // RA2: no alliance box left: the alliance column heading (1431) is hidden
 			}
-			if (!any_chat) { // RA2: as above
+			if (!any_chat) {
 				Show_Window(Get_Item(window, 1061), SW_HIDE); // RA2: no chat box left: the chat column heading (1061) is hidden
 			}
 
 			HWND team = Get_Item(window, 1840); // RA2: the team chat check box exists only in LAN and internet games and shows the saved taunt setting
-			if (team) { // RA2: as above
-				if (Session.Type == GAME_IPX || Session.Type == GAME_INTERNET) { // RA2: as above
-					Show_Window(team, SW_SHOW); // RA2: as above
-					if (Session.Type == GAME_IPX) { // RA2: as above
-						SendMessage(team, BM_SETCHECK, Session.LANTaunts, 0); // RA2: as above
-					} else if (Session.Type == GAME_INTERNET) { // RA2: as above
-						SendMessage(team, BM_SETCHECK, Session.WOLTaunts, 0); // RA2: as above
+			if (team) {
+				if (Session.Type == GAME_IPX || Session.Type == GAME_INTERNET) {
+					Show_Window(team, SW_SHOW);
+					if (Session.Type == GAME_IPX) {
+						SendMessage(team, BM_SETCHECK, Session.LANTaunts, 0);
+					} else if (Session.Type == GAME_INTERNET) {
+						SendMessage(team, BM_SETCHECK, Session.WOLTaunts, 0);
 					}
 				} else {
-					Show_Window(team, SW_HIDE); // RA2: as above
+					Show_Window(team, SW_HIDE);
 				}
 			}
 
 			((RadarDiplomacy &)Map).Update_Diplomacy_Rows(window); // RA2: fills in the rows
 
-			if (Session.Type == GAME_IPX || Session.Type == GAME_INTERNET) { // RA2: as above
+			if (Session.Type == GAME_IPX || Session.Type == GAME_INTERNET) {
 				HWND mode = Get_Item(window, 1062); // RA2: the game mode label
 				SendMessage(mode, OD_SETTEXTW, 0, (LPARAM)Session.MPGameMode->UIName.text()); // RA2: the game mode label
 			}
@@ -2805,66 +2805,66 @@ BOOL CALLBACK Diplomacy_Dialog_Proc(HWND window, UINT message, WPARAM wparam, LP
 			HWND scenario = Get_Item(window, 1819); // RA2: the map name label
 			SendMessage(scenario, OD_SETTEXTW, 0, (LPARAM)Session.Options.ScenarioDescription); // RA2: the map name label shows the scenario description
 			SetTimer(window, 0, 250, NULL); // RA2: refreshes the rows every quarter second
-			return(FALSE); // RA2: as above
+			return(FALSE);
 		}
 
 		case WM_TIMER: // RA2: the 250 ms timer refreshes the rows
-			((RadarDiplomacy &)Map).Update_Diplomacy_Rows(window); // RA2: as above
-			InvalidateRect(window, NULL, TRUE); // RA2: as above
-			return(FALSE); // RA2: as above
+			((RadarDiplomacy &)Map).Update_Diplomacy_Rows(window);
+			InvalidateRect(window, NULL, TRUE);
+			return(FALSE);
 
 		case WM_COMMAND: { // RA2: a click on a control
-			int id = GetDlgCtrlID((HWND)lparam); // RA2: as above
+			int id = GetDlgCtrlID((HWND)lparam);
 			if (id == 1059) { // RA2: the return button
 				unsigned short code = wparam >> 16; // RA2: the return button: stops the timer and sets the result stored in the window's user data
-				if (code == 0) { // RA2: as above
-					KillTimer(window, 0); // RA2: as above
-					*(int *)GetWindowLong(window, DWL_USER) = 1059; // RA2: as above
-					return(FALSE); // RA2: as above
+				if (code == 0) {
+					KillTimer(window, 0);
+					*(int *)GetWindowLong(window, DWL_USER) = 1059;
+					return(FALSE);
 				}
 			} else if (Is_Control(Diplomacy_Ally_Controls, id)) { // RA2: an alliance check box: sets its state and queues an alliance event for that house
-				unsigned code = wparam >> 16; // RA2: as above
-				if (code == 1 || code == 0) { // RA2: as above
-					int house = Control_Index(Diplomacy_Ally_Controls, id); // RA2: as above
-					if (house == PlayerPtr->HeapID) { // RA2: as above
-						house = 0; // RA2: as above
+				unsigned code = wparam >> 16;
+				if (code == 1 || code == 0) {
+					int house = Control_Index(Diplomacy_Ally_Controls, id);
+					if (house == PlayerPtr->HeapID) {
+						house = 0;
 					}
-					if (code == 0) { // RA2: as above
-						SendMessage((HWND)lparam, BM_SETCHECK, BST_CHECKED, 0); // RA2: as above
-					} else if (code == 1) { // RA2: as above
-						SendMessage((HWND)lparam, BM_SETCHECK, BST_UNCHECKED, 0); // RA2: as above
+					if (code == 0) {
+						SendMessage((HWND)lparam, BM_SETCHECK, BST_CHECKED, 0);
+					} else if (code == 1) {
+						SendMessage((HWND)lparam, BM_SETCHECK, BST_UNCHECKED, 0);
 					}
-					Send_Ally_Event(house); // RA2: as above
-					return(FALSE); // RA2: as above
+					Send_Ally_Event(house);
+					return(FALSE);
 				}
 			} else if (Is_Control(Diplomacy_Chat_Controls, id)) { // RA2: a chat check box: stores the player's chat flag
-				int value = (unsigned short)(wparam >> 16); // RA2: as above
-				if (value == 1 || value == 0) { // RA2: as above
-					bool checked = (unsigned short)(wparam >> 16) == 1; // RA2: as above
-					int house = Control_Index(Diplomacy_Chat_Controls, id); // RA2: as above
-					if (house == PlayerPtr->HeapID) { // RA2: as above
-						house = 0; // RA2: as above
+				int value = (unsigned short)(wparam >> 16);
+				if (value == 1 || value == 0) {
+					bool checked = (unsigned short)(wparam >> 16) == 1;
+					int house = Control_Index(Diplomacy_Chat_Controls, id);
+					if (house == PlayerPtr->HeapID) {
+						house = 0;
 					}
-					DiplomacyChatFlags[house] = checked; // RA2: as above
-					return(FALSE); // RA2: as above
+					DiplomacyChatFlags[house] = checked;
+					return(FALSE);
 				}
 			} else if (id == 1840) { // RA2: the team chat check box
 				unsigned code = wparam >> 16; // RA2: the team chat check box: stores the LAN or internet taunt setting
-				if (code == 1 || code == 0) { // RA2: as above
-					if (Session.Type == GAME_IPX) { // RA2: as above
-						Session.LANTaunts = code == 1; // RA2: as above
-						return(FALSE); // RA2: as above
+				if (code == 1 || code == 0) {
+					if (Session.Type == GAME_IPX) {
+						Session.LANTaunts = code == 1;
+						return(FALSE);
 					}
-					if (Session.Type == GAME_INTERNET) { // RA2: as above
-						Session.WOLTaunts = code == 1; // RA2: as above
+					if (Session.Type == GAME_INTERNET) {
+						Session.WOLTaunts = code == 1;
 					}
 				}
 			}
-			break; // RA2: as above
+			break;
 		}
 	}
 
-	return(FALSE); // RA2: as above
+	return(FALSE);
 }
 
 
@@ -2957,22 +2957,22 @@ void RadarDiplomacy::Update_Diplomacy_Row(HWND window, int row, HouseClass * hou
 void RadarDiplomacy::Update_Diplomacy_Rows(HWND window) // RA2: at 0x00634970
 {
 	int last = -1; // RA2: index of the last house the player controls
-	int count = Houses.Count(); // RA2: as above
-	for (int index = 0; index < count; index++) { // RA2: as above
-		HouseClass * house = Houses[index]; // RA2: as above
-		if (house != NULL) { // RA2: as above
-			if (house->Is_Player_Control()) { // RA2: as above
-				last = index; // RA2: as above
-			} else if (house->Class->IsMultiplayPassive) { // RA2: as above
-				continue; // RA2: as above
+	int count = Houses.Count();
+	for (int index = 0; index < count; index++) {
+		HouseClass * house = Houses[index];
+		if (house != NULL) {
+			if (house->Is_Player_Control()) {
+				last = index;
+			} else if (house->Class->IsMultiplayPassive) {
+				continue;
 			}
-			Update_Diplomacy_Row(window, index, house); // RA2: as above
+			Update_Diplomacy_Row(window, index, house);
 		}
 	}
 	HouseClass * player = Houses[last]; // RA2: the local player's house is listed first: rows 0 and last swap their houses
-	HouseClass * first = Houses[0]; // RA2: as above
-	Update_Diplomacy_Row(window, 0, player); // RA2: as above
-	Update_Diplomacy_Row(window, last, first); // RA2: as above
+	HouseClass * first = Houses[0];
+	Update_Diplomacy_Row(window, 0, player);
+	Update_Diplomacy_Row(window, last, first);
 }
 
 
@@ -2982,25 +2982,25 @@ void RadarDiplomacy::Update_Diplomacy_Rows(HWND window) // RA2: at 0x00634970
 void __fastcall Diplomacy_Dialog(MouseClass * map) // RA2: at 0x00634A00; conquer.cpp calls it with the map, which it does not use
 {
 	int result; // RA2: the dialog's result is stored in the window's user data
-	HWND dialog = OwnerDraw::Begin_Dialog(115, Diplomacy_Dialog_Proc, 0); // RA2: as above
+	HWND dialog = OwnerDraw::Begin_Dialog(115, Diplomacy_Dialog_Proc, 0);
 	IgnoreInput = true; // RA2: input to the game is held off while the dialog is up
-	Keyboard->Clear(); // RA2: as above
-	if (dialog) { // RA2: as above
-		SetWindowLong(dialog, DWL_USER, (LONG)&result); // RA2: as above
-		OwnerDraw::Display_Dialog(dialog); // RA2: as above
-		result = 0; // RA2: as above
-		while (true) { // RA2: as above
-			if (OwnerDraw::Dialog_Message_Handler()) { // RA2: as above
+	Keyboard->Clear();
+	if (dialog) {
+		SetWindowLong(dialog, DWL_USER, (LONG)&result);
+		OwnerDraw::Display_Dialog(dialog);
+		result = 0;
+		while (true) {
+			if (OwnerDraw::Dialog_Message_Handler()) {
 				result = 1059; // RA2: the dialog ends with the return button's ID when the message loop quits
-				break; // RA2: as above
+				break;
 			}
-			if (result) { // RA2: as above
-				break; // RA2: as above
+			if (result) {
+				break;
 			}
 		}
-		OwnerDraw::End_Dialog(dialog); // RA2: as above
+		OwnerDraw::End_Dialog(dialog);
 	}
-	Keyboard->Clear(); // RA2: as above
+	Keyboard->Clear();
 	IgnoreInput = Scen->IsInputLocked; // RA2: the input flag returns to the scenario's lock state
 	Map.Flag_To_Redraw(GS_REDRAW_ALL); // RA2: the whole screen is redrawn
 }

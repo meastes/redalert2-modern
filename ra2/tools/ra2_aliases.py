@@ -6,8 +6,8 @@ The rebuild often names one original function twice: a unit declares it under on
 Set_Primary_Audio_Format, 0x0040A6E0) and another unit defines it under another (drv_dsnd.cpp's
 AudioSetPrimaryFormat). VC6 resolved both to the address; natively the declared name is undefined
 and the link closure made it a trap. This binds each undefined function of the link to the function
-the rebuild defines at the same original address, through the rebuild catalog (rebuild/manifest/
-catalog at ra2/PIN: its reference tables name -> address, its regions address -> the defining
+the rebuild defines at the same original address, through the rebuild catalog (manifests/catalog
+at the vendored commit, as vendor/ra2-rebuild/symbols.tsv: its reference tables name -> address, its regions address -> the defining
 symbol), as an ld64 alias row (link_closure.py --aliases).
 
 A row is written only when it is safe to call through: the undefined name's qualified name maps to

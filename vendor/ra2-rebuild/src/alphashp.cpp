@@ -365,7 +365,71 @@ void AlphaShapeClass::Draw_In_Area(Point2D const & point, Rect const & cliprect)
 /// been recorded for that spot.
 /// </summary>
 /// <param name="cliprect">The clipping rectangle to draw within.</param>
+void AlphaShapeClass::Draw_All(Rect const & cliprect) // RA2: 0x0041F5E0; RobinDigitalPro/ra2-1001-decomp's text (1.001, after ra2-decomp's Yuri's Revenge twin form) in this tree's names
+{
+	unsigned char pixel;
 
+	for (int i = 0; i < AlphaShapes.Count(); i++) {
+		{
+			Rect r1 = AlphaShapes[i]->DrawRect;
+			r1 -= Point2D(TacticalMap->TacPixelX, TacticalMap->TacPixelY);
+			r1 += TacticalRect.Top_Left();
+
+			Rect clip = cliprect;
+			Rect r2 = Intersect(r1, clip);
+
+			if (r2.Is_Valid()) {
+				Point2D origin = r1.Top_Left();
+
+				ShapeSet const * shape = AlphaShapes[i]->ImageData;
+				if (shape == NULL) {
+					AlphaShapes[i]->ImageData = (ShapeSet const *)AlphaShapes[i]->Owner->Class_Of()->AlphaImageData;
+					shape = AlphaShapes[i]->ImageData;
+				}
+				Rect shape_rect = shape->Get_Rect(0);
+
+				int top = MAX(r2.Y, origin.Y + shape_rect.Y);
+				int src_y = top - origin.Y - shape_rect.Y;
+				int bottom = MIN(clip.Y + clip.Height, origin.Y + shape_rect.Height + shape_rect.Y);
+				int left = MAX(r2.X, origin.X + shape_rect.X);
+				int src_x = left - origin.X - shape_rect.X;
+				int right = MIN(clip.X + clip.Width, origin.X + shape_rect.Width + shape_rect.X);
+
+				int shape_skip = origin.X - right + shape_rect.Width + src_x + shape_rect.X;
+				int alpha_skip = AlphaBuffer->Get_Buffer_Width() - right + left;
+
+				unsigned char * shapeptr = (unsigned char *)shape->Get_Data(0);
+
+				unsigned short * alphaptr = (unsigned short *)AlphaBuffer->Get_Buffer_Offset(Point2D(left, top) - TacticalRect.Top_Left());
+
+				shapeptr += src_x + src_y * shape_rect.Width;
+				if (&alphaptr[right - left + (bottom - top) * AlphaBuffer->Get_Buffer_Width() + 2] >= (unsigned short *)AlphaBuffer->Get_Buffer_End()) {
+					for (int i = top; i < bottom; i++) {
+						for (int j = left; j < right; j++) {
+							pixel = *shapeptr++;
+							*alphaptr = BrightnessTable[pixel][*alphaptr];
+							alphaptr++;
+							alphaptr = (unsigned short *)AlphaBuffer->Wrap_Overflow((unsigned)alphaptr);
+						}
+						shapeptr += shape_skip;
+						alphaptr += alpha_skip;
+						alphaptr = (unsigned short *)AlphaBuffer->Wrap_Overflow((unsigned)alphaptr);
+					}
+				} else {
+					for (int i = top; i < bottom; i++) {
+						for (int j = left; j < right; j++) {
+							pixel = *shapeptr++;
+							*alphaptr = BrightnessTable[pixel][*alphaptr];
+							++alphaptr;
+						}
+						shapeptr += shape_skip;
+						alphaptr += alpha_skip;
+					}
+				}
+			}
+		}
+	}
+}
 
 
 /// <summary>

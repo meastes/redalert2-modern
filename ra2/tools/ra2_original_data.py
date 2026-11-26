@@ -91,6 +91,11 @@ def main():
         short = name.split('::')[-1]
         lines = (index.get('::'.join(name.split('::')[-2:]), []) if '::' in name else []) or index.get(short, [])
         decl = original_data.declaration(short, lines)
+        if decl is None and '::' in name:
+            # Lane P28: a namespace's own lines (`namespace OwnerDraw {` heads, indexed since the rebuild dropped
+            # its trailing markers) may hold only uses; the declaration is then among the short name's lines.
+            lines = index.get(short, [])
+            decl = original_data.declaration(short, lines)
         if decl is None:
             # Names only the host declares (the launcher handshake strings, platform/sdl/main.cpp;
             # lane P2: unloaded, the host created a mutex with an empty name and the game's

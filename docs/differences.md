@@ -126,7 +126,7 @@ the one that follows the original game.
 
 | Kind | Count | Where |
 | --- | ---: | --- |
-| Rebuild drafts compiled (`RA2_NON_MATCHING`, not exact) | 183 functions in 50 units (wonline's 10 and the WDT and ice ones not reached) | `vendor/ra2-rebuild/src`, marked in place |
+| Rebuild drafts compiled (`RA2_NON_MATCHING`, not exact) | 119 draft blocks in 42 units at the 66bccbbfdd pin (lane P28; 145 blocks, 183 functions, in 50 units at b873d2b3c6; wonline's and the WDT and ice ones not reached) | `vendor/ra2-rebuild/src`, marked in place |
 | Played-port text carried as glue (append rows) | 24 `.inc` files + `rb_behaviour.cpp`, `rb_asm_draw.cpp`, `rb_vqa.cpp`, `unit/hd_vehicles.cpp` | `ra2/glue` |
 | Of which test scaffolding only (never in play) | `harness_native.inc`, `harness_input_native.inc` | `ra2/glue` |
 | Exact in this port, draft in the old port | 45 functions | listed above (Campaign) |

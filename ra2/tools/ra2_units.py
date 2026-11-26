@@ -3,12 +3,12 @@
 """Generate the native (arm64, clang) view of the rebuild tree at its pinned commit (lane P1).
 
 From redalert2-decomp's branch ports-on-rebuild (native/rb/tools/rb_units.py; adapted from its
-native/yr/tools/yr_units.py). The rebuild compiles each rebuild/src/<unit>.cpp as one translation unit
-against ONE header directory, rebuild/include. This tool never edits the vendored copy of the rebuild
+native/yr/tools/yr_units.py). The rebuild compiles each src/<unit>.cpp as one translation unit
+against ONE header directory, include/. This tool never edits the vendored copy of the rebuild
 (vendor/ra2-rebuild: src/, include/, at the commit its PIN names) and writes:
 
-  OUT/hdr/...             rebuild/include after ra2/fixups.json and the port rewrites
-  OUT/units/<name>.cpp    one native TU per rebuild/src/*.cpp, fixed up and port-rewritten
+  OUT/hdr/...             include/ after ra2/fixups.json and the port rewrites
+  OUT/units/<name>.cpp    one native TU per src/*.cpp, fixed up and port-rewritten
   OUT/units.cmake         RB_NATIVE_UNITS for CMake
   OUT/report.json         the units and what was skipped
 
@@ -175,7 +175,7 @@ def main():
                 r['hits'] += 1
             continue
         target = out / 'units' / rel
-        emit(target, '#line 1 "rebuild/src/%s"\n' % rel + native_units.port(apply_fixups(key, read(src), fixups)))
+        emit(target, '#line 1 "vendor/ra2-rebuild/src/%s"\n' % rel + native_units.port(apply_fixups(key, read(src), fixups)))
         units.append(target)
     unused = [r.get('old', r.get('cut_function', r['file'])) for r in fixups
               if not r['hits'] and (not only or r['file'] == '*' or r['file'].startswith('hdr/'))]

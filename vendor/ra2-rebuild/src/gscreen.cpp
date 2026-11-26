@@ -438,7 +438,7 @@ void GScreenClass::Render(void)
 	}
 
 	if (Session.EnableMultiplayerDebug) {
-		Draw_Multiplayer_Debug(false); // RA2
+		Draw_Multiplayer_Debug(false);
 	}
 
 	MouseCursor->Draw_Mouse(CompositeSurface);
@@ -651,7 +651,7 @@ void GScreenClass::AI(KeyNumType &, Point2D const & xy)
 
 
 #include <string.h> // RA2: the color scheme library's key (palette.cpp), here where ra2-decomp's gscreen.cpp has it
-#include "hashstr.h" // RA2: as above
+#include "hashstr.h"
 
 
 /// <summary>

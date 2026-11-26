@@ -209,12 +209,6 @@
   },
   {
    "file": "src/startup.cpp",
-   "old": "#ifdef RA2_NON_MATCHING // not exact: 7223 bytes differ",
-   "new": "#ifdef RA2_NON_MATCHING /* native: the parked WinMain draft is this port's WinMain (lane P2; the SEH block dropped below) */ // not exact: 7223 bytes differ",
-   "why": "Lane P2: the rebuild's parked WinMain draft (with RegisterClasses and Init_Keys) is this port's WinMain in the RA2_NON_MATCHING build, as main's port compiles main's exact WinMain; _controlfp is the port's (crt.cpp), set_control_word main's behaviour body. Without the drafts WinMain stays a trap. The block is never compiled in the exact text."
-  },
-  {
-   "file": "src/startup.cpp",
    "old": "\t\t\t__try {\n\n\t\t\t\tDebugString(\"Main_Game\\n\");\n\n\t\t\t\tMain_Game(argc, argv);\n\n\t\t\t} __except(Exception_Handler(GetExceptionCode(), GetExceptionInformation())) {};",
    "new": "\t\t\t/* native: no SEH on arm64 (main's port/fixups.json drops the same block); the host's crash trace reports faults */\n\t\t\tDebugString(\"Main_Game\\n\");\n\n\t\t\tMain_Game(argc, argv);",
    "why": "clang has no __try/__except on arm64 macOS; main's port drops the same block around Main_Game in its WinMain (native/port/fixups.json, startup.cpp). Inside the parked draft only."
@@ -468,7 +462,7 @@
   {
    "file": "src/getcpu.cpp",
    "append": "getcpu_native.inc",
-   "why": "Lane P2: the CPU probes (handwritten assembly) and Get_CPU_Type()/Get_CPU_Type_Name() (exact in main, not yet in the rebuild): native behaviour bodies, reached by WinMain's start-up (Init_Game)."
+   "why": "Lane P2: the CPU probes (handwritten assembly): native behaviour bodies, reached by WinMain's start-up (Init_Game). Get_CPU_Type()/Get_CPU_Type_Name() are the rebuild's own since lane P28's re-pin."
   },
   {
    "file": "src/lightcon.cpp",
@@ -509,8 +503,8 @@
   },
   {
    "file": "src/ownrdraw.cpp",
-   "old": "LONG *data = (LONG *)operator new(8); // RA2: as above\n            data[0] = (LONG)\"NewEdit\";",
-   "new": "intptr_t *data = (intptr_t *)operator new(2 * sizeof(intptr_t)); // RA2: as above (native: pointer-sized words)\n            data[0] = (intptr_t)\"NewEdit\";",
+   "old": "LONG * data = (LONG *)operator new(8);\n\t\t\tdata[0] = (LONG) \"NewEdit\";",
+   "new": "intptr_t *data = (intptr_t *)operator new(2 * sizeof(intptr_t)); // native: pointer-sized words\n            data[0] = (intptr_t)\"NewEdit\";",
    "why": "Lane P2, as main's port/fixups.json (Scout1119, M14) for the same text: the GWL_USERDATA block of a replacement list box holds the class name pointer and the edit's style as two 32-bit words on VC6; natively two pointer-sized words, written here and read back by Subclass_Control (the skirmish dialog faulted in strcpy)."
   },
   {
@@ -521,8 +515,8 @@
   },
   {
    "file": "src/ownrdraw.cpp",
-   "old": "struct TextRequest { // RA2: as above\n\tint Item; // RA2: as above",
-   "new": "struct TextRequest { // RA2: as above\n\tintptr_t Item; // RA2: as above (native: the control's handle, pointer width, as ToolTipTextRequest::Window)",
+   "old": "struct TextRequest {\n\t\tint Item;",
+   "new": "struct TextRequest {\n\tintptr_t Item; // native: the control's handle, pointer width, as ToolTipTextRequest::Window",
    "why": "Lane P2: message 0x4E9's record has two declarations, TextRequest here (the sender: int Item, int Index, WideWstring Text) and ownrdraw.h's ToolTipTextRequest (the receivers: HWND Window, int Item, WideWstring Text). On VC6 both are 4, 4, then the string at +8; natively the receiver's HWND is 8 bytes, so the skirmish dialog's tooltip answer was written 8 bytes past the sender's string and its destructor freed garbage. The first field at pointer width makes the layouts agree."
   },
   {
@@ -578,8 +572,8 @@
   },
   {
    "file": "src/ownrdraw.cpp",
-   "old": "struct NodeList { // RA2: as above\n\tchar Reserved_00[0x34]; // RA2: as above",
-   "new": "struct NodeList { // RA2: as above\n\tchar Reserved_00[offsetof(OwnerDraw::WinData, Nodes)]; // RA2: as above (native: WinData's Nodes, 0x34 on VC6)",
+   "old": "struct NodeList {\n\t\tchar Reserved_00[0x34];",
+   "new": "struct NodeList {\n\tchar Reserved_00[offsetof(OwnerDraw::WinData, Nodes)]; // native: WinData's Nodes, 0x34 on VC6",
    "why": "Lane P2 (pointer width): NodeList is a view of WinData whose Head is WinData::Nodes at +0x34 on VC6. Natively Nodes lies further on (8-byte pointers before it), so ~WinData's loop (while Nodes: Remove_Node) removed through another field and never ended (the skirmish dialog's teardown hung in Dictionary::remove). The view's padding is WinData's own offset natively."
   },
   {
@@ -635,6 +629,11 @@
    "file": "src/beacon.cpp",
    "append": "beacon_native.inc",
    "why": "Lane P2: Intersect 0x0041FDF0, beacon.h's plain declaration of trect.h's template copy, defined by nothing; the template for int (RadarClass::Fill_In_Background trapped on it while the skirmish map loaded)."
+  },
+  {
+   "file": "src/alphashp.cpp",
+   "cut_function": "^void AlphaShapeClass::Draw_All\\(Rect const & cliprect\\)",
+   "why": "Lane P28 (re-pin to 66bccbbfdd): AlphaShapeClass::Draw_All 0x0041F5E0 is now the rebuild's own text, which the appended glue (alphashp_native.inc) already defines with the port's native changes (pointer-width wrap, harness counts or the Enhancements button); the rebuild's definition is cut so the re-pin keeps the played behaviour. Moving to the rebuild's text is a separate step."
   },
   {
    "file": "src/alphashp.cpp",
@@ -742,8 +741,8 @@
   },
   {
    "file": "src/conquer.cpp",
-   "old": "\t\t\tif (Main_Loop()) {\t// RA2: as above",
-   "new": "\t\t\tbool RB_Main_Loop_Seam(void);   /* native: mainloop_native.inc */\n\t\t\tif (RB_Main_Loop_Seam()) {\t// RA2: as above",
+   "old": "\t\t\tif (Main_Loop()) {",
+   "new": "\t\t\tbool RB_Main_Loop_Seam(void);   /* native: mainloop_native.inc */\n\t\t\tif (RB_Main_Loop_Seam()) {",
    "why": "Lane P2: Main_Game calls Main_Loop through the native seam (frame floor and frame count, mainloop_native.inc)."
   },
   {
@@ -764,7 +763,7 @@
   {
    "file": "src/txtlabel2.cpp",
    "regex": true,
-   "old": "delete \\[\\] (DialogDrawer|MainButtonDrawer);",
+   "old": "delete ?\\[\\] ?(DialogDrawer|MainButtonDrawer);",
    "new": "delete \\1; /* native: one ConvertClass (Load_Art_Palette's new), not an array */",
    "why": "Lane P2: Free_Dialog_Palettes frees the two dialog drawers with delete [], but Load_Art_Palette made each with a scalar new. VC6's array delete of a class with a destructor read a count before the object and the original got away with it; natively the allocator refused the shifted pointer when the game quit (Abort Mission, Quit). A scalar delete, the allocation's own form."
   },
@@ -947,9 +946,14 @@
   },
   {
    "file": "src/voc.cpp",
-   "old": "\t\t\tresult = stream->Read(&entry, sizeof(entry), 0); // RA2: as above",
-   "new": "\t\t\tresult = stream->Read((void *)&entry, sizeof(entry), 0); // RA2: as above",
+   "old": "\t\t\tresult = stream->Read(&entry, sizeof(entry), 0);",
+   "new": "\t\t\tresult = stream->Read((void *)&entry, sizeof(entry), 0);",
    "why": "Lane P4 (original saves): Static_Sounds_Load's entry is an unnamed local struct of four ints, the same 16 bytes in VC6's layout and natively; the typed Read found no field map for an unnamed record (original_layouts.py leaves them out) and reported it ('no layout ... read as is'). Read through void *, the raw read it already was, without the report. The same call in VC6."
+  },
+  {
+   "file": "src/xsurface.cpp",
+   "cut_function": "^bool XSurface::Draw_Ellipse\\(Point2D point, int radx, int rady, Rect cliprect, int color\\)",
+   "why": "Lane P28 (re-pin to 66bccbbfdd): XSurface::Draw_Ellipse 0x007746C0 is now the rebuild's own text, which the appended glue (xsurface_native.inc) already defines with the port's native changes (pointer-width wrap, harness counts or the Enhancements button); the rebuild's definition is cut so the re-pin keeps the played behaviour. Moving to the rebuild's text is a separate step."
   },
   {
    "file": "src/xsurface.cpp",
@@ -969,12 +973,17 @@
   },
   {
    "file": "src/dsurface.cpp",
+   "cut_function": "^bool DSurface::Draw_Depth_Antialiased_Line\\(Rect const & cliprect,",
+   "why": "Lane P28 (re-pin to 66bccbbfdd): DSurface::Draw_Depth_Antialiased_Line 0x004AC650 is now the rebuild's own text, which the appended glue (dsurface_native.inc) already defines with the port's native changes (pointer-width wrap, harness counts or the Enhancements button); the rebuild's definition is cut so the re-pin keeps the played behaviour. Moving to the rebuild's text is a separate step."
+  },
+  {
+   "file": "src/dsurface.cpp",
    "append": "dsurface_native.inc",
    "why": "Lane P4: DSurface::Draw_Depth_Antialiased_Line 0x004AC650 (the rebuild keeps TibSun's text under #if 0), main's behaviour body; reached by the laser beams and Draw_Radial_Indicator."
   },
   {
    "file": "src/object.cpp",
-   "old": "\tSwizzler.Swizzle((void **)&Unknown_18); // RA2: as above",
+   "old": "\tSwizzler.Swizzle((void **)&Unknown_18);",
    "new": "\tif (Unknown_18 != 0) Swizzler.Swizzle((void **)&Unknown_18); // RA2: as above (NATIVE: a 4-byte int here; Swizzle patches 8 bytes, Unknown_18 and RefCount; a null field needs no remap)",
    "why": "Lane P4 (main's port fixup for ObjectClass::Load 0x005D4760, the same case): AbstractClass +0x18 is a 4-byte int natively which ObjectClass::Load swizzles as a pointer; Swizzle read it and RefCount as one 8-byte id, so a resaved bullet with outstanding references (RefCount 2) failed to load ('swizzle: unmatched id 0x200000000 ... BulletClass +0x28'). The original's Swizzle of a null pointer does nothing, so skipping the call for 0 keeps its behaviour; no code stores a non-zero value there."
   },
@@ -1114,6 +1123,11 @@
   },
   {
    "file": "src/mainopt.cpp",
+   "cut_function": "^BOOL CALLBACK Main_Options_Dialog_Proc\\([^)]*\\)[ \\t]*//",
+   "why": "Lane P28 (re-pin to 66bccbbfdd): Main_Options_Dialog_Proc 0x00542590 is now the rebuild's own text, which the appended glue (mainopt_native.inc) already defines with the port's native changes (pointer-width wrap, harness counts or the Enhancements button); the rebuild's definition is cut so the re-pin keeps the played behaviour. Moving to the rebuild's text is a separate step."
+  },
+  {
+   "file": "src/mainopt.cpp",
    "append": "mainopt_native.inc",
    "why": "Lane P8: Main_Options_Dialog_Proc (0x00542590; the rebuild keeps its text under #if 0, a link-closure trap: the main menu's Options aborted), that text compiled natively and checked against main's behaviour row (link/behaviour_m22_options.cpp), with the native Enhancements button (0x7F80) and page (main's link/native_enhancements.cpp, lanes C3/C7)."
   },
@@ -1187,19 +1201,19 @@
   },
   {
    "file": "src/txtlabel2.cpp",
-   "old": "\tif (width >= 1024) { // RA2: as above\n\t\tleft = (width - 800) / 2;",
+   "old": "\tif (width >= 1024) {\n\t\tleft = (width - 800) / 2;",
    "new": "\tif (width > 800) { /* NATIVE: centred above 800, as drawn (Scout1274) */\n\t\tleft = (width - 800) / 2;",
    "why": "Lane P8 (the feature audit): Scout1274 (main's rows): Layout_Interface_Art 0x006F3E70 centres the 800x600 menu panel only at 1024 wide or 768 high or more, while the functions that draw it and the dialogs centre it at any size above 800x600; the original only offers 640x480, 800x600 and 1024x768 or more, where both agree. The touch app wants the usable screen's size (the Duo's 944x634): the panel sat at the right edge, clipped, the buttons 72 pixels left of it. Natively the layout centres above 800x600 as the drawing does; at the original's sizes nothing changes."
   },
   {
    "file": "src/txtlabel2.cpp",
-   "old": "\tif (height >= 768) { // RA2: as above\n\t\ttop = (height - 600) / 2;",
+   "old": "\tif (height >= 768) {\n\t\ttop = (height - 600) / 2;",
    "new": "\tif (height > 600) { /* NATIVE: centred above 600, as drawn (Scout1274) */\n\t\ttop = (height - 600) / 2;",
    "why": "Lane P8 (the feature audit): Scout1274: the height, as the width."
   },
   {
    "file": "src/txtlabel2.cpp",
-   "old": "\tif (VideoModeWidth >= 1024) { // RA2: as above\n\t\tint left = DialogBackRect->X;",
+   "old": "\tif (VideoModeWidth >= 1024) {\n\t\tint left = DialogBackRect->X;",
    "new": "\tif (VideoModeWidth > 800 || DialogBackRect->Y > 0) { /* NATIVE: whenever the panel is centred (Scout1274) */\n\t\tint left = DialogBackRect->X;",
    "why": "Lane P8 (the feature audit): Scout1274: Draw_Interface_Borders 0x006F34D0 blacks out the bands around the centred panel only at 1024 wide or more; with the layout centred above 800x600 the bands at the touch app's sizes kept old surface contents as coloured noise. Natively whenever the panel is centred (wider than 800, or a top offset); at the original's sizes nothing changes."
   },
@@ -1314,7 +1328,7 @@
   },
   {
    "file": "src/sidebar.cpp",
-   "old": "\tint x = Options.IsSidebarOnRight ? TacticalRect.X + TacticalRect.Width : 0; // RA2: as above",
+   "old": "\tint x = Options.IsSidebarOnRight ? TacticalRect.X + TacticalRect.Width : 0;",
    "new": "\tint x = Options.IsSidebarOnRight ? RB_Sidebar_X(TacticalRect.X + TacticalRect.Width) : 0; /* native (C4) */",
    "why": "Lane P8 (the feature audit): Map zoom (main's lane C4 rows, link/native_map_zoom.cpp; glue/zoom_native.inc): SidebarClass::Recalc_Horizontal_Layout 0x0067BA60 places the sidebar at the view's right edge: the tactical rectangle's while zoomed."
   },
@@ -1326,19 +1340,19 @@
   },
   {
    "file": "src/sidebar.cpp",
-   "old": "\t\tSidebarRect.X = TacticalRect.X + TacticalRect.Width;\n",
-   "new": "\t\tSidebarRect.X = RB_Sidebar_X(TacticalRect.X + TacticalRect.Width);   /* native (C4) */\n",
+   "old": "\t\tint right_edge = TacticalRect.X + TacticalRect.Width;\n\t\tSidebarRect.X = right_edge;\n",
+   "new": "\t\tint right_edge = RB_Sidebar_X(TacticalRect.X + TacticalRect.Width);   /* native (C4) */\n\t\tSidebarRect.X = right_edge;\n",
    "why": "Lane P8 (the feature audit): Map zoom (main's lane C4 rows, link/native_map_zoom.cpp; glue/zoom_native.inc): Reposition_Sidebar 0x006819A0's sidebar rectangle."
   },
   {
    "file": "src/sidebar.cpp",
-   "old": "\t\tBackground.Set_Position(TacticalRect.X + TacticalRect.Width, y); // RA2: as above",
+   "old": "\t\tBackground.Set_Position(TacticalRect.X + TacticalRect.Width, y);",
    "new": "\t\tBackground.Set_Position(RB_Sidebar_X(TacticalRect.X + TacticalRect.Width), y); /* native (C4) */",
    "why": "Lane P8 (the feature audit): Map zoom (main's lane C4 rows, link/native_map_zoom.cpp; glue/zoom_native.inc): Reposition_Sidebar 0x006819A0's background gadget."
   },
   {
    "file": "src/sidebar.cpp",
-   "old": "\tSidebarRect.Height = TacticalRect.Y + TacticalRect.Height + TabBarHeight - 0x9E; // RA2: as above",
+   "old": "\tSidebarRect.Height = TacticalRect.Y + TacticalRect.Height + TabBarHeight - 0x9E;",
    "new": "\tSidebarRect.Height = RB_Sidebar_Bottom(TacticalRect.Y + TacticalRect.Height) + TabBarHeight - 0x9E; /* native (C4, C7) */",
    "why": "Lane P8 (the feature audit): Map zoom (main's lane C4 rows, link/native_map_zoom.cpp; glue/zoom_native.inc): SidebarClass::Recalc_Layout 0x0067B910 takes the view's bottom edge as the command bar's top: the tactical rectangle's while zoomed, less the rows the sidebar surface lacks (Game interface size)."
   },
@@ -1386,26 +1400,26 @@
   },
   {
    "file": "src/startup.cpp",
-   "old": "\t\tRect sidebar_rect(0, 0, SidebarWidth, VisibleRect.Height);\n\t\tRect tile_rect(0,0,VisibleRect.Width-sidebar_rect.Width, sidebar_rect.Height);\n\t\tRect composite_rect(0,0,VisibleRect.Width-sidebar_rect.Width, sidebar_rect.Height);",
-   "new": "\t\tRect sidebar_rect(0, 0, SidebarWidth, RB_Sidebar_Height(VisibleRect.Height));   /* native (C3) */\n\t\tRect tile_rect(0,0,VisibleRect.Width-sidebar_rect.Width, VisibleRect.Height);   /* native (C3): the screen's height, not the sidebar's */\n\t\tRect composite_rect(0,0,VisibleRect.Width-sidebar_rect.Width, VisibleRect.Height);",
+   "old": "\t\t\tRect side_rect(0, 0, sidebar_width, screen_height);\n\t\t\tRect tile_rect(0, 0, VisibleRect.Width - side_rect.Width, side_rect.Height);\n\t\t\tint width = tile_rect.Width;\n\t\t\tRect composite_rect(0, 0, width, side_rect.Height);",
+   "new": "\t\t\tRect side_rect(0, 0, sidebar_width, RB_Sidebar_Height(screen_height));   /* native (C3) */\n\t\t\tRect tile_rect(0, 0, VisibleRect.Width - side_rect.Width, screen_height);   /* native (C3): the screen's height, not the sidebar's */\n\t\t\tint width = tile_rect.Width;\n\t\t\tRect composite_rect(0, 0, width, screen_height);",
    "why": "Lane P8 (the feature audit): Game interface size (main's lane C3/C7 rows; glue/zoom_native.inc RB_Sidebar_Height): the surfaces at start-up (WinMain); the tile and composite surfaces took the sidebar rectangle's height (the screen's in the original), so they keep the screen's height."
   },
   {
    "file": "src/txtlabel2.cpp",
    "regex": true,
-   "old": "(Load_Sidebar_Palettes\\(\\); // RA2: as above\\n\\t+)Layout_Sidebar_Art\\(VideoModeWidth, VideoModeHeight\\);",
+   "old": "(Load_Sidebar_Palettes\\(\\);\\n\\t+)Layout_Sidebar_Art\\(VideoModeWidth, VideoModeHeight\\);",
    "new": "\\1Layout_Sidebar_Art(VideoModeWidth, RB_Sidebar_Height(VideoModeHeight)); /* native (C3) */",
    "why": "Lane P8 (the feature audit): Game interface size (main's lane C3/C7 rows; glue/zoom_native.inc RB_Sidebar_Height): the sidebar art's layout for the sidebar's height when the art is loaded (Load_Sidebar_Art 0x006F4400) and when it is drawn (Draw_Sidebar_Art 0x006F4620)."
   },
   {
    "file": "src/txtlabel2.cpp",
-   "old": "\ty = height - 32; // RA2: as above\n\tint bar_width = Get_Title_Screen_Area().Width;",
+   "old": "\ty = height - 32;\n\tint bar_width = Get_Title_Screen_Area().Width;",
    "new": "\ty = RB_Command_Bar_Top(); /* native (N31): the screen's bottom */\n\tint bar_width = Get_Title_Screen_Area().Width;",
    "why": "Lane P8 (the feature audit): the command bar (main's lane N31 rows; glue/zoom_native.inc): Layout_Sidebar_Art 0x006F4C90 puts the command bar's rectangles at the bottom of the height it is given; natively the layout is also made for the sidebar's shorter height (Game interface size, Zoom gestures), and TabClass::Draw_It then drew the bar that far up the map whenever a button asked for a redraw (the user's Duo report 2026-11-22: the bar flashes higher up). The bar stays at the screen's bottom; with the defaults that is height - 32."
   },
   {
    "file": "src/txtlabel2.cpp",
-   "old": "\tTabTileCount = (width - ThumbOpenRect->Width - TabBackRect->Width - TabEndRect->Width)\n\t\t/ ButtonSlotRect->Width; // RA2: as above\n\tint bar_x = TabBackRect->X - TabEndRect->Width; // RA2: as above",
+   "old": "\tTabTileCount = (width - ThumbOpenRect->Width - TabBackRect->Width - TabEndRect->Width)\n\t\t/ ButtonSlotRect->Width;\n\tint bar_x = TabBackRect->X - TabEndRect->Width;",
    "new": "\tint bar_right = RB_Command_Bar_Right(width, TabBackRect->X); /* native (N31) */\n\tTabTileCount = (bar_right - ThumbOpenRect->Width - TabEndRect->Width)\n\t\t/ ButtonSlotRect->Width;\n\tint bar_x = bar_right - TabEndRect->Width;",
    "why": "Lane P8 (the feature audit): the command bar (main's lane N31 rows; glue/zoom_native.inc): Layout_Sidebar_Art lays the command bar's pieces out from its right end, the sidebar column's x (width less the column's width, the same number in the original): at render scale 2 (Zoom gestures) the host shows only the bar's left part, so the open thumb lay off the picture and a closed bar could not be opened again (the user's Duo report 2026-11-22). The right end is the shown part's; at render scale 1 the original's."
   },
@@ -1417,14 +1431,14 @@
   },
   {
    "file": "src/mainloop.cpp",
-   "old": "\t\t\tDo_Win(); // RA2: as above",
-   "new": "\t\t\tRB_Map_Zoom_End();   /* native (C16) */\n\t\t\tDo_Win(); // RA2: as above",
+   "old": "\t\t\tDo_Win();",
+   "new": "\t\t\tRB_Map_Zoom_End();   /* native (C16) */\n\t\t\tDo_Win();",
    "why": "Lane P8 (the feature audit): Zoom gestures (main's lane C16 rows; glue/zoom_native.inc): Main_Loop's end runs Do_Win (the score screen) before Main_Loop returns; the host is told the game is over first."
   },
   {
    "file": "src/mainloop.cpp",
-   "old": "\t\t\tDo_Lose(); // RA2: as above",
-   "new": "\t\t\tRB_Map_Zoom_End();   /* native (C16) */\n\t\t\tDo_Lose(); // RA2: as above",
+   "old": "\t\t\tDo_Lose();",
+   "new": "\t\t\tRB_Map_Zoom_End();   /* native (C16) */\n\t\t\tDo_Lose();",
    "why": "Lane P8 (the feature audit): Zoom gestures (main's lane C16 rows; glue/zoom_native.inc): as Do_Win: before Do_Lose."
   },
   {
@@ -1514,8 +1528,8 @@
   },
   {
    "file": "src/ownrdraw.cpp",
-   "old": "struct TextNode { // RA2: as above\n\tTextNode * Next; // RA2: as above\n\tint Reserved_04; // RA2: as above",
-   "new": "struct TextNode { // RA2: as above\n\tTextNode * Next; // RA2: as above\n\tintptr_t Reserved_04; // RA2: as above (native: pointer-sized, the item data)",
+   "old": "struct TextNode {\n\t\tTextNode * Next;\n\t\tint Reserved_04;",
+   "new": "struct TextNode {\n\tTextNode * Next;\n\tintptr_t Reserved_04; // native: pointer-sized, the item data",
    "why": "Lane P8 (pointer width; found by main's native-zoom-menu test run on this port: the in-game Save screen faulted in LoadOptionsClass::Save_Dialog_On_WM_COMMAND at a 32-bit address): the replacement list box's TextNode +0x04 is the row's item data (LB_/CB_SETITEMDATA store lparam there, GETITEMDATA returns it); the load/save/delete lists keep their FileEntryClass pointers in it, cut to 32 bits by the int. The node's allocation already sizes by offsetof(TextNode, Text) (row 95)."
   },
   {
@@ -1525,8 +1539,8 @@
   },
   {
    "file": "src/mainloop.cpp",
-   "old": "\tif (PlayerWins || PlayerLoses || PlayerRestarts || PlayerAborts) { // RA2: as above\n\t\tSession.Suspended++;",
-   "new": "\tRB_Note_Game_Over();   /* native (lane P8, test scaffolding): main's game-over milestone */\n\tif (PlayerWins || PlayerLoses || PlayerRestarts || PlayerAborts) { // RA2: as above\n\t\tSession.Suspended++;",
+   "old": "\tif (PlayerWins || PlayerLoses || PlayerRestarts || PlayerAborts) {\n\t\tSession.Suspended++;",
+   "new": "\tRB_Note_Game_Over();   /* native (lane P8, test scaffolding): main's game-over milestone */\n\tif (PlayerWins || PlayerLoses || PlayerRestarts || PlayerAborts) {\n\t\tSession.Suspended++;",
    "why": "Lane P8 (test scaffolding, main's harness_skirmish.cpp milestone): Process_Game_End 0x0053F840 reports the game's end (player wins, player loses, restart, abort at loop frame n) as the src-based port's seam does; main's tests (zoom_input.py score and abort) read it. Logging only."
   },
   {
@@ -1536,14 +1550,14 @@
   },
   {
    "file": "src/ownrdraw.cpp",
-   "old": "\t\tcase WM_USER + 228: { // RA2: plays the named movie\n\t\t\tStop_Static_Movie(window, data); // RA2: as above\n",
-   "new": "\t\tcase WM_USER + 228: { // RA2: plays the named movie\n\t\t\tStop_Static_Movie(window, data); // RA2: as above\n\t\t\tRB_Static_Movie_Name(window, (char const *)lparam);   /* native (lane Y8): kept for the widescreen mode change */\n",
+   "old": "\t\tcase WM_USER + 228: { // RA2: plays the named movie\n\t\t\tStop_Static_Movie(window, data);\n",
+   "new": "\t\tcase WM_USER + 228: { // RA2: plays the named movie\n\t\t\tStop_Static_Movie(window, data);\n\t\t\tRB_Static_Movie_Name(window, (char const *)lparam);   /* native (lane Y8): kept for the widescreen mode change */\n",
    "why": "Lane P8, Mac widescreen (main's lane Y8 native_widescreen.cpp with behaviour_m14_ownerdraw.cpp's Native_Static_Movies_Stop/Restart): a static's named movie (the main menu's animated backdrop) is recorded when it starts, so the widescreen mode change can stop it and start it again on the new surfaces. Recording only."
   },
   {
    "file": "src/ownrdraw.cpp",
-   "old": "\t\tcase WM_USER + 226: // RA2: stops the movie\n\t\t\tStop_Static_Movie(window, data); // RA2: as above\n",
-   "new": "\t\tcase WM_USER + 226: // RA2: stops the movie\n\t\t\tStop_Static_Movie(window, data); // RA2: as above\n\t\t\tRB_Static_Movie_Name(window, NULL);   /* native (lane Y8) */\n",
+   "old": "\t\tcase WM_USER + 226: // RA2: stops the movie\n\t\t\tStop_Static_Movie(window, data);\n",
+   "new": "\t\tcase WM_USER + 226: // RA2: stops the movie\n\t\t\tStop_Static_Movie(window, data);\n\t\t\tRB_Static_Movie_Name(window, NULL);   /* native (lane Y8) */\n",
    "why": "Lane P8, Mac widescreen: a static's movie stopped by the game is no longer started again."
   },
   {
@@ -1600,9 +1614,10 @@
   },
   {
    "file": "src/techno.cpp",
-   "old": "SurfaceRegion TechnoClass::Techno_Render_Voxel_Object(VoxelDataStruct const & voxeldata, Matrix3D const & matrix, Point2D const & point, Rect const & xcliprect, int frame, ShapeFlags_Type flags, int brightness) const\n{\n",
-   "new": "SurfaceRegion TechnoClass::Techno_Render_Voxel_Object(VoxelDataStruct const & voxeldata, Matrix3D const & matrix, Point2D const & point, Rect const & xcliprect, int frame, ShapeFlags_Type flags, int brightness) const\n{\n\tRB_Hd_Owner(Fetch_RTTI());   /* native (HD vehicles) */\n",
-   "why": "Lane P8 (the feature audit): HD vehicles (main's lanes C16/C17 rows; the YR port's lane N19 rows, the same text in its tree; glue/unit/hd_vehicles.cpp): the voxel renderer tells the HD module whose voxels it draws (its per-kind counts: the tests' proof that vehicles, aircraft and voxel building parts show at Nx). TechnoClass 0x006D24E0."
+   "old": "(SurfaceRegion TechnoClass::Techno_Render_Voxel_Object\\(VoxelDataStruct const & voxeldata, Matrix3D const & matrix, Point2D const & point, Rect const & xcliprect, int frame, ShapeFlags_Type flags, int brightness\\) const[^\\n]*\\n\\{\\n)",
+   "new": "\\1\tRB_Hd_Owner(Fetch_RTTI());   /* native (HD vehicles) */\n",
+   "why": "Lane P8 (the feature audit): HD vehicles (main's lanes C16/C17 rows; the YR port's lane N19 rows, the same text in its tree; glue/unit/hd_vehicles.cpp): the voxel renderer tells the HD module whose voxels it draws (its per-kind counts: the tests' proof that vehicles, aircraft and voxel building parts show at Nx). TechnoClass 0x006D24E0.",
+   "regex": true
   },
   {
    "file": "src/techno.cpp",
@@ -1612,6 +1627,12 @@
    "why": "Lane P8 (the feature audit): HD vehicles (main's lanes C16/C17 rows; the YR port's lane N19 rows, the same text in its tree; glue/unit/hd_vehicles.cpp): as the object: TechnoClass 0x006D2810 (the voxel shadow)."
   },
   {
+   "file": "src/techno.cpp",
+   "old": "\t\t\tdouble angle = M_PI / segments * RadialFireSegment - M_PI_2;",
+   "new": "\t\t\tdouble angle = (2.0 * M_PI / segments) * RadialFireSegment - M_PI / 2.0;   /* native: lane P28, main's exact 0x006CA890 (a full turn over the segments) */",
+   "why": "Lane P28 (re-pin to 66bccbbfdd): TechnoClass::Fire_At is still a parked draft (6 bytes differ), and its new text spaces the radial fan by pi/segments; main's exact 0x006CA890 (src-final src/recovered/techno.cpp:3310, unknown_tau_79d158 / segments) and the b873d2b3c6 draft use a full turn, 2*pi/segments. With pi the Soviet 6 replay (Flak Track or radial-fire volleys) won at tick 30688 instead of the recorded 30200. Main's form carried until the rebuild's row is exact."
+  },
+  {
    "file": "src/dsurface.cpp",
    "old": "\t\tHRESULT result = SurfacePtr->Blt(&xdestrect, source.SurfacePtr, &xsrcrect, DDBLT_WAIT, NULL);\n\t\treturn(result == DD_OK);",
    "new": "\t\tHRESULT result = SurfacePtr->Blt(&xdestrect, source.SurfacePtr, &xsrcrect, DDBLT_WAIT, NULL);\n\t\tvoid RB_Hd_Copied(Surface & dest, Rect const & destrect, Surface & source, Rect const & sourcerect);   /* native (HD vehicles) */\n\t\tif (result == DD_OK) RB_Hd_Copied(*this, Rect(xdestrect.left, xdestrect.top, drect.Width, drect.Height), (Surface &)ssource, Rect(xsrcrect.left, xsrcrect.top, srect.Width, srect.Height));\n\t\treturn(result == DD_OK);",
@@ -1619,44 +1640,44 @@
   },
   {
    "file": "src/init.cpp",
-   "old": "bool Select_Game(bool) // RA2: as above\n{\n",
-   "new": "bool RB_Skirmish_Played(void);   /* native: glue/mainloop_native.inc (test scaffolding) */\nvoid RB_Soak_Seed(void);   /* native: glue/harness_input_native.inc (test scaffolding) */\nbool Select_Game(bool) // RA2: as above\n{\n\tRB_Soak_Seed();   /* native (lane P8, test scaffolding): RA2_NATIVE_SOAK_SEED, before Select_Game's Init_Random (main's Native_Soak_Seed at its Select_Game seam) */\n\tif (RB_Skirmish_Played()) return(false);   /* native (lane P8, test scaffolding): one game per --skirmish run, as main's harness */\n",
+   "old": "bool Select_Game(bool)\n{\n",
+   "new": "bool RB_Skirmish_Played(void);   /* native: glue/mainloop_native.inc (test scaffolding) */\nvoid RB_Soak_Seed(void);   /* native: glue/harness_input_native.inc (test scaffolding) */\nbool Select_Game(bool)\n{\n\tRB_Soak_Seed();   /* native (lane P8, test scaffolding): RA2_NATIVE_SOAK_SEED, before Select_Game's Init_Random (main's Native_Soak_Seed at its Select_Game seam) */\n\tif (RB_Skirmish_Played()) return(false);   /* native (lane P8, test scaffolding): one game per --skirmish run, as main's harness */\n",
    "why": "Lane P8 (test scaffolding, main's harness_skirmish.cpp Native_Select_Game_Seam): with the port's --skirmish argument (main's tests through tools/ra2_skirmish_wrap.py) a run plays one game: Select_Game answers false once a game has run, so the score screen's Continue ends the run (WinMain returns 0), as main's tests expect (zoom_input.py score). Without --skirmish nothing changes. It also sets CustomSeed from RA2_NATIVE_SOAK_SEED first, as main's seam does: Select_Game calls Init_Random before Start_Scenario (frame identity found the seed set later had no effect)."
   },
   {
    "file": "src/ownrdraw.cpp",
-   "old": "\t\t\tif ((data->PictureMode == 1 && data->IsPlaying) || data->PictureMode == 4) KillTimer(window, 0);\n\t\t\tStop_Static_Movie(window, data); // RA2: as above\n\t\t\t// RA2: destruction continues through the previous window procedure.",
-   "new": "\t\t\tif ((data->PictureMode == 1 && data->IsPlaying) || data->PictureMode == 4) KillTimer(window, 0);\n\t\t\tStop_Static_Movie(window, data); // RA2: as above\n\t\t\tRB_Static_Movie_Name(window, NULL);   /* native (lane Y8): the static is gone */\n\t\t\t// RA2: destruction continues through the previous window procedure.",
+   "old": "\t\t\tif ((data->PictureMode == 1 && data->IsPlaying) || data->PictureMode == 4) KillTimer(window, 0);\n\t\t\tStop_Static_Movie(window, data);\n\t\t\t// RA2: destruction continues through the previous window procedure.",
+   "new": "\t\t\tif ((data->PictureMode == 1 && data->IsPlaying) || data->PictureMode == 4) KillTimer(window, 0);\n\t\t\tStop_Static_Movie(window, data);\n\t\t\tRB_Static_Movie_Name(window, NULL);   /* native (lane Y8): the static is gone */\n\t\t\t// RA2: destruction continues through the previous window procedure.",
    "why": "Lane P8, Mac widescreen: a destroyed static's movie name is dropped (the port has no IsWindow to test a recorded handle with)."
   },
   {
    "file": "src/ownrdraw.cpp",
-   "old": "        return id == 0x5ce || id == 0x5cd; // RA2: as above",
+   "old": "\t\treturn id == 0x5ce || id == 0x5cd;",
    "new": "        return id == 0x5ce || id == 0x5cd || id == 0x7f80   /* NATIVE (C3): the Enhancements button */\n            || id == 0x7f02 || id == 0x7f00 || id == 0x7f01;   /* NATIVE (C7): the Enhancements page's Ok, Original, Enhanced */",
    "why": "Lane P8 (main's lane C3/C7 row at OwnerDraw 0x005E6860): the shell Options dialog 0xD5 gains the Enhancements button (0x7F80, appended by port/src/native_dialogs.cpp). 0x005E6860 lists, per dialog kind, the buttons that belong in the right-hand column (moved there and drawn as column buttons); for 0xD5 they are Keyboard 0x5CE and Network 0x5CD. Listing 0x7F80 with them puts it in the next slot of the column (it had stayed at the template's place, 667,431, so main's tests' click on the column slot missed it), and the page's Ok/Original/Enhanced likewise. No original id is affected."
   },
   {
    "file": "src/ownrdraw.cpp",
-   "old": "    return id == 0x686; // RA2: as above\n}",
+   "old": "\treturn id == 0x686;\n}",
    "new": "    return id == 0x686 || id == 0x7f03;   /* NATIVE (C7): the Enhancements page's Cancel */\n}",
    "why": "Lane P12 (main's lane C7 row at OwnerDraw::Is_Default_Button 0x005E72C0, native/port/fixups.json): 0x005E72C0 names, per dialog kind, the button that sits in the bottom slot of the right-hand column (as the Options dialog's Main Menu 0x686). The Enhancements page is created under the Options dialog's id 0xD5 (port/src/native_dialogs.cpp), so listing its Cancel 0x7F03 beside 0x686 puts it in that slot as a column button; without it the page's Cancel stayed at the template's place over the page (the user's Duo report 2026-11-24, the Enhancements menu). No original dialog has a control 0x7F03."
   },
   {
    "file": "src/ownrdraw.cpp",
-   "old": "    int item = CallWindowProcA(proc, owner, 0x199, index, 0); // RA2: as above\n    if (item == -1 || item == 0) { // RA2: as above\n        item = CallWindowProcA(proc, owner, 0x150, index, 0); // RA2: as above",
-   "new": "    intptr_t item = CallWindowProcA(proc, owner, 0x199, index, 0); // RA2: as above (native: pointer-sized, the item's node)\n    if (item == -1 || item == 0) { // RA2: as above\n        item = CallWindowProcA(proc, owner, 0x150, index, 0); // RA2: as above",
+   "old": "\tint item = CallWindowProcA(proc, owner, 0x199, index, 0);\n\tif (item == -1 || item == 0) {\n\t\titem = CallWindowProcA(proc, owner, 0x150, index, 0);",
+   "new": "    intptr_t item = CallWindowProcA(proc, owner, 0x199, index, 0); // native: pointer-sized, the item's node\n    if (item == -1 || item == 0) {\n        item = CallWindowProcA(proc, owner, 0x150, index, 0);",
    "why": "Lane P8 (pointer width; found by main's enhancements_newgame.py on this port: opening a dropdown of the Enhancements page faulted in Combo_Drop_Proc): Get_Item_Text keeps the combo row's node pointer (0x199, else CB_GETITEMDATA) in an int and reads its text through it; cut to 32 bits natively. Every owner-draw dropdown's open list reaches it (the Options resolution box, the skirmish setup's combos when opened)."
   },
   {
    "file": "src/ownrdraw.cpp",
-   "old": "struct ListItemData { // RA2: as above\n    int Reserved_00; // RA2: as above\n    int Reserved_04; // RA2: as above\n    wchar_t *text; // RA2: as above\n};",
-   "new": "struct ListItemData { // RA2: as above (native: TextNode's view: Next, the item data, Data)\n    void *Reserved_00; // RA2: as above (native: TextNode::Next, a pointer)\n    intptr_t Reserved_04; // RA2: as above (native: TextNode::Reserved_04, pointer-sized)\n    wchar_t *text; // RA2: as above\n};",
+   "old": "struct ListItemData {\n\t\tint Reserved_00;\n\t\tint Reserved_04;\n\t\twchar_t * text;\n};",
+   "new": "struct ListItemData { // native: TextNode's view: Next, the item data, Data\n    void *Reserved_00; // native: TextNode::Next, a pointer\n    intptr_t Reserved_04; // native: TextNode::Reserved_04, pointer-sized\n    wchar_t *text;\n};",
    "why": "Lane P8 (pointer width, with the Get_Item_Text row): ListItemData is Get_Item_Text's view of a combo row's TextNode (Next, item data, the text pointer at VC6 +0x08); with 4-byte ints it read the text pointer at +0x08 natively, where TextNode's Next and item data are 8 bytes each and Data is at +0x10."
   },
   {
    "file": "src/ownrdraw.cpp",
-   "old": "\t\t\tint height = drop_rect.bottom - drop_rect.top;\n\t\t\tint count = SendMessageA(window, CB_GETCOUNT, 0, 0);",
-   "new": "\t\t\tint height = drop_rect.bottom - drop_rect.top;\n\t\t\tif (height < 2 * item_height) height = 0x7FFF;   /* native: the port took a move's closed height as the dropped height; the list is sized by its rows below */\n\t\t\tint count = SendMessageA(window, CB_GETCOUNT, 0, 0);",
+   "old": "\t\t\tint height = drop_rect.bottom - drop_rect.top;\n\t\t\tint visible = (height - 1) / item_height;",
+   "new": "\t\t\tint height = drop_rect.bottom - drop_rect.top;\n\t\t\tif (height < 2 * item_height) height = 0x7FFF;   /* native: the port took a move's closed height as the dropped height; the list is sized by its rows below */\n\t\t\tint visible = (height - 1) / item_height;",
    "why": "Lane P8 (found by main's enhancements_newgame.py on this port: a dropdown of the Enhancements page opened one row tall and every click on it fell outside the list, so no row could be chosen): the combo's open (Combo_Proc's CB_SHOWDROPDOWN) sizes the list from CB_GETDROPPEDCONTROLRECT; the port answers the height a combo was last moved or sized with (user32.cpp combo_height), and the owner-draw layout moves combos with their closed height, so the dropped height became the selection field's. A dropped height under two rows is taken as unknown and the list is sized by its rows (count * item height + 1, clamped to the dialog), as the code below does for a tall one."
   },
   {
@@ -1676,9 +1697,9 @@
   {
    "file": "src/netshare.cpp",
    "regex": true,
-   "old": "\\(int\\)(entry|open|closed|choice|LobbyEntries\\[[0-9]\\])(?=[),])",
+   "old": "\\(int\\)(entry|open|closed|choice|node|LobbyEntries\\[[0-9]\\])(?=[),])",
    "new": "(intptr_t)\\1",
-   "why": "Lane P8 (the width sweep, item 5: main's width rows checked one by one against the rebuild text): Pointer width: the slot entries passed to Change_Slot_Type/Select_Combo_By_Data and compared with CB_GETITEMDATA at full width."
+   "why": "Lane P8 (the width sweep, item 5: main's width rows checked one by one against the rebuild text): Pointer width: the slot entries passed to Change_Slot_Type/Select_Combo_By_Data and compared with CB_GETITEMDATA at full width. Lane P28 (re-pin): the parked Change_Slot_Type draft now passes its NodeNameType * node."
   },
   {
    "file": "src/netshare.cpp",
@@ -1708,8 +1729,8 @@
   },
   {
    "file": "src/gdlgsupp.cpp",
-   "old": "int data = Combo_Selected_Data(dialog, player, -1); // RA2: as above",
-   "new": "intptr_t data = Combo_Selected_Data(dialog, player, -1); // RA2: as above",
+   "old": "int data = Combo_Selected_Data(dialog, player, -1);",
+   "new": "intptr_t data = Combo_Selected_Data(dialog, player, -1);",
    "why": "Lane P8 (the width sweep, item 5: main's width rows checked one by one against the rebuild text): Pointer width: compared with the observer entry's address."
   },
   {
@@ -1727,14 +1748,14 @@
   },
   {
    "file": "src/ownrdraw.cpp",
-   "old": "    HWND dialog = OwnerDraw::Begin_Dialog(resource, proc, 0); // RA2: as above\n    int result = 0; // RA2: as above",
-   "new": "    HWND dialog = OwnerDraw::Begin_Dialog(resource, proc, 0); // RA2: as above\n    intptr_t result = 0; // RA2: as above (native: pointer width, the movie list's entry)",
+   "old": "\tHWND dialog = OwnerDraw::Begin_Dialog(resource, proc, 0);\n\tint result = 0;",
+   "new": "    HWND dialog = OwnerDraw::Begin_Dialog(resource, proc, 0);\n    intptr_t result = 0; // native: pointer width, the movie list's entry",
    "why": "Lane P8 (the width sweep, item 5: main's width rows checked one by one against the rebuild text): As above, the slot."
   },
   {
    "file": "src/init.cpp",
-   "old": "\tint * choice = (int *)GetWindowLongA(window, DWL_USER); // RA2: as above\n\n\tswitch (message) { // RA2: as above\n\t\tcase OD_SUBCLASSED: // RA2: as above",
-   "new": "\tintptr_t * choice = (intptr_t *)GetWindowLongA(window, DWL_USER); // RA2: as above (native: pointer width)\n\n\tswitch (message) { // RA2: as above\n\t\tcase OD_SUBCLASSED: // RA2: as above",
+   "old": "\tint * choice = (int *)GetWindowLongA(window, DWL_USER);\n\n\tswitch (message) {\n\t\tcase OD_SUBCLASSED:",
+   "new": "\tintptr_t * choice = (intptr_t *)GetWindowLongA(window, DWL_USER); // native: pointer width\n\n\tswitch (message) {\n\t\tcase OD_SUBCLASSED:",
    "why": "Lane P8 (the width sweep, item 5: main's width rows checked one by one against the rebuild text): As above: Movie_List_Dialog_Proc 0x005134C0 stores the chosen MovieListEntry * through the slot."
   },
   {
@@ -1745,8 +1766,8 @@
   },
   {
    "file": "src/init.cpp",
-   "old": "\tHWND dialog = OwnerDraw::Begin_Dialog(IDD_MAIN_MENU, (DLGPROC)Main_Menu_Dialog_Proc); // RA2: as above\n\tif (dialog != NULL) {\n",
-   "new": "\tHWND dialog = OwnerDraw::Begin_Dialog(IDD_MAIN_MENU, (DLGPROC)Main_Menu_Dialog_Proc); // RA2: as above\n\tif (dialog != NULL) {\n\t\tEnableWindow(GetDlgItem(dialog, 0x684), FALSE);   /* NATIVE: no Internet play (main's lane C20) */\n",
+   "old": "\tHWND dialog = OwnerDraw::Begin_Dialog(IDD_MAIN_MENU, (DLGPROC)Main_Menu_Dialog_Proc);\n\tif (dialog != NULL) {\n",
+   "new": "\tHWND dialog = OwnerDraw::Begin_Dialog(IDD_MAIN_MENU, (DLGPROC)Main_Menu_Dialog_Proc);\n\tif (dialog != NULL) {\n\t\tEnableWindow(GetDlgItem(dialog, 0x684), FALSE);   /* NATIVE: no Internet play (main's lane C20) */\n",
    "why": "Lane P12 (main's lane C20 row at the main menu's Begin_Dialog, native/port/fixups.json; user 2026-11-16, and the user's Duo report 2026-11-24: the Internet button was live): the native build has no Internet play (Westwood Online; its code is left out here, its entries link-closure traps). The main menu dialog 0xE2's Internet button 0x684 (STT:MainButtonWWOnline) is disabled as soon as the dialog is made: it draws with the original's own disabled shape-button look and a click does nothing."
   },
   {
@@ -1793,20 +1814,20 @@
   },
   {
    "file": "src/ownrdraw.cpp",
-   "old": "    int Reserved_A4; // RA2: as above\n    bool IsPlaying; // RA2: as above\n};",
-   "new": "    HWND Reserved_A4; // RA2: as above (native: StaticRecord::Notify's width)\n    bool IsPlaying; // RA2: as above\n};",
+   "old": "\t\tint Reserved_A4;\n\t\tbool IsPlaying;\n};",
+   "new": "    HWND Reserved_A4; // native: StaticRecord::Notify's width\n    bool IsPlaying;\n};",
    "why": "Lane P8 (the width sweep, item 5: main's width rows checked one by one against the rebuild text): Pointer width: ControlAnimationState and StaticRecord share +0x78..+0xAC (Shape, FrameCount, Frame, IsPlaying); the HWND keeps IsPlaying at the same native offset."
   },
   {
    "file": "src/ownrdraw.cpp",
-   "old": "struct StaticRecord { // RA2: as above\n\tchar Reserved_00[0x10]; // RA2: as above\n\tSurface * Back;\t\t\t\t\t// RA2: +0x10 what lies under the control\n\tSurface * Image;\t\t\t\t// RA2: +0x14 picture mode 2\n\tchar Reserved_18[0x28 - 0x18]; // RA2: as above\n\twchar_t * Text;\t\t\t\t\t// RA2: +0x28\n\tchar Reserved_2C[0x58 - 0x2C]; // RA2: as above\n\tMovieHandle * Movie;\t\t\t// RA2: +0x58 playing in the control\n\tint IsLooping;\t\t\t\t\t// RA2: +0x5C the movie restarts when it ends\n\tMovieHandle * Movie2;\t\t\t// RA2: +0x60 released with it\n\tBitFont * Font;\t\t\t// RA2: +0x64\n\tchar Reserved_68[0x70 - 0x68]; // RA2: as above\n\tint PictureMode;\t\t\t\t// RA2: +0x70 0 text, 1 typed text, 2 image, 3 shape, 4 animation\n\tConvertClass * Drawer;\t\t\t// RA2: +0x74\n\tShapeSet * Shape;\t\t\t\t// RA2: +0x78\n\tbool IsShapeAllocated;\t\t\t// RA2: +0x7C\n\tint Typed;\t\t\t\t\t\t// RA2: +0x80 characters shown so far\n\tint TypeRate;\t\t\t\t\t// RA2: +0x84 the timer period\n\tint TypeStep;\t\t\t\t\t// RA2: +0x88 characters per tick\n\tint TypeExtra;\t\t\t\t\t// RA2: +0x8C\n\tint TypingSound;\t\t\t\t// RA2: +0x90 -1 for none\n\tint FrameCount;\t\t\t\t\t// RA2: +0x94 (the frame delay until the shape is known)\n\tint Frame;\t\t\t\t\t\t// RA2: +0x98\n\tint StartTime;\t\t\t\t\t// RA2: +0x9C\n\tint Delay;\t\t\t\t\t\t// RA2: +0xA0 before the picture shows\n\tHWND Notify;\t\t\t\t\t// RA2: +0xA4 told of each new frame (0x4D8)\n\tbool IsPlaying;\t\t\t\t\t// RA2: +0xA8\n\tint TextFlags;\t\t\t\t\t// RA2: +0xAC\n\tchar Reserved_B0[0xB4 - 0xB0]; // RA2: as above\n\tbool IsFilled;\t\t\t\t\t// RA2: +0xB4 a solid background\n\tCOLORREF FillColor;\t\t\t\t// RA2: +0xB8\n\tbool IsDisabled;\t\t\t\t// RA2: +0xBC\n\tchar Reserved_BD[0xEC - 0xBD]; // RA2: as above\n\tCOLORREF TextColor;\t\t\t\t// RA2: +0xEC\n};",
-   "new": "struct StaticRecord { // RA2: as above (native: WinData's own offsets, as NodeList)\n\tchar Reserved_00[offsetof(OwnerDraw::WinData, Back)]; // RA2: as above\n\tSurface * Back;\t\t\t\t\t// RA2: +0x10 what lies under the control\n\tSurface * Image;\t\t\t\t// RA2: +0x14 picture mode 2\n\tchar Reserved_18[offsetof(OwnerDraw::WinData, Text) - offsetof(OwnerDraw::WinData, Image) - sizeof(Surface *)]; // RA2: as above\n\twchar_t * Text;\t\t\t\t\t// RA2: +0x28\n\tchar Reserved_2C[offsetof(OwnerDraw::WinData, Reserved_58) - offsetof(OwnerDraw::WinData, Text) - sizeof(wchar_t *)]; // RA2: as above\n\tMovieHandle * Movie;\t\t\t// RA2: +0x58 playing in the control\n\tint IsLooping;\t\t\t\t\t// RA2: +0x5C the movie restarts when it ends\n\tMovieHandle * Movie2;\t\t\t// RA2: +0x60 released with it\n\tBitFont * Font;\t\t\t// RA2: +0x64\n\tchar Reserved_68[offsetof(OwnerDraw::WinData, PictureMode) - offsetof(OwnerDraw::WinData, Font) - sizeof(BitFont *)]; // RA2: as above\n\tint PictureMode;\t\t\t\t// RA2: +0x70 0 text, 1 typed text, 2 image, 3 shape, 4 animation\n\tConvertClass * Drawer;\t\t\t// RA2: +0x74\n\tShapeSet * Shape;\t\t\t\t// RA2: +0x78\n\tbool IsShapeAllocated;\t\t\t// RA2: +0x7C\n\tint Typed;\t\t\t\t\t\t// RA2: +0x80 characters shown so far\n\tint TypeRate;\t\t\t\t\t// RA2: +0x84 the timer period\n\tint TypeStep;\t\t\t\t\t// RA2: +0x88 characters per tick\n\tint TypeExtra;\t\t\t\t\t// RA2: +0x8C\n\tint TypingSound;\t\t\t\t// RA2: +0x90 -1 for none\n\tint FrameCount;\t\t\t\t\t// RA2: +0x94 (the frame delay until the shape is known)\n\tint Frame;\t\t\t\t\t\t// RA2: +0x98\n\tint StartTime;\t\t\t\t\t// RA2: +0x9C\n\tint Delay;\t\t\t\t\t\t// RA2: +0xA0 before the picture shows\n\tHWND Notify;\t\t\t\t\t// RA2: +0xA4 told of each new frame (0x4D8)\n\tbool IsPlaying;\t\t\t\t\t// RA2: +0xA8\n\tint TextFlags;\t\t\t\t\t// RA2: +0xAC\n\tchar Reserved_B0[0xB4 - 0xB0]; // RA2: as above\n\tbool IsFilled;\t\t\t\t\t// RA2: +0xB4 a solid background\n\tCOLORREF FillColor;\t\t\t\t// RA2: +0xB8\n\tbool IsDisabled;\t\t\t\t// RA2: +0xBC\n\tchar Reserved_BD[offsetof(OwnerDraw::WinData, RangeMax) - offsetof(OwnerDraw::WinData, IsDisabled) - 1]; // RA2: as above\n\tCOLORREF TextColor;\t\t\t\t// RA2: +0xEC\n};\nstatic_assert(offsetof(StaticRecord, Shape) == offsetof(OwnerDraw::WinData, Animation), \"native: StaticRecord follows WinData\");\nstatic_assert(offsetof(StaticRecord, TypingSound) == offsetof(OwnerDraw::WinData, TypingSound), \"native: StaticRecord follows WinData\");\nstatic_assert(offsetof(StaticRecord, IsDisabled) == offsetof(OwnerDraw::WinData, IsDisabled), \"native: StaticRecord follows WinData\");\nstatic_assert(offsetof(StaticRecord, Font) == offsetof(OwnerDraw::WinData, Font) && offsetof(StaticRecord, Drawer) == offsetof(OwnerDraw::WinData, Drawer), \"native: StaticRecord follows WinData\");\nstatic_assert(offsetof(OwnerDraw::ControlAnimationState, IsPlaying) == offsetof(StaticRecord, IsPlaying) - offsetof(StaticRecord, Shape), \"native: the two views of +0x78 agree\");",
+   "old": "struct StaticRecord {\n\t\tchar Reserved_00[0x10];\n\tSurface * Back;\t\t\t\t\t// RA2: +0x10 what lies under the control\n\tSurface * Image;\t\t\t\t// RA2: +0x14 picture mode 2\n\t\tchar Reserved_18[0x28 - 0x18];\n\twchar_t * Text;\t\t\t\t\t// RA2: +0x28\n\t\tchar Reserved_2C[0x58 - 0x2C];\n\tMovieHandle * Movie;\t\t\t// RA2: +0x58 playing in the control\n\tint IsLooping;\t\t\t\t\t// RA2: +0x5C the movie restarts when it ends\n\tMovieHandle * Movie2;\t\t\t// RA2: +0x60 released with it\n\tBitFont * Font;\t\t\t// RA2: +0x64\n\t\tchar Reserved_68[0x70 - 0x68];\n\tint PictureMode;\t\t\t\t// RA2: +0x70 0 text, 1 typed text, 2 image, 3 shape, 4 animation\n\tConvertClass * Drawer;\t\t\t// RA2: +0x74\n\tShapeSet * Shape;\t\t\t\t// RA2: +0x78\n\tbool IsShapeAllocated;\t\t\t// RA2: +0x7C\n\tint Typed;\t\t\t\t\t\t// RA2: +0x80 characters shown so far\n\tint TypeRate;\t\t\t\t\t// RA2: +0x84 the timer period\n\tint TypeStep;\t\t\t\t\t// RA2: +0x88 characters per tick\n\tint TypeExtra;\t\t\t\t\t// RA2: +0x8C\n\tint TypingSound;\t\t\t\t// RA2: +0x90 -1 for none\n\tint FrameCount;\t\t\t\t\t// RA2: +0x94 (the frame delay until the shape is known)\n\tint Frame;\t\t\t\t\t\t// RA2: +0x98\n\tint StartTime;\t\t\t\t\t// RA2: +0x9C\n\tint Delay;\t\t\t\t\t\t// RA2: +0xA0 before the picture shows\n\tHWND Notify;\t\t\t\t\t// RA2: +0xA4 told of each new frame (0x4D8)\n\tbool IsPlaying;\t\t\t\t\t// RA2: +0xA8\n\tint TextFlags;\t\t\t\t\t// RA2: +0xAC\n\t\tchar Reserved_B0[0xB4 - 0xB0];\n\tbool IsFilled;\t\t\t\t\t// RA2: +0xB4 a solid background\n\tCOLORREF FillColor;\t\t\t\t// RA2: +0xB8\n\tbool IsDisabled;\t\t\t\t// RA2: +0xBC\n\t\tchar Reserved_BD[0xEC - 0xBD];\n\tCOLORREF TextColor;\t\t\t\t// RA2: +0xEC\n};",
+   "new": "struct StaticRecord { // native: WinData's own offsets, as NodeList\n\tchar Reserved_00[offsetof(OwnerDraw::WinData, Back)];\n\tSurface * Back;\t\t\t\t\t// RA2: +0x10 what lies under the control\n\tSurface * Image;\t\t\t\t// RA2: +0x14 picture mode 2\n\tchar Reserved_18[offsetof(OwnerDraw::WinData, Text) - offsetof(OwnerDraw::WinData, Image) - sizeof(Surface *)];\n\twchar_t * Text;\t\t\t\t\t// RA2: +0x28\n\tchar Reserved_2C[offsetof(OwnerDraw::WinData, Reserved_58) - offsetof(OwnerDraw::WinData, Text) - sizeof(wchar_t *)];\n\tMovieHandle * Movie;\t\t\t// RA2: +0x58 playing in the control\n\tint IsLooping;\t\t\t\t\t// RA2: +0x5C the movie restarts when it ends\n\tMovieHandle * Movie2;\t\t\t// RA2: +0x60 released with it\n\tBitFont * Font;\t\t\t// RA2: +0x64\n\tchar Reserved_68[offsetof(OwnerDraw::WinData, PictureMode) - offsetof(OwnerDraw::WinData, Font) - sizeof(BitFont *)];\n\tint PictureMode;\t\t\t\t// RA2: +0x70 0 text, 1 typed text, 2 image, 3 shape, 4 animation\n\tConvertClass * Drawer;\t\t\t// RA2: +0x74\n\tShapeSet * Shape;\t\t\t\t// RA2: +0x78\n\tbool IsShapeAllocated;\t\t\t// RA2: +0x7C\n\tint Typed;\t\t\t\t\t\t// RA2: +0x80 characters shown so far\n\tint TypeRate;\t\t\t\t\t// RA2: +0x84 the timer period\n\tint TypeStep;\t\t\t\t\t// RA2: +0x88 characters per tick\n\tint TypeExtra;\t\t\t\t\t// RA2: +0x8C\n\tint TypingSound;\t\t\t\t// RA2: +0x90 -1 for none\n\tint FrameCount;\t\t\t\t\t// RA2: +0x94 (the frame delay until the shape is known)\n\tint Frame;\t\t\t\t\t\t// RA2: +0x98\n\tint StartTime;\t\t\t\t\t// RA2: +0x9C\n\tint Delay;\t\t\t\t\t\t// RA2: +0xA0 before the picture shows\n\tHWND Notify;\t\t\t\t\t// RA2: +0xA4 told of each new frame (0x4D8)\n\tbool IsPlaying;\t\t\t\t\t// RA2: +0xA8\n\tint TextFlags;\t\t\t\t\t// RA2: +0xAC\n\tchar Reserved_B0[0xB4 - 0xB0];\n\tbool IsFilled;\t\t\t\t\t// RA2: +0xB4 a solid background\n\tCOLORREF FillColor;\t\t\t\t// RA2: +0xB8\n\tbool IsDisabled;\t\t\t\t// RA2: +0xBC\n\tchar Reserved_BD[offsetof(OwnerDraw::WinData, RangeMax) - offsetof(OwnerDraw::WinData, IsDisabled) - 1];\n\tCOLORREF TextColor;\t\t\t\t// RA2: +0xEC\n};\nstatic_assert(offsetof(StaticRecord, Shape) == offsetof(OwnerDraw::WinData, Animation), \"native: StaticRecord follows WinData\");\nstatic_assert(offsetof(StaticRecord, TypingSound) == offsetof(OwnerDraw::WinData, TypingSound), \"native: StaticRecord follows WinData\");\nstatic_assert(offsetof(StaticRecord, IsDisabled) == offsetof(OwnerDraw::WinData, IsDisabled), \"native: StaticRecord follows WinData\");\nstatic_assert(offsetof(StaticRecord, Font) == offsetof(OwnerDraw::WinData, Font) && offsetof(StaticRecord, Drawer) == offsetof(OwnerDraw::WinData, Drawer), \"native: StaticRecord follows WinData\");\nstatic_assert(offsetof(OwnerDraw::ControlAnimationState, IsPlaying) == offsetof(StaticRecord, IsPlaying) - offsetof(StaticRecord, Shape), \"native: the two views of +0x78 agree\");",
    "why": "Lane P8 (the width sweep, item 5: main's width rows checked one by one against the rebuild text): Pointer width: Static_Proc (0x005F2B50 draft; every Static control) reads the control record through StaticRecord, a view with VC6 char padding; natively WinData's members lie elsewhere (8-byte HWNDs and pointers), so Text, Font, PictureMode, Drawer, Shape, TypingSound and TextColor were read from other fields. The view's padding is WinData's own offsets natively (as row 96's NodeList); its private fields keep their VC6 order."
   },
   {
    "file": "src/ownrdraw.cpp",
-   "old": "struct ScrollBarRecord { // RA2: as above\n    char SubclassParam[0x08]; // RA2: as above\n    HWND ScrollOwner; // RA2: as above\n    char Reserved_0C[0x10 - 0x0c]; // RA2: as above\n    Surface *Back; // RA2: as above\n    char Reserved_14[0x20 - 0x14]; // RA2: as above\n    int SkipCheckPaint; // RA2: as above\n    char Reserved_24[0xbc - 0x24]; // RA2: as above\n    bool IsDisabled; // RA2: as above\n    char IsHidden[0xc8 - 0xbd]; // RA2: as above\n    int TextStyle; // RA2: as above\n    char Reserved_CC; // RA2: as above\n    bool IsAlternateColors; // RA2: as above\n    char Reserved_CE[0xe8 - 0xce]; // RA2: as above\n",
-   "new": "struct ScrollBarRecord { // RA2: as above (native: WinData's own offsets)\n    char SubclassParam[offsetof(WinData, ScrollOwner)]; // RA2: as above\n    HWND ScrollOwner; // RA2: as above\n    char Reserved_0C[offsetof(WinData, Back) - offsetof(WinData, ScrollOwner) - sizeof(HWND)]; // RA2: as above\n    Surface *Back; // RA2: as above\n    char Reserved_14[offsetof(WinData, SkipCheckPaint) - offsetof(WinData, Back) - sizeof(Surface *)]; // RA2: as above\n    int SkipCheckPaint; // RA2: as above\n    char Reserved_24[offsetof(WinData, IsDisabled) - offsetof(WinData, SkipCheckPaint) - sizeof(int)]; // RA2: as above\n    bool IsDisabled; // RA2: as above\n    char IsHidden[offsetof(WinData, TextStyle) - offsetof(WinData, IsDisabled) - 1]; // RA2: as above\n    int TextStyle; // RA2: as above\n    char Reserved_CC; // RA2: as above\n    bool IsAlternateColors; // RA2: as above\n    char Reserved_CE[offsetof(WinData, ItemState) - offsetof(WinData, IsAlternateColors) - 1]; // RA2: as above\n",
+   "old": "struct ScrollBarRecord {\n\t\tchar SubclassParam[0x08];\n\t\tHWND ScrollOwner;\n\t\tchar Reserved_0C[0x10 - 0x0c];\n\t\tSurface * Back;\n\t\tchar Reserved_14[0x20 - 0x14];\n\t\tint SkipCheckPaint;\n\t\tchar Reserved_24[0xbc - 0x24];\n\t\tbool IsDisabled;\n\t\tchar IsHidden[0xc8 - 0xbd];\n\t\tint TextStyle;\n\t\tchar Reserved_CC;\n\t\tbool IsAlternateColors;\n\t\tchar Reserved_CE[0xe8 - 0xce];\n",
+   "new": "struct ScrollBarRecord { // native: WinData's own offsets\n    char SubclassParam[offsetof(WinData, ScrollOwner)];\n    HWND ScrollOwner;\n    char Reserved_0C[offsetof(WinData, Back) - offsetof(WinData, ScrollOwner) - sizeof(HWND)];\n    Surface *Back;\n    char Reserved_14[offsetof(WinData, SkipCheckPaint) - offsetof(WinData, Back) - sizeof(Surface *)];\n    int SkipCheckPaint;\n    char Reserved_24[offsetof(WinData, IsDisabled) - offsetof(WinData, SkipCheckPaint) - sizeof(int)];\n    bool IsDisabled;\n    char IsHidden[offsetof(WinData, TextStyle) - offsetof(WinData, IsDisabled) - 1];\n    int TextStyle;\n    char Reserved_CC;\n    bool IsAlternateColors;\n    char Reserved_CE[offsetof(WinData, ItemState) - offsetof(WinData, IsAlternateColors) - 1];\n",
    "why": "Lane P8 (the width sweep, item 5: main's width rows checked one by one against the rebuild text): Pointer width: Scroll_Bar_Proc reads its control record through ScrollBarRecord, a view with VC6 char padding; natively SkipCheckPaint, IsDisabled, TextStyle and IsAlternateColors lay elsewhere in WinData (8-byte HWNDs and pointers) and the bar's private state overlapped Result/IsFlashing/TextStyle. The padding is WinData's own offsets natively."
   },
   {
@@ -1943,8 +1964,8 @@
   },
   {
    "file": "hdr/globals.h",
-   "old": "extern bool Session_Busy; // RA2: as above",
-   "new": "extern bool & Session_Busy; // RA2: as above (native: Session.NetOpen, the same byte in the original)",
+   "old": "extern bool Session_Busy;",
+   "new": "extern bool & Session_Busy; // native: Session.NetOpen, the same byte in the original",
    "why": "Lane P9 (main's lan_pair.py on this port: the host faulted in TabClass::AI, TabBarRect null, when its first click in the Network lobby ran Main_Loop from the dialog pump): the original's 'Session_Busy' at 0x00A3F616 is not a global of its own but Session.NetOpen (Session 0x00A3D298 + 0x237E; main's session_state.hpp: NetOpen 'also unknown_session_a3f616'). The lobby sets Session.NetOpen and Dialog_Message_Handler and the choice dialogs read it as Session_Busy to keep Main_Loop out of the menus. Natively the rebuild's separate global was never written (no unit assigns it), so every network dialog pumped Main_Loop. The global is a reference to Session's member natively (the data binder then gives it no storage of its own)."
   },
   {
@@ -2074,7 +2095,7 @@
   },
   {
    "file": "hdr/ipxmgr.h",
-   "old": "IPXGlobalConnClass *LobbyChannel;",
+   "old": "IPXGlobalConnClass * LobbyChannel;",
    "new": "IPXGlobalConnClass *LobbyChannel; friend struct RB_Native_Ipx_Access; /* native: lane P11, PacketRouterConnection's definition reads it */",
    "why": "Lane P11 (P10's field-alias sweep: every catalog-bound name against the i686 extent of every class-typed global): the rebuild declares these as globals of their own at addresses that lie inside Map (0x008324E0, MouseClass, i686 sizeof 0x4F3C) or Ipx (0x00A40978); the original reaches the same storage by the global's address and as the member. Natively they were separate storage (the data binder gave each undefined name zero storage of its own), so a write through one never reached the other. Each global is a reference to its member natively, as lane P9's rows. the private LobbyChannel made readable to PacketRouterConnection's definition (a friend struct, no access change for anything else)."
   },
@@ -2102,15 +2123,9 @@
    "why": "Lane P11 (the overlay: behaviour of the rebuild's parked Coord_Scatter draft against main's exact 0x00491750): the lock snap. The draft's Coord_Snap divides (X / 256 * 256 + 128, rounding toward zero); main's exact text, and so the original, subtracts the low byte (X - (X & 255) + 128, rounding down). They differ for a negative X or Y, which the bounds test lets through for -255..-1 (X / 256 is 0) and the fallback to the anchor can carry: X = -100 snaps to +128 in the draft and to -128 in the original, a locked scatter at the map's top or left edge landing a cell off. Main's form carried; Z untouched as in main."
   },
   {
-   "file": "src/techno.cpp",
-   "old": "float length = Vector3((float)displacement.X, (float)displacement.Y, (float)displacement.Z).Length();",
-   "new": "float length = (float)fastmath::sqrt((double)(float)displacement.Z * (double)(float)displacement.Z + ((double)(float)displacement.X * (double)(float)displacement.X + (double)(float)displacement.Y * (double)(float)displacement.Y)); /* native: lane P11, main's exact text (the squares summed in double) */",
-   "why": "Lane P11 (the overlay: behaviour of TechnoClass::Fire_At, a judgment-call row in the rebuild, against main's exact 0x006CA890): the flak-scatter branch's length. Vector3::Length sums X*X+Y*Y+Z*Z in float; main's exact text (Point3F_006ca890::Length) converts each float component to double and sums Z*Z + (X*X + Y*Y) before the square root, then narrows to float. Past about 4,096 leptons per component the float sum loses bits and (int)length can come out one lower, moving the scatter spread. Main's order and widths carried."
-  },
-  {
    "file": "src/ownrdraw.cpp",
-   "old": "        if (Is_Campaign_Button((unsigned int)parent, window)) { // RA2: as above\n            record->ButtonKind = 1; // RA2: as above\n",
-   "new": "        // NATIVE (lane C23, Y11; lane P13): the combined app's toggle (port/src/user32.cpp, id 0x7F5E) is a main-menu sidebar button.\n        if (Is_Campaign_Button((unsigned int)parent, window) || GetDlgCtrlID(window) == 0x7F5E) { // RA2: as above\n            record->ButtonKind = 1; // RA2: as above\n",
+   "old": "\t\tif (Is_Campaign_Button((unsigned int)parent, window)) {\n\t\t\trecord->ButtonKind = 1;\n",
+   "new": "        // NATIVE (lane C23, Y11; lane P13): the combined app's toggle (port/src/user32.cpp, id 0x7F5E) is a main-menu sidebar button.\n        if (Is_Campaign_Button((unsigned int)parent, window) || GetDlgCtrlID(window) == 0x7F5E) {\n            record->ButtonKind = 1;\n",
    "why": "Lane P13, main's port row (redalert2-decomp native/port/fixups.json, the src/recovered/ownrdraw.cpp row of lanes C23 and Y11): native addition, not original behaviour. The combined app's main-menu toggle (port/src/user32.cpp, id 0x7F5E, a clone of the main menu's Exit Game 0x3EE) is drawn and animated as the main menu's sidebar buttons (WinData::ButtonKind = 1, as Is_Campaign_Button 0x005E7740 gives Exit Game), as YR's twin ClassifyLayoutBand gives it (yr/fixups.json). Is_Campaign_Button knows only the listed dialogs' ids. Without the toggle (RA2.app, every other dialog) nothing changes: no control has that id. This row: Assign_Button_Kind 0x005E7EB0."
   },
   {
@@ -2121,8 +2136,8 @@
   },
   {
    "file": "src/ownrdraw.cpp",
-   "old": "\tint state = data->ItemState; // RA2: as above\n\tLONG style = GetWindowLongA(window, GWL_STYLE); // RA2: as above\n",
-   "new": "\tint state = data->ItemState | ((CallWindowProcA(previous, window, BM_GETSTATE, 0, 0) & BST_PUSHED) ? 1 : 0); // RA2: as above (native: lane P13, the button's BST_PUSHED too)\n\tLONG style = GetWindowLongA(window, GWL_STYLE); // RA2: as above\n",
+   "old": "\tint state = data->ItemState;\n\tLONG style = GetWindowLongA(window, GWL_STYLE);\n\n",
+   "new": "\tint state = data->ItemState | ((CallWindowProcA(previous, window, BM_GETSTATE, 0, 0) & BST_PUSHED) ? 1 : 0); // native: lane P13, the button's BST_PUSHED too\n\tLONG style = GetWindowLongA(window, GWL_STYLE);\n\n",
    "why": "Lane P13, main's port behaviour (redalert2-decomp native/link/behaviour_m14_ownerdraw.cpp, Paint_Button for 0x005F0320): Owner_Button_Proc draws a button pressed from the owner-draw state the dialog's WM_DRAWITEM stores in WinData +0xE8 (ItemState, ODS_SELECTED); the port's Win32 layer sends no WM_DRAWITEM, so no push button (main menu, dialogs, the combined app's toggle) ever drew its pressed frame. Main's port also takes the button's own BST_PUSHED (BM_GETSTATE, which port/src/user32.cpp answers from its press tracking); carried. Found by one-game-toggle (\"the toggle shows no press\")."
   },
   {

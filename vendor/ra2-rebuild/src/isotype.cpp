@@ -155,7 +155,7 @@ ShadowCasterInfo ShadowCasterSlopeInfo[SLOPE_COUNT] = {
 	/* Slope 03 */ ShadowCasterInfo(),
 	/* Slope 04 */ ShadowCasterInfo(13, 6, 48, 12), // RA2: TibSun's 48 x 24 tile offsets, kept unchanged in the original's table
 	/* Slope 05 */ ShadowCasterInfo(),
-	/* Slope 06 */ ShadowCasterInfo(14, 1, 48, 12), // RA2: as above
+	/* Slope 06 */ ShadowCasterInfo(14, 1, 48, 12),
 	/* Slope 07 */ ShadowCasterInfo(),
 	/* Slope 08 */ ShadowCasterInfo(),
 	/* Slope 09 */ ShadowCasterInfo(),
@@ -1554,7 +1554,7 @@ struct IsoBlitState {
 #pragma pack(pop)
 
 
-#ifdef RA2_NON_MATCHING // not exact: 6016 bytes differ at 0052c230 (6967 body bytes, image_bounds.csv).
+#ifdef RA2_NON_MATCHING // not exact: 5967 bytes differ against the image-derived bound 0052c230 (6967 body bytes) (was 6013; the clipped origin in separate mutable work_x and work_y, as RobinDigitalPro/ra2-1001-decomp fc60876 src/m85/src/isotype.cpp has it; before that 6016, the contiguous depth-only span walking its rows through zrow as TibSun isotype.cpp does)
 IsoBlitState IsoDrawData;
 unsigned short _iso_row_offsets[ISO_DRAW_WIDTH*ISO_DRAW_HEIGHT];
 unsigned char _iso_start_cols[ISO_DRAW_WIDTH*ISO_DRAW_HEIGHT];
@@ -1645,10 +1645,9 @@ void IsometricTileTypeClass::Draw_Tile(LightConvertClass * drawer, int subtile, 
 	#undef __
 	#undef XX
 
-	LightConvertClass * drawtest = drawer;
 	IsometricTileTypeClass const * tileptr;
 	tileptr = this;
-	if (drawtest != NULL) {
+	if (drawer != NULL) {
 		/*
 		 * If a random variation was requested, walk the tile-set list to the
 		 * requested variation and draw that tile instead of this one.
@@ -1670,7 +1669,8 @@ void IsometricTileTypeClass::Draw_Tile(LightConvertClass * drawer, int subtile, 
 				}
 			}
 		}
-		Point2D work(x, y);
+		int work_x = x;
+		int work_y = y;
 		bool clipped_out = false;
 		AlphaLightingRemapClass * aremap = AlphaLightingRemapInit.Init(drawer->IntensityLevels);
 		IsoDrawData.LightRemap = aremap->Get_Table(brightness);
@@ -1744,7 +1744,7 @@ void IsometricTileTypeClass::Draw_Tile(LightConvertClass * drawer, int subtile, 
 			if (set != NULL) {
 				if (use_z) {
 					IsoDrawData.BaseDepth = (unsigned short)(LOWORD(DepthBuffer->Bounds.Y) + LOWORD(DepthBuffer->ScrollOffset) - y - LOWORD(set->Height));
-					IsoDrawData.BaseDepth = (int)&((unsigned char *)IsoDrawData.BaseDepth)[height * set->Height / -2];
+					IsoDrawData.BaseDepth += height * set->Height / -2;
 				}
 
 				int spanw = ISO_DRAW_WIDTH;
@@ -1759,8 +1759,8 @@ void IsometricTileTypeClass::Draw_Tile(LightConvertClass * drawer, int subtile, 
 				IsoDrawData.ClipLeft = 0;
 				IsoDrawData.ClipTop = 0;
 				IsoDrawData.RowSrcOffset = _iso_row_offsets;
-				IsoDrawData.RowStartCol = (unsigned char *)_iso_start_cols;
-				IsoDrawData.RowRunLength = (unsigned char *)_iso_run_lengths;
+				IsoDrawData.RowStartCol = _iso_start_cols;
+				IsoDrawData.RowRunLength = _iso_run_lengths[0];
 
 				/*
 				 * Clip the ISO_DRAW_WIDTHxISO_DRAW_HEIGHT tile diamond against the clip rectangle, adjusting
@@ -1773,7 +1773,7 @@ void IsometricTileTypeClass::Draw_Tile(LightConvertClass * drawer, int subtile, 
 					spanw = x - cliprect.X + IsoDrawData.SpanWidth;
 					IsoDrawData.ClipLeft = cliprect.X - x;
 					IsoDrawData.SpanWidth = spanw;
-					work.X = cliprect.X;
+					work_x = cliprect.X;
 					if (spanw <= 0) {
 						clipped_out = true;
 					}
@@ -1782,17 +1782,16 @@ void IsometricTileTypeClass::Draw_Tile(LightConvertClass * drawer, int subtile, 
 					spanh = y - cliprect.Y + IsoDrawData.SpanHeight;
 					IsoDrawData.ClipTop = cliprect.Y - y;
 					IsoDrawData.SpanHeight = spanh;
-					work.Y = cliprect.Y;
+					work_y = cliprect.Y;
 					if (spanh <= 0) {
 						clipped_out = true;
 					}
 				}
 
 				int right_clip = ISO_DRAW_WIDTH-1;
-				int lock_x = work.X;
 				int clip_right = cliprect.Width + cliprect.X;
-				if (work.X + spanw > clip_right) {
-					int overhang = spanw - cliprect.Width - cliprect.X + work.X;
+				if (work_x + spanw > clip_right) {
+					int overhang = spanw - cliprect.Width - cliprect.X + work_x;
 					spanw -= overhang;
 					right_clip -= overhang;
 					IsoDrawData.SpanWidth = spanw;
@@ -1801,8 +1800,8 @@ void IsometricTileTypeClass::Draw_Tile(LightConvertClass * drawer, int subtile, 
 					}
 				}
 				int clip_bottom = cliprect.Y + cliprect.Height;
-				if (IsoDrawData.SpanHeight + work.Y > clip_bottom) {
-					IsoDrawData.SpanHeight = cliprect.Height - work.Y + cliprect.Y;
+				if (IsoDrawData.SpanHeight + work_y > clip_bottom) {
+					IsoDrawData.SpanHeight = cliprect.Height - work_y + cliprect.Y;
 					if (IsoDrawData.SpanHeight <= 0) {
 						clipped_out = true;
 					}
@@ -1823,11 +1822,11 @@ void IsometricTileTypeClass::Draw_Tile(LightConvertClass * drawer, int subtile, 
 						}
 						int table_off = clip_x + ISO_DRAW_WIDTH * clip_y;
 						IsoDrawData.RowSrcOffset = &_iso_row_offsets[table_off];
-						IsoDrawData.RowStartCol = (unsigned char *)&_iso_start_cols[table_off];
-						IsoDrawData.RowRunLength = (unsigned char *)&_iso_run_lengths[MAX(0, right_clip)][table_off];
+						IsoDrawData.RowStartCol = &_iso_start_cols[table_off];
+						IsoDrawData.RowRunLength = &_iso_run_lengths[MAX(0, right_clip)][table_off];
 					}
 					IsoDrawData.SurfacePitch = surface.Stride();
-					IsoDrawData.DestPtr = (unsigned short *)surface.Lock(Point2D(lock_x, work.Y));
+					IsoDrawData.DestPtr = (unsigned short *)surface.Lock(Point2D(work_x, work_y));
 					if (IsoDrawData.DestPtr == NULL) {
 						skip_extra = true;
 					} else {
@@ -1837,10 +1836,10 @@ void IsometricTileTypeClass::Draw_Tile(LightConvertClass * drawer, int subtile, 
 						if (!record->IsHasZData) {
 							use_z = 0;
 						} else if (use_z) {
-							IsoDrawData.DepthPtr = (unsigned short *)DepthBuffer->Get_Buffer_Offset(Point2D(lock_x, work.Y - TacticalRect.Y));
+							IsoDrawData.DepthPtr = (unsigned short *)DepthBuffer->Get_Buffer_Offset(Point2D(work_x, work_y - TacticalRect.Y));
 							IsoDrawData.DepthWidth = DepthBuffer->BufferWidth;
 						}
-						arow = (unsigned short *)AlphaBuffer->Get_Buffer_Offset(Point2D(lock_x, work.Y - TacticalRect.Y));
+						arow = (unsigned short *)AlphaBuffer->Get_Buffer_Offset(Point2D(work_x, work_y - TacticalRect.Y));
 						IsoDrawData.AlphaPtr = arow;
 						IsoDrawData.AlphaWidth = AlphaBuffer->Get_Buffer_Width();
 						IsoDrawData.SrcPixel = (int)(record + 1);
@@ -1871,12 +1870,16 @@ void IsometricTileTypeClass::Draw_Tile(LightConvertClass * drawer, int subtile, 
 										IsoDrawData.DestPtr += start;
 										IsoDrawData.DepthPtr += start;
 										IsoDrawData.DepthPtr = (unsigned short *)DepthBuffer->Wrap_Overflow((unsigned int)IsoDrawData.DepthPtr);
-										for (int run = *IsoDrawData.RowRunLength; run > 0; --run) {
-											*IsoDrawData.DepthPtr = IsoDrawData.FillDepth;
-											*IsoDrawData.DestPtr = (unsigned short)IsoDrawData.FogColor;
-											++IsoDrawData.DestPtr;
-											++IsoDrawData.DepthPtr;
-											IsoDrawData.DepthPtr = (unsigned short *)DepthBuffer->Wrap_Overflow((unsigned int)IsoDrawData.DepthPtr);
+										int run = *IsoDrawData.RowRunLength;
+										if (run > 0) {
+											do {
+												*IsoDrawData.DepthPtr = IsoDrawData.FillDepth;
+												*IsoDrawData.DestPtr = (unsigned short)IsoDrawData.FogColor;
+												++IsoDrawData.DestPtr;
+												++IsoDrawData.DepthPtr;
+												IsoDrawData.DepthPtr = (unsigned short *)DepthBuffer->Wrap_Overflow((unsigned int)IsoDrawData.DepthPtr);
+												--run;
+											} while (run != 0);
 										}
 										IsoDrawData.DestPtr = (unsigned short *)((char *)IsoDrawData.RowDest + IsoDrawData.SurfacePitch);
 										IsoDrawData.DepthPtr = &IsoDrawData.RowDepth[IsoDrawData.DepthWidth];
@@ -2035,15 +2038,19 @@ void IsometricTileTypeClass::Draw_Tile(LightConvertClass * drawer, int subtile, 
 										IsoDrawData.RowRunLength += ISO_DRAW_WIDTH;
 									}
 								} else if (depth_only) {
+									unsigned short * zrow = IsoDrawData.DepthPtr;
 									for (int row = 0; row < IsoDrawData.SpanHeight; ++row) {
-										int start = *IsoDrawData.RowStartCol;
-										IsoDrawData.RowDepth = IsoDrawData.DepthPtr;
-										IsoDrawData.DepthPtr += start;
-										for (int run = *IsoDrawData.RowRunLength; run > 0; --run) {
-											*IsoDrawData.DepthPtr = IsoDrawData.FillDepth;
-											++IsoDrawData.DepthPtr;
+										IsoDrawData.RowDepth = zrow;
+										IsoDrawData.DepthPtr = &zrow[*IsoDrawData.RowStartCol];
+										int run = *IsoDrawData.RowRunLength;
+										if (run > 0) {
+											do {
+												*IsoDrawData.DepthPtr = IsoDrawData.FillDepth;
+												++IsoDrawData.DepthPtr;
+												--run;
+											} while (run != 0);
 										}
-										IsoDrawData.DepthPtr = &IsoDrawData.RowDepth[IsoDrawData.DepthWidth];
+										IsoDrawData.DepthPtr = zrow = &IsoDrawData.RowDepth[IsoDrawData.DepthWidth];
 										IsoDrawData.RowStartCol += ISO_DRAW_WIDTH;
 										IsoDrawData.RowRunLength += ISO_DRAW_WIDTH;
 									}

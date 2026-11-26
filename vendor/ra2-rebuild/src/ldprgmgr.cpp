@@ -214,7 +214,7 @@ void LoadProgressManager::Load_Mixes(void)
 /// <summary>
 /// Whether the local player watches the game instead of playing it.
 /// </summary>
-#ifdef RA2_NON_MATCHING // not exact: no independent bound yet (00535bf0 has no row); 1906 of 3978 bytes differ against the frozen image bound (image_bounds.csv) (was 3730; all 85 calls and the 0x1184 stack probe match)
+#ifdef RA2_NON_MATCHING // not exact: 1828 bytes differ against the image-derived bound 00535bf0 (3,978 body bytes, 6 padding) (was 1906; the multiplayer unit name drawn into its own Rect, as RobinDigitalPro/ra2-1001-decomp 171f804 has it; before that 3730; all 85 calls and the 0x1184 stack probe match)
 ConvertClass * __cdecl Get_Load_Screen_Drawer(void); // RA2: 0x006F2450
 ConvertClass * __cdecl Get_Load_Screen_Side_Drawer(void); // RA2: 0x006F2470
 ConvertClass * __cdecl Get_Splash_Bar_Drawer(void); // RA2: 0x006F2490
@@ -426,17 +426,13 @@ inline wchar_t const * Briefing(int side)
 /// </summary>
 void LoadProgressManager::Draw(void)
 {
-	wchar_t text[2048];
-	wchar_t unit_name[128];
-	char filename[32];
-
 	bool low_res = VideoModeWidth == LowResWidth;
 	ProgressSurface = new BSurface(VideoModeWidth, VideoModeHeight, 2);
 	if (ProgressSurface == NULL) {
 		return;
 	}
-	Rect screen(0, 0, 0, 0);
 	int background = DSurface::Build_Hicolor_Pixel(BlackColor);
+	Rect screen(0, 0, 0, 0);
 	screen.Width = VideoModeWidth;
 	screen.Height = VideoModeHeight;
 	ProgressSurface->Fill_Rect(screen, screen, background);
@@ -445,34 +441,34 @@ void LoadProgressManager::Draw(void)
 		char const * name = low_res ? Scen->LS640BkgdName : Scen->LS800BkgdName;
 		if (*name != '\0') {
 			LoadMessage = NULL;
-			if (Scen->LSLoadMessage[0] != '\0') {
+			if (*Scen->LSLoadMessage) {
 				LoadMessage = StringTable::LoadString(Scen->LSLoadMessage, NULL, "D:\\Ra2\\LdPrgMgr.cpp", 591);
 			}
 			LoadBriefing = NULL;
-			if (Scen->LSBrief[0] != '\0') {
+			if (*Scen->LSBrief) {
 				LoadBriefing = StringTable::LoadString(Scen->LSBrief, NULL, "D:\\Ra2\\LdPrgMgr.cpp", 595);
 			}
 			int side = Progress.Get_Side();
 			char const * title_name = Get_Title_Bar_File(VideoModeWidth, VideoModeHeight, side);
 			char const * bar_name = Get_Splash_Bar_File(VideoModeWidth, VideoModeHeight, side);
-			TitleBarShape = Load_Alloc_Data(title_name, TitleBarShapeLoaded);
-			TextBarShape = Load_Alloc_Data(bar_name, TextBarShapeLoaded);
-			PictureShape = Load_Alloc_Data(name, PictureShapeLoaded);
+			TitleBarShape = (ShapeSet *)Load_Alloc_Data(title_name, TitleBarShapeLoaded);
+			TextBarShape = (ShapeSet *)Load_Alloc_Data(bar_name, TextBarShapeLoaded);
+			PictureShape = (ShapeSet *)Load_Alloc_Data(name, PictureShapeLoaded);
 			ConvertClass * title_drawer = Get_Load_Screen_Drawer();
 			ConvertClass * picture_drawer = Get_Load_Screen_Side_Drawer();
 			ConvertClass * bar_drawer = Get_Splash_Bar_Drawer();
 
 			Point2D point(TitleBarRect.X, TitleBarRect.Y);
 			if (TitleBarShape != NULL) {
-				Draw_Shape(*ProgressSurface, *title_drawer, (ShapeSet const *)TitleBarShape, 0, point, screen, SHAPE_WIN_REL, NULL, 0, ZGRAD_GROUND, 1000, NULL, 0, Point2D(0, 0));
+				Draw_Shape(*ProgressSurface, *title_drawer, TitleBarShape, 0, point, screen, SHAPE_WIN_REL);
 			} else {
 				ProgressSurface->Fill_Rect(screen, TitleBarRect, background);
 			}
 			point.Y = PictureRect.Y;
-			Draw_Shape(*ProgressSurface, *picture_drawer, (ShapeSet const *)PictureShape, 0, point, screen, SHAPE_WIN_REL, NULL, 0, ZGRAD_GROUND, 1000, NULL, 0, Point2D(0, 0));
+			Draw_Shape(*ProgressSurface, *picture_drawer, PictureShape, 0, point, screen, SHAPE_WIN_REL);
 			point.Y = TextBarRect.Y;
 			if (TextBarShape != NULL) {
-				Draw_Shape(*ProgressSurface, *bar_drawer, (ShapeSet const *)TextBarShape, 0, point, screen, SHAPE_WIN_REL, NULL, 0, ZGRAD_GROUND, 1000, NULL, 0, Point2D(0, 0));
+				Draw_Shape(*ProgressSurface, *bar_drawer, TextBarShape, 0, point, screen, SHAPE_WIN_REL);
 			} else {
 				ProgressSurface->Fill_Rect(screen, TextBarRect, background);
 			}
@@ -491,6 +487,7 @@ void LoadProgressManager::Draw(void)
 					point.X = Scen->LS800BriefLocX + PictureRect.X;
 					point.Y = Scen->LS800BriefLocY + PictureRect.Y;
 				}
+				wchar_t text[2048];
 				wcscpy(text, LoadBriefing);
 				RGBClass pixel_color = scheme->HSV;
 				int pixel = DSurface::Build_Hicolor_Pixel(pixel_color.Get_Red(), pixel_color.Get_Green(), pixel_color.Get_Blue());
@@ -507,12 +504,13 @@ void LoadProgressManager::Draw(void)
 
 	{
 		int side = Session.Players[0]->Get_Country();
+		char filename[32];
 		char const * suffix = VideoModeWidth == LowResWidth ? Suffix640 : Suffix800;
 		Loading_Filename(filename, side, suffix);
-		PictureShape = Load_Alloc_Data(filename, PictureShapeLoaded);
+		PictureShape = (ShapeSet *)Load_Alloc_Data(filename, PictureShapeLoaded);
 		ConvertClass * drawer = Get_MP_Load_Drawer();
 		Point2D point = Copy_Point(&PictureRect);
-		Draw_Shape(*ProgressSurface, *drawer, (ShapeSet const *)PictureShape, 0, point, screen, SHAPE_WIN_REL, NULL, 0, ZGRAD_GROUND, 1000, NULL, 0, Point2D(0, 0));
+		Draw_Shape(*ProgressSurface, *drawer, PictureShape, 0, point, screen, SHAPE_WIN_REL);
 
 		ColorScheme * scheme = Progress.Text_Scheme();
 		RGBClass pixel_color = scheme->HSV;
@@ -525,11 +523,12 @@ void LoadProgressManager::Draw(void)
 		Draw_Area_Text(country_name, ProgressSurface, area, pixel, 2);
 
 		if (!Is_Observer()) {
+			wchar_t unit_name[128];
 			wcscpy(unit_name, Unit_Name(side));
 			Upper_Case(unit_name);
-			area = Unit_Area();
+			Rect unit_area = Unit_Area();
 			int unit_pixel = DSurface::Build_Hicolor_Pixel(BlackColor);
-			Draw_Area_Text(unit_name, ProgressSurface, area, unit_pixel, 0);
+			Draw_Area_Text(unit_name, ProgressSurface, unit_area, unit_pixel, 0);
 
 			wchar_t const * brief = Briefing(side);
 			area = Get_Briefing_Area();

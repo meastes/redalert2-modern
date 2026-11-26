@@ -21,6 +21,8 @@ void RB_Run_Enhancements(HWND options);
 void RB_Enhancements_Button_Text(HWND options);
 
 static int * ResolutionModes = NULL;     // RA2 0x00A6ED10: EnumDisplayModes' width/height pairs
+static int InitialResolution = -1;       // the list position the dialog remembers (the rebuild's file statics before lane P28's re-pin)
+static bool OptionsReady;
 
 static void RB_Free_Modes(void)
 {

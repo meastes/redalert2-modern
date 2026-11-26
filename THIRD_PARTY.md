@@ -28,10 +28,10 @@ recovered source, which adopted text from the projects below with attribution; e
 
 ## Vendored rebuild tree: `vendor/ra2-rebuild`
 
-`rebuild/src`, `rebuild/include`, `rebuild/LICENSE.md` and `rebuild/manifest/adopted.csv` of redalert2-decomp at
-the commit in `vendor/ra2-rebuild/PIN` (local main commit `b873d2b3c6`, the tree the ports-on-rebuild branch
-reached identity on), copied unchanged by `tools/update_rebuild.sh`; `symbols.tsv` is derived from the rebuild
-catalog (names and addresses). `tools/check_tree.py` fails when a vendored file differs from its PIN digest.
+`src`, `include`, `LICENSE.md` and `manifests/adopted.csv` of redalert2-decomp (its exact tree, at the repository
+root since its 2026-11-25 layout move; `rebuild/` before) at the commit in `vendor/ra2-rebuild/PIN` (local main
+commit `66bccbbfdd`), copied unchanged by `tools/update_rebuild.sh`; `symbols.tsv` is derived from its catalog
+`manifests/catalog` (names and addresses). `tools/check_tree.py` fails when a vendored file differs from its PIN digest.
 
 Most of the rebuild's text is adopted whole-file from **mischa85/RedAlert2** (`github.com/mischa85/RedAlert2`;
 commits per file in `adopted.csv`). That project builds on the **TibSun reconstruction** (OpenTS-Developers/TibSun,

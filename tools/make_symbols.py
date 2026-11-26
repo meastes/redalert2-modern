@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Write vendor/ra2-rebuild/symbols.tsv: the small name/address index the port's build reads in place of the
-rebuild catalog (rebuild/manifest/catalog in redalert2-decomp, about 57 MB).
+decomp catalog (manifests/catalog in redalert2-decomp, about 57 MB).
 
 Two kinds of rows, in the catalog's own order (the readers keep the first row of a name, as they did over
 the catalog):
@@ -12,7 +12,7 @@ the catalog):
 Names and addresses only; no bytes of any executable. Run by tools/update_rebuild.sh in a redalert2-decomp
 checkout (it needs that checkout's tools/original_target/catalog_io.py):
 
-    python3 tools/make_symbols.py --decomp <checkout> --catalog <extracted rebuild/manifest/catalog> --out symbols.tsv
+    python3 tools/make_symbols.py --decomp <checkout> --catalog <extracted manifests/catalog> --out symbols.tsv
 """
 import argparse
 import sys
