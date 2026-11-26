@@ -368,6 +368,7 @@ void press_escape();
 void set_attack_move(bool on);
 void sync_toolbar();
 hostos::Rect keys_rect();
+bool drawable_waiting = false;   // the window's drawable had no size at the last present (lane P32)
 void redraw();
 // The layout's log line, written when it differs from the last one (lane C18: a layout made
 // again with the same result logs nothing, so one that changes for a frame shows in the log).
@@ -1643,6 +1644,7 @@ void pump_events()
             if (e.type == SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED) apply_mouse_grab();
             layout_dirty = true;
             window_resized_ms = SDL_GetTicks();
+            if (drawable_waiting) redraw();     // the picture held while the drawable had no size (lane P32)
             break;
         case SDL_EVENT_PINCH_UPDATE: {
             // A trackpad pinch zooms the map about the pointer (Zoom gestures, lane C16).
@@ -2021,6 +2023,21 @@ void present_now(const void *pixels, int width, int height, int pitch)
     if (layout_dirty) update_layout();
     if (pixels) SDL_UpdateTexture(texture, nullptr, pixels, pitch);
     hd_update(pixels, width, height, pitch);
+    // No drawing while the window's drawable has no size (lane P32: a renderer made on the window
+    // the combined app keeps, after a swap, before the window has its size back, or with no screen
+    // to draw on): Metal's next drawable for a zero-height layer aborts the process ("texture
+    // height zero"). The picture is kept in the texture and drawn when the size comes back (the
+    // window's pixel-size event, pump_events).
+    {
+        int ow = 0, oh = 0;
+        if (!SDL_GetCurrentRenderOutputSize(renderer, &ow, &oh) || ow <= 0 || oh <= 0) {
+            if (!drawable_waiting) fprintf(stderr, "host: the window's drawable is %dx%d: drawing waits for its size\n", ow, oh);
+            drawable_waiting = true;
+            return;
+        }
+        if (drawable_waiting) fprintf(stderr, "host: the window's drawable is %dx%d again: drawing resumes\n", ow, oh);
+        drawable_waiting = false;
+    }
     float density = pixel_density();
     // The picture (with_hd: and the HD vehicles' overlay; RA2_NATIVE_HD_COMPARE dumps it both ways).
     auto draw_picture = [&](bool with_hd) {

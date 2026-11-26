@@ -147,6 +147,20 @@ Enable_Animated_Control rests through the sidebar slide, so a repaint asked duri
 the emptied column (two presents in Red Alert 2, four in Yuri's Revenge, main menu -> Options); fixed in both games
 (ra2/fixups.json, yr/fixups.json), **scripted, passing**: one-game-toggle-slide (Mac; fails without the rows).
 
+Lane P32 (2026-11-26): lane P28's full ctest on a clean main (a360d48, busy Mac at night: other lanes' games running,
+tests in parallel, the display possibly asleep) reported one-game-toggle and one-game-saves aborting in Metal ("texture
+height zero") when Yuri's Revenge started after the swap from Red Alert 2 (P28-swap0). **Not reproduced**: on a clean
+build of a360d48 both passed alone (193 s, 198 s), and with every one-game row and the four yr-native-skirmish rows at
+`ctest -j6` beside lane P31's running game; P28's worktree and logs were gone. So no commit is named as the cause (the
+combined app's host, yr/combined, last changed in e27a880, lane P13; the host's release for the next engine not since
+the import). The only path to that abort the host can
+reach is drawing to a window whose drawable has no size (Metal's next drawable for a zero-height layer): the renderer
+the swapped engine makes on the kept window, or a window with no screen to draw on. Guarded: `present_now`
+(platform/sdl/host.cpp) draws nothing while the render output size is zero, keeps the picture in its texture, logs
+`host: the window's drawable is WxH: drawing waits for its size`, and redraws on the window's pixel-size event.
+**fixed, unreproduced**: the one-game rows pass with the guard; if the log line ever shows in a run, that run is the
+reproduction.
+
 ## Lane P21: missions played to a real win through the step server (2026-11-25)
 
 A pilot: the game paused by default and advanced by a requested number of ticks (ra2/glue/stepserver_native.inc, client
