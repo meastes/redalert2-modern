@@ -989,3 +989,214 @@ def build_legal(g, name, near, r=8, timeout=4000, during=None, **kw):
         if not g.queue(name,1,st): print('build_legal: %s not on the sidebar'%name); return None
     wait_built(g,'building',timeout,during=during)
     return place_legal(g,name,near,r,**kw)
+
+
+# -- lane P26/P27 helpers (folded in from the lanes' build folders) -----------------------------------------------------
+DEFENSE_TYPES = {'TESLA', 'NAFLAK', 'NALASR', 'NAWALL', 'NAIRON', 'NAMISL', 'NAPSIS'}   # BuildCat=Combat: the defense queue
+
+
+class Mgr:
+    """A base run one step a call (lane P26): the building plan (type, near[, r]) bought and placed on legal origins
+    (defense types through the defense queue), the infantry, vehicle, aircraft and ship factories kept on their wants
+    ([(type, count)], first short one first), new units of the types in rally walked to their cell, and with defend a
+    home defence (all combatants at the threat nearest home within home_r, engineers and spies first)."""
+
+    def __init__(self, g, plan, home, home_r=12, inf=None, veh=None, defend=True, air=None, navy=None):
+        self.g = g
+        self.plan = [i for i in plan if i[0] not in DEFENSE_TYPES]
+        self.dplan = [i for i in plan if i[0] in DEFENSE_TYPES]
+        self.home, self.home_r = home, home_r
+        self.inf, self.veh, self.air, self.navy = inf or [], veh or [], air or [], navy or []
+        self.defend = defend
+        self.fails = 0
+        self.last_def = -999
+        self.rally = {}
+        self.known = None
+        self.def_types = None
+
+    @staticmethod
+    def want_next(wants, mine):
+        for t, n in wants:
+            if sum(1 for o in mine if o.type == t) < n:
+                return t, n
+        return None
+
+    def step(self, st=None):
+        g = self.g
+        st = st or g.state()
+        mine = [o for o in st['objs'] if o.own]
+        for q, fk in ((self.plan, 'building'), (self.dplan, 'defense')):
+            if not q:
+                continue
+            f = st['factory'].get(fk)
+            item = q[0]
+            name, near = item[0], item[1]
+            r = item[2] if len(item) > 2 else 8
+            if f and f[0] == name and f[1] >= 100:
+                o = place_legal(g, name, near, r)
+                if o is None:
+                    o = place_legal(g, name, near, r + 6)
+                if o is not None or self.fails > 3:
+                    q.pop(0)
+                    self.fails = 0
+                else:
+                    self.fails += 1
+                st = g.state()
+            elif not f:
+                if g.queue(name, 1, st):
+                    print(g.tick, 'queued', name, 'credits', st.get('credits'), flush=True)
+        for kind, wants in (('infantry', self.inf), ('vehicle', self.veh), ('aircraft', self.air), ('ship', self.navy)):
+            if not wants or kind in st['factory']:
+                continue
+            w = self.want_next(wants, mine)
+            if w and st.get('credits', 0) >= 200:
+                g.queue(w[0], 1, st)
+        if self.rally:
+            have = [o for o in mine if o.type in self.rally]
+            if self.known is None:
+                self.known = {o.id for o in have}
+            for o in have:
+                if o.id not in self.known:
+                    self.known.add(o.id)
+                    g.select([o])
+                    g.move(self.rally[o.type])
+                    g.deselect()
+        if self.defend:
+            en = [o for o in st['objs'] if not o.own and not o.ally and o.kind != 'bld' and o.s > 0
+                  and dist(o, self.home) <= self.home_r and not o.house.startswith(('Civ', 'Neutral', 'Special'))
+                  and (not self.def_types or o.type in self.def_types)]
+            if en and g.tick - self.last_def >= 90:
+                tgt = min(en, key=lambda o: (o.type not in ('ENGINEER', 'SENGINEER', 'GHOST', 'JUMPJET', 'SPY'),
+                                             dist(o, self.home)))
+                if select_all_combat(g):
+                    g.attack(tgt)
+                g.deselect()
+                self.last_def = g.tick
+        return st
+
+    def run(self, ticks, step=30, every=None):
+        end = self.g.tick + ticks
+        while self.g.tick < end:
+            st = self.step()
+            if every:
+                every(st)
+            self.g.adv(step)
+            ls = [l for l in self.g.take_news() if ' lost ' in l and (' %s ' % self.g.player) in l]
+            if ls:
+                print(self.g.tick, 'LOST', ' ; '.join(l.split(' ', 3)[3] for l in ls)[:300], flush=True)
+
+
+def capture(g, eng_type, targets, quiet=False):
+    """Each idle engineer of eng_type sent into the nearest target building (ids) not yet the player's; returns the
+    orders given (lane P26). Neutral animals (Allied 9's and Soviet 2's alligators) kill engineers on the way: clear
+    them first."""
+    objs = g.objects('all')
+    engs = [o for o in objs if o.own and o.type == eng_type]
+    tg = [o for o in objs if o.id in targets and not o.own]
+    n = 0
+    for e in engs:
+        if not tg:
+            break
+        t = min(tg, key=lambda o: dist(o, e))
+        tg.remove(t)
+        g.select([e])
+        g.attack(t)
+        g.deselect()
+        n += 1
+        if not quiet:
+            print(g.tick, 'capture', e, '->', t, flush=True)
+    return n
+
+
+REPAIR_BUTTON = '914 180'   # the sidebar's repair (wrench) button at the 1024x768 screen the runs use
+
+
+def repair_all(g, frac=0.75, types=None, done=None):
+    """Own buildings below frac of their strength put under repair (the wrench, then a click on each), each once until
+    healed (lane P26). done: the set of ids already under repair (kept on g by default)."""
+    if done is None:
+        done = g.__dict__.setdefault('_repairing', set())
+    mine = g.mine()
+    for o in mine:
+        if o.kind == 'bld' and o.s < o.smax * frac and o.type != 'CAOILD' and (types is None or o.type in types) \
+                and o.id not in done:
+            g.look(o.x, o.y)
+            g.raw_click(REPAIR_BUTTON)
+            g.adv(2)
+            g.raw_click('@^%d' % o.id)
+            g.adv(2)
+            g.raw_click('428 368', right=True)
+            done.add(o.id)
+    for o in mine:
+        if o.kind == 'bld' and o.s >= o.smax:
+            done.discard(o.id)
+
+
+def fight_legs(g, team, waypoints, radius=8, step=60, ticks_per_leg=3000, ground_defences=DEFENCES + ('TESLA',),
+               types=('HTNK',), quiet=False, houses=(), every=None, ids=None, recruit=None, skip=('HARV', 'CMIN'),
+               extra=None, buildings=(), prefer=()):
+    """fight_along with more hooks (lane P27): every(g) is called at each check (a Mgr step, a home defence), ids fixes
+    the team's members (default: the units of types now), recruit(objs) returns units to add to the team, extra(objs,
+    cx, cy) returns targets force-fired by cell first (barrels beside enemy buildings), and buildings names houses whose
+    every building is a target (after units and ground defences; prefer types first; one out of sight is force-fired
+    by its cell). Returns the team's members left."""
+    mem = []
+    for wp in waypoints:
+        end = g.tick + ticks_per_leg
+        moving = False
+        cur = None
+        while g.tick < end:
+            if every:
+                every(g)
+            objs = g.objects('all')
+            mem = [o for o in objs if (o.own or o.house in houses) and o.type in types and o.kind != 'bld']
+            if ids is None:
+                ids = {o.id for o in mem}
+            if recruit:
+                new = [o for o in recruit(objs) if o.id not in ids]
+                if new:
+                    g.team(team)
+                    g.select(new, add=True)
+                    g.with_key('Left_Ctrl', g.key, str(team))
+                    ids |= {o.id for o in new}
+                    moving = False
+            mem = [o for o in mem if o.id in ids]
+            if not mem:
+                return []
+            cx = sorted(o.x for o in mem)[len(mem) // 2]
+            cy = sorted(o.y for o in mem)[len(mem) // 2]
+            ex = extra(objs, cx, cy) if extra else []
+            en = [o for o in objs if not o.own and not o.ally and o.s > 0 and dist(o, (cx, cy)) <= radius
+                  and not o.house.startswith(('Civ', 'Neutral', 'Special'))
+                  and (o.kind != 'bld' or o.type in ground_defences or o.house in buildings) and o.type not in skip]
+            if ex:
+                t = ex[0]
+                if cur != ('x', t.id):
+                    g.team(team)
+                    g.force_cell(t.cell)
+                    cur = ('x', t.id)
+                moving = False
+            elif en:
+                t = min(en, key=lambda o: (o.kind == 'bld' and o.type not in ground_defences,
+                                           o.kind == 'bld' and o.type not in prefer, dist(o, (cx, cy))))
+                if cur != t.id:
+                    g.team(team)
+                    if t.kind == 'bld' and not t.seen:
+                        g.force_cell(t.cell)
+                    else:
+                        g.attack(t)
+                    cur = t.id
+                moving = False
+            else:
+                cur = None
+                near = [o for o in mem if dist(o, wp) <= 3]
+                if len(near) * 3 >= len(mem) * 2:
+                    break
+                if not moving:
+                    g.team(team)
+                    g.move(wp)
+                    moving = True
+            g.adv(step)
+        if not quiet:
+            print('fight_legs %s: tick %d, team %d' % (wp, g.tick, len(mem)), flush=True)
+    return mem

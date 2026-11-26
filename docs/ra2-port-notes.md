@@ -983,3 +983,15 @@ Step server (lane P26): `state` lists the defense queue (`factory defense`, Buil
 silo and the Iron Curtain build apart from other buildings, and a finished defense waits there for placement) and the naval
 yard's (`factory ship`). `mapfile <out> <name>` copies another of the game's data files read through the mix files (RULES.INI:
 weapon ranges, speeds, super weapon timers), for planning; never into the repository.
+
+
+## Campaign missions played to wins (lane P27, 2026-11-26, same PIN)
+
+Lane P26's sweep continued with the same tools and rules (one replay per win in ra2/tests/campaign/, rerun to the same
+winning tick before its ctest row; a mission is shelved at 3 lane-hours of wall time, cumulative across lanes); every
+mission left is a retry. Lane-hours are cumulative (earlier lanes' time included).
+
+| Mission | Result | Lane-hours | Notes |
+| --- | --- | --- | --- |
+| Soviet 2 (SOV02T, Hostile Shore) | won at tick 46,156 | 0.2 + 0.15 | win: every Americans object gone (the Germans' two refineries too; "Player Wins" on destroyed-all of houses 0 and 3, then a 5-second delay). The pillbox at (72,53) brings the MCV, deployed where it lands (76,59). Rhinos force-fired the four barrels by the German refineries (five conscripts lost to the blast); the Germans' harvesters fell to the home defence. Power, a refinery at (69,62), barracks, naval yard, two sentry guns south-west by the ore; engineers to the two derricks (34,61, 37,61) died to the alligators (Nod house, ALL) the first time: four Rhinos shot them, then the capture. The naval yard drew the destroyer attacks ("2 Destroyer Attack") and fell twice. 18 Rhinos down the road at x 78 killed the fifteen Grizzlies; a second push of eleven razed the whole Allied base (a building's destruction fires "End Mission": fire sale, every unit hunting) and died to the GIs and pillboxes at (86,130). An Allied engineer took a derrick: retaken. With two refineries, two harvesters and both derricks (about 1,240 credits a minute), the last four destroyers, guarding at (107-119,87-96), came into the bay when the third naval yard was placed (93,52) and died to three submarines and the Rhinos at the shore |
+
