@@ -44,7 +44,9 @@ typedef void (*Initialiser)(void);
 #if defined(__MINGW32__)
 __attribute__((section(".yrini$m"), used)) Initialiser load_original_cheats_entry = load_original_cheats;
 #else
-__attribute__((section("__DATA,__yr_init_func"), used)) Initialiser load_original_cheats_entry = load_original_cheats;
+// no_sanitize("address") (lane P35): an AddressSanitizer build pads an instrumented global with a redzone, which would
+// put zero "pointers" into the section that ra2_native_original_records walks.
+__attribute__((section("__DATA,__yr_init_func"), used, no_sanitize("address"))) Initialiser load_original_cheats_entry = load_original_cheats;
 #endif
 }
 
