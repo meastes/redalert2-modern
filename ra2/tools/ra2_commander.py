@@ -967,7 +967,10 @@ def place_legal(g, name, near, r=8, avoid=None, tries=3, pick=None):
         t=g.tab_of(name)
         if t is None: print('place_legal: not on sidebar',name); return None
         g.raw_click('@tab=%d'%t); g.raw_click('@cameo=%s'%name)
-        c=(o0[0]+(w-1)//2, o0[1]+(h-1)//2)
+        # the click cell: the game places a building's origin at the clicked cell plus its ZoneOffset, -dim/2
+        # (DisplayClass::Set_Cursor_Shape, Mouse_Left_Release); (w-1)//2 was one cell short for an even width or height
+        # (2x2, 2x3, 4x3), which put the footprint one cell up-left of the legal origin (lane P36)
+        c=(o0[0]+w//2, o0[1]+h//2)
         g.look(*c); g.raw_click('@=%d,%d'%c); g.adv(2)
         now=[o for o in g.mine() if o.type==name and o.id not in before]
         if now: print('placed',name,o0,now[0],g.tick,flush=True); return now[0]
