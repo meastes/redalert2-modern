@@ -944,3 +944,48 @@ def guard(g, teams, ticks, houses=(), radius=7, step=40, prio=('DOG','SHK','ENGI
                 if not quiet: print(g.tick,'guard',tm[0],t,flush=True)
         g.adv(step)
     return True
+
+
+# -- lane P25 helpers -------------------------------------------------------------------------------------------------
+def legal_spots(g, name, near, r=8):
+    out=[]
+    for l in g.cmd('buildable %s %d %d %d'%(name,near[0],near[1],r)):
+        m=re.match(r'^place (-?\d+) (-?\d+) ok',l)
+        if m: out.append((int(m.group(1)),int(m.group(2))))
+    return out
+def place_legal(g, name, near, r=8, avoid=None, tries=3, pick=None):
+    """A finished building placed on a legal origin (the step server's buildable) nearest near: the selection dropped,
+    tab, icon, one click on the cell that puts the footprint's origin there. avoid(origin)->True skips an origin."""
+    w,h=SIZE.get(name,(3,3))
+    sp=legal_spots(g,name,near,r)
+    if avoid: sp=[s for s in sp if not avoid(s)]
+    if not sp: print('place_legal: no legal spot for',name,'near',near,flush=True); return None
+    sp.sort(key=pick or (lambda s: max(abs(s[0]+w//2-near[0]),abs(s[1]+h//2-near[1]))))
+    before={o.id for o in g.mine() if o.type==name}
+    for o0 in sp[:tries]:
+        g.raw_click('428 368', right=True)
+        t=g.tab_of(name)
+        if t is None: print('place_legal: not on sidebar',name); return None
+        g.raw_click('@tab=%d'%t); g.raw_click('@cameo=%s'%name)
+        c=(o0[0]+(w-1)//2, o0[1]+(h-1)//2)
+        g.look(*c); g.raw_click('@=%d,%d'%c); g.adv(2)
+        now=[o for o in g.mine() if o.type==name and o.id not in before]
+        if now: print('placed',name,o0,now[0],g.tick,flush=True); return now[0]
+    g.raw_click('428 368', right=True)
+    print('place_legal: failed',name,sp[:tries],g.tick,flush=True)
+    return None
+def wait_built(g, kind='building', timeout=4000, step=30, during=None):
+    end=g.tick+timeout
+    while g.tick<end:
+        st=g.state(); f=st['factory'].get(kind)
+        if not f or f[1]>=100: return f
+        if during: during(st)
+        g.adv(step)
+    return None
+def build_legal(g, name, near, r=8, timeout=4000, during=None, **kw):
+    st=g.state(); f=st['factory'].get('building')
+    if not (f and f[0]==name):
+        if f: print('build_legal: factory busy with',f); return None
+        if not g.queue(name,1,st): print('build_legal: %s not on the sidebar'%name); return None
+    wait_built(g,'building',timeout,during=during)
+    return place_legal(g,name,near,r,**kw)

@@ -49,6 +49,7 @@
 //   triggers                 the live triggers (id, name, enabled, tripped events)
 //   cell <x> <y> [<r>]       the cells around x,y: water/cliff/land, height, mapped by the player, occupant
 //   terrain <x0> <y0> <x1> <y1>  one character a cell (land type, bridge, buildings, the player's and the enemy's)
+//   buildable <T> <x> <y> [r] where building type T would place (origins near x,y; r 0: each blocked cell's reason)
 //   probe <x> <y>            a cell's pixel in the view and the view's position (diagnostics)
 //   screenshot <file>        the last picture as the window shows it (BMP)
 //   mapfile <file>           the scenario's own file (map, triggers, teams: the user's data, read through the game's
@@ -496,6 +497,51 @@ bool RB_Step_Command(int frame, char const * text, bool live)
 			}
 			row[n] = 0;
 			RB_Step_Out("%s", row);
+		}
+	} else if (RB_IS("buildable")) {
+		// buildable <TYPE> <x> <y> [<r>] (lane P25): for each origin cell within r of x,y, whether the building would place
+		// there as the placement cursor judges it (the proximity check, the shroud check, every footprint cell clear to
+		// build); "place X Y ok" lines for the legal ones, and with r 0 the reason for each footprint cell that is not.
+		char name[32] = {0};
+		int v[3] = {0, 0, 0};
+		char const * p = rest;
+		int k = 0;
+		while (*p == ' ') ++p;
+		while (*p && *p != ' ' && k < 31) name[k++] = *p++;
+		RB_Step_Numbers(p, v, 3);
+		ObjectTypeClass const * ot = ObjectTypeClass::From_Name(name);
+		if (ot == NULL || ot->RTTI != RTTI_BUILDINGTYPE || PlayerPtr == NULL) {
+			RB_Step_Out("error no building type %s", name);
+		} else {
+			BuildingTypeClass * bt = (BuildingTypeClass *)ot;
+			Cell const * list = bt->Occupy_List(true);
+			int r = v[2] > 12 ? 12 : v[2];
+			int legal = 0;
+			for (int cy = v[1] - r; cy <= v[1] + r; ++cy) {
+				for (int cx = v[0] - r; cx <= v[0] + r; ++cx) {
+					Cell at((short)cx, (short)cy);
+					bool prox = Map.Passes_Proximity_Check(bt, PlayerPtr->HeapID, list, at);
+					bool shroud = Map.Passes_Shroud_Check(bt, PlayerPtr->HeapID, list, at);
+					bool clear = true;
+					for (Cell const * l = list; *l != REFRESH_EOL; ++l) {
+						Cell c = at + *l;
+						if (!Map.In_Radar(c)) { clear = false; if (r == 0) RB_Step_Out("cell %d,%d off the map", c.X, c.Y); continue; }
+						CellClass & cc = Map[c];
+						if (!cc.Is_Clear_To_Build(bt->Speed, bt, PlayerPtr)) {
+							clear = false;
+							if (r == 0) {
+								ObjectClass * o = cc.Cell_Object();
+								RB_Step_Out("cell %d,%d blocked: object %s overlay %d land %d build %d local %d bridge %d ramp %d flags %x", c.X, c.Y,
+									(o && o->Class_Of()) ? o->Class_Of()->Name() : "-", (int)cc.Overlay, (int)cc.Land_Type(), (int)::Ground[cc.Land_Type()].Build,
+									(int)Map.In_Local_Radar(&cc), (int)cc.Is_Bridge_Here(), (int)cc.Ramp, (unsigned)(cc.Flag.Composite & 0x3F));
+							}
+						}
+					}
+					if (r == 0) RB_Step_Out("place %d %d proximity %d shroud %d clear %d", cx, cy, (int)prox, (int)shroud, (int)clear);
+					else if (prox && shroud && clear) { RB_Step_Out("place %d %d ok", cx, cy); ++legal; }
+				}
+			}
+			if (r > 0) RB_Step_Out("buildable %s %d legal", name, legal);
 		}
 	} else if (RB_IS("probe")) {
 		int xy[2] = {0, 0};
