@@ -319,6 +319,14 @@ foreach(rb_won "all01|allied|1" "all02|allied|2" "all03|allied|3" "all04|allied|
   set_tests_properties(ra2-native-campaign-won-${rb_won_name} PROPERTIES SKIP_RETURN_CODE 77 RUN_SERIAL TRUE TIMEOUT 1200
                        LABELS ra2-campaign-won)
 endforeach()
+# Lane P30: walls bought and placed by clicks (Soviet 7, ra2/tests/regress/walls-sov07.replay as the live step server's
+# preload); pass: the two walls and the line filled between them hold the NAWALL overlay (ra2/tests/ra2_walls.py).
+if(NOT WIN32)
+  add_test(NAME ra2-native-walls COMMAND "${RB_PYTHON3}" -B "${RB_DIR}/tests/ra2_walls.py"
+           --binary $<TARGET_FILE:ra2-native> --data-dir "${RB_DATA_DIR}" --game-exe "${RB_GAME_EXE}"
+           --work "${CMAKE_CURRENT_BINARY_DIR}/tests/walls")
+  set_tests_properties(ra2-native-walls PROPERTIES SKIP_RETURN_CODE 77 RUN_SERIAL TRUE TIMEOUT 600 LABELS ra2-campaign-won)
+endif()
 # Lane P5: the resave route over the user's other four saves in the install folder (ra2-native-resave is ALL01T);
 # label ra2-resaves, not ra2-quick (about 2.5 minutes each).
 foreach(rb_save ALL02S.sav ALL03U.sav SAVE397A.SAV SAVE4FBD.SAV)

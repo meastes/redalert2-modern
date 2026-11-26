@@ -1,0 +1,33 @@
+# SOV07S.MAP: ticks are loop frames from the scenario's first. Lane P30: two Soviet walls bought and placed by clicks (75,64 then 78,64); the line between them fills (76,64 and 77,64)
+6 input move @tab=1
+6 input +2 ldown @tab=1
+6 input +6 lup @tab=1
+16 input move @cameo=NAWALL
+16 input +2 ldown @cameo=NAWALL
+16 input +6 lup @cameo=NAWALL
+206 input move @tab=1
+206 input +2 ldown @tab=1
+206 input +6 lup @tab=1
+216 input move @cameo=NAWALL
+216 input +2 ldown @cameo=NAWALL
+216 input +6 lup @cameo=NAWALL
+226 look 75 64
+229 input move @=75,64
+229 input +2 ldown @=75,64
+229 input +6 lup @=75,64
+244 input move @tab=1
+244 input +2 ldown @tab=1
+244 input +6 lup @tab=1
+254 input move @cameo=NAWALL
+254 input +2 ldown @cameo=NAWALL
+254 input +6 lup @cameo=NAWALL
+444 input move @tab=1
+444 input +2 ldown @tab=1
+444 input +6 lup @tab=1
+454 input move @cameo=NAWALL
+454 input +2 ldown @cameo=NAWALL
+454 input +6 lup @cameo=NAWALL
+464 look 78 64
+467 input move @=78,64
+467 input +2 ldown @=78,64
+467 input +6 lup @=78,64

@@ -47,7 +47,7 @@
 //                            mission, selected, own/ally, on a cell the player has mapped), the live triggers
 //   objects [mine|enemy|all] the techno lines alone
 //   triggers                 the live triggers (id, name, enabled, tripped events)
-//   cell <x> <y> [<r>]       the cells around x,y: water/cliff/land, height, mapped by the player, occupant
+//   cell <x> <y> [<r>]       the cells around x,y: water/cliff/land, height, mapped by the player, occupant, "+NAME" overlay
 //   terrain <x0> <y0> <x1> <y1>  one character a cell (land type, bridge, buildings, the player's and the enemy's)
 //   buildable <T> <x> <y> [r] where building type T would place (origins near x,y; r 0: each blocked cell's reason)
 //   probe <x> <y>            a cell's pixel in the view and the view's position (diagnostics)
@@ -62,6 +62,7 @@
 #include "ccfile.h"
 #include "_rect.h"
 #include "rules.h"
+#include "overtype.h"
 
 extern "C" int ra2port_step_listen(const char * path);          // platform/sdl/host.cpp (POSIX; 0 elsewhere)
 extern "C" int ra2port_step_getline(char * buffer, int size);   // blocks for the next command line; -1 when no server
@@ -292,8 +293,14 @@ void RB_Step_Cells(int x, int y, int r)
 			if (!Map.In_Radar(cell)) { n += snprintf(line + n, sizeof(line) - n, " ----"); continue; }
 			CellClass & c = Map[cell];
 			ObjectClass * who = c.Cell_Occupier();
-			n += snprintf(line + n, sizeof(line) - n, " %c%d%c%s", c.Is_Tile_Water() ? 'w' : c.Is_Tile_Cliff() ? 'c' : '.', (int)c.Height,
-				c.IsMapped ? 'm' : '?', who ? (who->Owner_HouseClass() == PlayerPtr ? "P" : "o") : "");
+			// lane P30: an overlay by name after a '+' (a wall's land type stays clear, as in the original: OverlayTypeClass
+			// reads no Land= for walls, so only the overlay shows one)
+			char ov[40] = "";
+			if (c.Overlay != OVERLAY_NONE && (unsigned)c.Overlay < (unsigned)OverlayTypes.Count() && OverlayTypes[c.Overlay]) {
+				snprintf(ov, sizeof(ov), "+%s", OverlayTypes[c.Overlay]->Name());
+			}
+			n += snprintf(line + n, sizeof(line) - n, " %c%d%c%s%s", c.Is_Tile_Water() ? 'w' : c.Is_Tile_Cliff() ? 'c' : '.', (int)c.Height,
+				c.IsMapped ? 'm' : '?', who ? (who->Owner_HouseClass() == PlayerPtr ? "P" : "o") : "", ov);
 		}
 		RB_Step_Out("%s", line);
 	}
@@ -478,7 +485,7 @@ bool RB_Step_Command(int frame, char const * text, bool live)
 		RB_Step_Numbers(rest, v, 3);
 		RB_Step_Cells(v[0], v[1], v[2] > 12 ? 12 : v[2]);
 	} else if (RB_IS("terrain")) {
-		// terrain <x0> <y0> <x1> <y1>: one character a cell: the land type (. clear, r road, ~ water, # rock, W wall,
+		// terrain <x0> <y0> <x1> <y1>: one character a cell: the land type (. clear, r road, ~ water, # rock, W wall (a wall overlay too),
 		// t ore, b beach, , rough, i ice, = rail, T tunnel, v weeds), a bridge deck '%', a building 'B' (the player's 'P'
 		// for any of its technos, 'e' an enemy's, 'a' another's), unmapped cells in lower case shadow ' '.
 		int v[4] = {0, 0, 0, 0};
@@ -493,6 +500,8 @@ bool RB_Step_Command(int frame, char const * text, bool live)
 					CellClass & c = Map[cell];
 					int land = (int)c.Land_Type();
 					ch = land >= 0 && land < 12 ? ".r~#Wtb,i=Tv"[land] : '?';
+					// lane P30: a wall overlay keeps the clear land type (as in the original), so it is shown by its overlay
+					if (c.Overlay != OVERLAY_NONE && (unsigned)c.Overlay < (unsigned)OverlayTypes.Count() && OverlayTypes[c.Overlay] && OverlayTypes[c.Overlay]->IsWall) ch = 'W';
 					if (c.IsBridgeDeck) ch = '%';
 					ObjectClass * who = c.Cell_Occupier();
 					if (who != NULL) {

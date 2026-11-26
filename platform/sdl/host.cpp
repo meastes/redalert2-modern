@@ -2951,6 +2951,7 @@ extern "C" int ra2_host_widescreen_target(int cur_w, int cur_h, int *w, int *h)
 #ifndef _WIN32
 #include <sys/socket.h>
 #include <sys/un.h>
+#include <errno.h>
 namespace {
 int step_listener = -1;
 int step_client = -1;
@@ -2991,6 +2992,7 @@ extern "C" int ra2port_step_getline_ex(char *buffer, int size, int connected_onl
         if (step_client < 0) {
             if (connected_only) return -2;
             step_client = accept(step_listener, nullptr, nullptr);
+            if (step_client < 0 && errno == EINTR) continue;   // a signal (a debugger attaching) is not the end of serving
             if (step_client < 0) return -1;
 #ifdef SO_NOSIGPIPE
             int one = 1;     // a client gone before its reply must not end the game (SIGPIPE)
@@ -3000,6 +3002,7 @@ extern "C" int ra2port_step_getline_ex(char *buffer, int size, int connected_onl
         }
         char chunk[512];
         ssize_t got = read(step_client, chunk, sizeof chunk);
+        if (got < 0 && errno == EINTR) continue;
         if (got <= 0) {
             close(step_client);
             step_client = -1;

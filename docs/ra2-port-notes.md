@@ -1020,3 +1020,20 @@ anywhere near; instrumented once, OverlayClass::Mark's wall branch printed only 
 printed nothing in a replayed run, so the placement path for a wall was not found within the 20-minute box. Open: a likely
 port fault in wall placement (BuildingClass::Unlimbo's IsWall branch, OverlayClass::Mark), to be traced with lldb on a
 placement click rather than through a replay.
+
+## Lane P30 (2026-11-26, same PIN): walls; campaign sweep
+
+Walls are placed (lane P29's open fault was a reading of the step server's output, not a port fault). A live click
+(Soviet 7, the wall cameo then cell 77,61, tick 31,078) traced with lldb runs EventClass::Execute (PLACE) ->
+HouseClass::Place_Object (RTTI_BUILDING, building type 16) -> BuildingClass::Unlimbo's IsWall branch ->
+OverlayTypeClass::Create_One_Of -> ObjectClass::Unlimbo -> OverlayClass::Mark (the wall branch) -> MapClass::Place_Wall;
+the cell holds overlay 26 (NAWALL, the 27th of [OverlayTypes]) and the wall post is drawn. From Soviet 7's start, walls
+clicked at 75,64 and 78,64 fill the line between them (76,64 and 77,64), as the original's Place_Wall does. The cell's
+land type stays clear: OverlayTypeClass::Read_INI (exact, 0x5DCAA0) takes the land from a Land= key, which none of
+RULES.INI's walls has, and Recalc_Attributes takes the NoUseTileLandType path for them; so `terrain` (which drew the land
+type) never showed a wall and lane P29 took the wall for lost (its other try, at 74,59, was a rock cell). `terrain` now
+draws a wall overlay as W and `cell` names each cell's overlay after a '+'; ra2-native-walls (ra2/tests/ra2_walls.py,
+the clicks in ra2/tests/regress/walls-sov07.replay) checks the four cells through the step server. Lane P29's debug
+prints that never fired were not reproduced: in the same replayed run lldb stopped in Place_Object for every placement.
+Also: a debugger attaching made the step server's accept() or read() fail with EINTR, which ended serving (the game ran
+on freely); both now retry (platform/sdl/host.cpp).
