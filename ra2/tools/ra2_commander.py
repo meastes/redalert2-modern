@@ -1237,7 +1237,7 @@ def party_legs(g, teams, waypoints, radius=7, step=50, ticks_per_leg=2500, house
                   and (o.kind != 'bld' or o.type in defences) and (zone is None or zone(o))]
             fired = False
             for n, types, prio, hits_buildings in teams:
-                if not mems[n]:
+                if not mems[n] or prio is None:     # prio None: a team that only follows (engineers)
                     continue
                 pool = [o for o in en if o.kind != 'bld' or hits_buildings]
                 if not pool:
