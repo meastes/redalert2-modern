@@ -992,7 +992,8 @@ def build_legal(g, name, near, r=8, timeout=4000, during=None, **kw):
 
 
 # -- lane P26/P27 helpers (folded in from the lanes' build folders) -----------------------------------------------------
-DEFENSE_TYPES = {'TESLA', 'NAFLAK', 'NALASR', 'NAWALL', 'NAIRON', 'NAMISL', 'NAPSIS'}   # BuildCat=Combat: the defense queue
+DEFENSE_TYPES = {'TESLA', 'NAFLAK', 'NALASR', 'NAWALL', 'NAIRON', 'NAMISL', 'NAPSIS',   # BuildCat=Combat: the defense queue
+                 'ATESLA', 'GAPILL', 'NASAM', 'GAWALL', 'GACSPH', 'GAWEAT'}
 
 
 class Mgr:
@@ -1042,6 +1043,11 @@ class Mgr:
                 else:
                     self.fails += 1
                 st = g.state()
+            elif f and f[1] >= 100 and f[0] != name:
+                # a finished building that is not the plan's head (left from an earlier plan): placed near home
+                if place_legal(g, f[0], self.home, 10) is None:
+                    place_legal(g, f[0], self.home, 16)
+                st = g.state()
             elif not f:
                 if g.queue(name, 1, st):
                     print(g.tick, 'queued', name, 'credits', st.get('credits'), flush=True)
@@ -1052,7 +1058,9 @@ class Mgr:
         for kind, wants in (('infantry', self.inf), ('vehicle', self.veh), ('aircraft', self.air), ('ship', self.navy)):
             if not wants or kind in st['factory']:
                 continue
-            w = self.want_next(wants, mine)
+            # the first short want that is on the sidebar now (an Allied harvester is CMIN, not HARV; a type whose
+            # factory or prerequisite is gone waits)
+            w = self.want_next([tw for tw in wants if g.tab_of(tw[0], st) is not None], mine)
             if w and st.get('credits', 0) >= 200:
                 g.queue(w[0], 1, st)
         if self.rally:
