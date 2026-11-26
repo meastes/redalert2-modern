@@ -794,6 +794,9 @@ void RB_Step_Server_Frame(int frame)
 		int got = ra2port_step_getline(line, sizeof(line));
 		if (got < 0) { rb_step_mode = RB_STEP_OFF; break; }
 		if (got == 0) continue;
+		// The wait just ended is not a frame's work either, and the command may read the game's clock (state's clock
+		// line): without this, a wait of over five seconds before it let the frame clock slip by the rest (lane P34).
+		ra2port_frame_clock(3);
 		if (RB_Step_Command(tick, line, true)) RB_Step_Record(tick, line);
 		if (rb_step_budget == 0) ra2port_step_reply(".");
 		ra2port_frame_clock(3);   // the wait for the client's command was not a frame's work
