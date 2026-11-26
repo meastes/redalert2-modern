@@ -1303,3 +1303,23 @@ def walk_route(g, oid, route, step=40, timeout=4000):
             if dist(o, wp) <= 1:
                 break
     return get(g, oid)
+
+
+def park_ring(g, x0, y0, x1, y1, types=('APOC', 'HTNK'), objs=None):
+    """The player's tanks of types moved one to each cell of the ring round a building's footprint (x0..x1, y0..y1),
+    nearest first (lane P27: Soviet 7's lab, so that engineers and spies cannot reach it). Returns {unit id: cell};
+    re-issue the moves for strays now and then."""
+    ring = [(x, y) for x in range(x0 - 1, x1 + 2) for y in range(y0 - 1, y1 + 2)
+            if x in (x0 - 1, x1 + 1) or y in (y0 - 1, y1 + 1)]
+    pool = [o for o in (objs if objs is not None else g.mine()) if o.own and o.type in types]
+    park = {}
+    for c in ring:
+        if not pool:
+            break
+        t = min(pool, key=lambda o: dist(o, c))
+        pool.remove(t)
+        park[t.id] = c
+        g.select([t])
+        g.move(c)
+        g.deselect()
+    return park
