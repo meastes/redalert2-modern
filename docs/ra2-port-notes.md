@@ -1192,7 +1192,7 @@ them lane P21's all01.replay goes another way at about tick 2,650 (the landed pa
 re-recorded with the frame clock. P21's commands carry over to tick 6,383 (one object id remapped: the engineer). Then
 the three Grizzlies take the four V3s and the two sentry guns, the six GIs come up in support, and Tanya C4s the
 construction yard, both war factories, the radar, the barracks and the power plants. It won at tick 13,871, the same
-on a rerun (the old recording won at 11,007). The other 17 wins hold at their ticks in the release build and under
+on a rerun (the old recording won at 11,007). The other 20 wins (sov08, sov10 and all09, recorded meanwhile, among them) hold at their ticks in the release build and under
 ASan.
 
 ctests: `ra2-native-asan-all01` and `-sov06` (label ra2-asan, only in an RA2_NATIVE_ASAN build;
