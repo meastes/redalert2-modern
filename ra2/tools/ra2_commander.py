@@ -1200,3 +1200,94 @@ def fight_legs(g, team, waypoints, radius=8, step=60, ticks_per_leg=3000, ground
         if not quiet:
             print('fight_legs %s: tick %d, team %d' % (wp, g.tick, len(mem)), flush=True)
     return mem
+
+
+def party_legs(g, teams, waypoints, radius=7, step=50, ticks_per_leg=2500, houses=(), every=None,
+               defences=DEFENCES + ('TESLA',), skip=('HARV', 'CMIN'), quiet=False, lead=0, zone=None):
+    """A mixed party walked along waypoints in short legs (lane P27): teams is [(n, types, prio_types,
+    hits_buildings)]; at each check every team fires at the threat (an enemy unit, or a ground defence when
+    hits_buildings) nearest the lead team's centre within radius, its prio types first; with no threat the teams move on
+    to the waypoint. zone(obj) -> False leaves a threat alone (a party chasing a target across a street runs into the
+    next nest: Soviet 5). houses: other houses the player commands (PlayerControl=yes). Returns {team: members}."""
+    ids = {}
+    out = {}
+    for wp in waypoints:
+        end = g.tick + ticks_per_leg
+        moving = False
+        cur = {}
+        while g.tick < end:
+            if every:
+                every(g)
+            objs = g.objects('all')
+            mems = {}
+            for tm in teams:
+                n, types = tm[0], tm[1]
+                m = [o for o in objs if (o.own or o.house in houses) and o.type in types and o.kind != 'bld']
+                if n not in ids:
+                    ids[n] = {o.id for o in m}
+                mems[n] = [o for o in m if o.id in ids[n]]
+            allm = [o for v in mems.values() for o in v]
+            if not allm:
+                return mems
+            ld = mems.get(teams[lead][0]) or allm
+            cx = sorted(o.x for o in ld)[len(ld) // 2]
+            cy = sorted(o.y for o in ld)[len(ld) // 2]
+            en = [o for o in objs if not o.own and not o.ally and o.s > 0 and dist(o, (cx, cy)) <= radius
+                  and not o.house.startswith(('Civ', 'Neutral', 'Special', 'Other')) and o.type not in skip
+                  and (o.kind != 'bld' or o.type in defences) and (zone is None or zone(o))]
+            fired = False
+            for n, types, prio, hits_buildings in teams:
+                if not mems[n]:
+                    continue
+                pool = [o for o in en if o.kind != 'bld' or hits_buildings]
+                if not pool:
+                    continue
+                t = min(pool, key=lambda o: (o.type not in prio, o.kind == 'bld', dist(o, (cx, cy))))
+                if cur.get(n) != t.id:
+                    g.team(n)
+                    if t.kind == 'bld' and not t.seen:
+                        g.force_cell(t.cell)
+                    else:
+                        g.attack(t)
+                    cur[n] = t.id
+                fired = True
+            if fired:
+                moving = False
+            else:
+                cur = {}
+                near = [o for o in ld if dist(o, wp) <= 3]
+                if len(near) * 3 >= len(ld) * 2:
+                    break
+                if not moving:
+                    for tm in teams:
+                        if mems[tm[0]]:
+                            g.team(tm[0])
+                            g.move(wp)
+                    moving = True
+            g.adv(step)
+        out = mems
+        if not quiet:
+            print('party %s: tick %d, %s' % (wp, g.tick, ' '.join('%d:%d' % (k, len(v)) for k, v in mems.items())),
+                  flush=True)
+    return out
+
+
+def walk_route(g, oid, route, step=40, timeout=4000):
+    """One unit walked along a route cell by cell (lane P27: the pathfinder's shortest way can run through an enemy
+    nest; Soviet 5's tesla troopers died at 70,64 until walked round it). Returns the unit or None."""
+    end = g.tick + timeout
+    for wp in route:
+        get_o = get(g, oid)
+        if get_o is None:
+            return None
+        g.select([get_o])
+        g.move(wp)
+        g.deselect()
+        while g.tick < end:
+            g.adv(step)
+            o = get(g, oid)
+            if o is None:
+                return None
+            if dist(o, wp) <= 1:
+                break
+    return get(g, oid)
