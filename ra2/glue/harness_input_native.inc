@@ -82,6 +82,17 @@ bool RB_In_Gadget_List(GadgetClass const * gadget)
 	return false;
 }
 
+// A sidebar entry's name: a techno type's, or a super weapon type's (lane P25: the armed super weapon's cameo, as a player
+// clicks it before the map click).
+char const * RB_Buildable_Name(RTTIType rtti, int id)
+{
+	if (rtti == RTTI_SPECIAL || rtti == RTTI_SUPERWEAPONTYPE) {
+		return (unsigned)id < (unsigned)SuperWeaponTypes.Count() && SuperWeaponTypes[id] ? SuperWeaponTypes[id]->Name() : NULL;
+	}
+	TechnoTypeClass const * type = Fetch_Techno_Type(rtti, id);
+	return type ? type->Name() : NULL;
+}
+
 int RB_Sidebar_Point(char const * spec, int * x, int * y)
 {
 	char const * rest;
@@ -99,8 +110,8 @@ int RB_Sidebar_Point(char const * spec, int * x, int * y)
 		for (int i = 0; i < shown && i < 60; ++i) {
 			int index = column.TopIndex * 2 + i;
 			if (index >= column.BuildableCount) break;
-			TechnoTypeClass const * type = Fetch_Techno_Type(column.Buildables[index].BuildableType, column.Buildables[index].BuildableID);
-			if (type && RB_Same_Name(type->Name(), rest, 64)) {
+			char const * name = RB_Buildable_Name(column.Buildables[index].BuildableType, column.Buildables[index].BuildableID);
+			if (name && RB_Same_Name(name, rest, 64)) {
 				RB_Centre(SidebarClass::StripClass::SelectButton[strip * 60 + i], x, y);
 				return 1;
 			}

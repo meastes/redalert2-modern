@@ -1,0 +1,75 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Soviet 11 (SOV11S, Red Revolution) won by lane P25 through the step server (ra2/tools/ra2_step.py,
+# ra2/tools/ra2_commander.py): the two starting Kirovs flown round the map's south-west and north-west edges, clear of
+# the flak belts, onto the Kremlin (800 strength), force-fired by its cell; the base left to itself.
+# SOV11S.MAP: ticks are loop frames from the scenario's first
+360 input move 428 368
+360 input +2 rdown 428 368
+360 input +6 rup 428 368
+372 look 107 156
+375 input move @^1027542
+375 input +2 ldown @^1027542
+375 input +6 lup @^1027542
+385 input keydown Left_Shift
+386 look 115 157
+389 input move @^1027543
+389 input +2 ldown @^1027543
+389 input +6 lup @^1027543
+399 input keyup Left_Shift
+401 input keydown Left_Ctrl
+402 input key 9
+404 input keyup Left_Ctrl
+406 input key 9
+408 look 95 148
+411 input move @=95,148
+411 input +2 ldown @=95,148
+411 input +6 lup @=95,148
+721 input key 9
+723 look 60 138
+726 input move @=60,138
+726 input +2 ldown @=60,138
+726 input +6 lup @=60,138
+1036 input key 9
+1038 look 60 138
+1041 input move @=60,138
+1041 input +2 ldown @=60,138
+1041 input +6 lup @=60,138
+9051 input key 9
+9053 look 38 112
+9056 input move @=38,112
+9056 input +2 ldown @=38,112
+9056 input +6 lup @=38,112
+17066 input key 9
+17068 look 22 82
+17071 input move @=22,82
+17071 input +2 ldown @=22,82
+17071 input +6 lup @=22,82
+25081 input key 9
+25083 look 13 62
+25086 input move @=13,62
+25086 input +2 ldown @=13,62
+25086 input +6 lup @=13,62
+26096 input key 9
+26098 look 25 46
+26101 input move @=25,46
+26101 input +2 ldown @=25,46
+26101 input +6 lup @=25,46
+34111 input key 9
+34113 look 36 37
+34116 input move @=36,37
+34116 input +2 ldown @=36,37
+34116 input +6 lup @=36,37
+34826 input key 9
+34828 look 42 40
+34831 input move @=42,40
+34831 input +2 ldown @=42,40
+34831 input +6 lup @=42,40
+35041 save S11K.SAV
+35041 input key 9
+35043 input keydown Left_Ctrl
+35044 look 47 45
+35047 input move @=47,45
+35047 input +2 ldown @=47,45
+35047 input +6 lup @=47,45
+35057 input keyup Left_Ctrl
+35900 # game over: won

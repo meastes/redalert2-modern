@@ -266,8 +266,8 @@ void RB_Step_State(int frame)
 		char line[1024];
 		int n = snprintf(line, sizeof(line), "sidebar tab %d:", strip);
 		for (int i = 0; i < column.BuildableCount && n < (int)sizeof(line) - 40; ++i) {
-			TechnoTypeClass const * type = Fetch_Techno_Type(column.Buildables[i].BuildableType, column.Buildables[i].BuildableID);
-			if (type) n += snprintf(line + n, sizeof(line) - n, " %s", type->Name());
+			char const * name = RB_Buildable_Name(column.Buildables[i].BuildableType, column.Buildables[i].BuildableID);
+			if (name) n += snprintf(line + n, sizeof(line) - n, " %s", name);
 		}
 		RB_Step_Out("%s", line);
 	}
