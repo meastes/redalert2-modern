@@ -42,7 +42,7 @@
 //                            so in the replay                                                              [recorded]
 //   save <file>              Save_Game in the write folder, as the options menu's Save                    [recorded]
 //   state                    the structured state: scenario, ticks, game over, the mission timer, the player's credits,
-//                            power and input lock, the houses, the factories (what each builds, %), each sidebar tab's
+//                            power and input lock, the houses (each with its power, drain and credits), the factories (what each builds, %), each sidebar tab's
 //                            build options, the view, every techno (id, kind, type, house, cell, strength/max,
 //                            mission, selected, own/ally, on a cell the player has mapped), the live triggers
 //   objects [mine|enemy|all] the techno lines alone
@@ -254,9 +254,11 @@ void RB_Step_State(int frame)
 	for (int h = 0; h < Houses.Count(); ++h) {
 		HouseClass * house = Houses[h];
 		if (house == NULL) continue;
-		RB_Step_Out("house h%d %s %s%s%s buildings %d", (int)house->HeapID, RB_House_Name(house),
+		// lane P31: each house's power, drain and credits (Allied 11: whether the enemy base is on low power, can repair)
+		RB_Step_Out("house h%d %s %s%s%s buildings %d power %d drain %d credits %ld", (int)house->HeapID, RB_House_Name(house),
 			house == PlayerPtr ? "player" : (PlayerPtr && PlayerPtr->Is_Ally(house)) ? "ally" : "enemy",
-			house->IsDefeated ? " defeated" : "", house->IsToWin ? " to-win" : house->IsToLose ? " to-lose" : "", house->Buildings.Count());
+			house->IsDefeated ? " defeated" : "", house->IsToWin ? " to-win" : house->IsToLose ? " to-lose" : "", house->Buildings.Count(),
+			house->Power, house->Drain, (long)house->Available_Money());
 	}
 	RB_Step_Factory("building", RTTI_BUILDING);
 	RB_Step_Factory("infantry", RTTI_INFANTRY);
