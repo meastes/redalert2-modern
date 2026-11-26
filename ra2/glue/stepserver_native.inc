@@ -519,6 +519,13 @@ bool RB_Step_Command(int frame, char const * text, bool live)
 		while (*p && *p != ' ' && k < 31) name[k++] = *p++;
 		RB_Step_Numbers(p, v, 3);
 		ObjectTypeClass const * ot = ObjectTypeClass::From_Name(name);
+		if (ot != NULL && ot->RTTI != RTTI_BUILDINGTYPE) {
+			// a wall's name is also its overlay's (NAWALL, GAWALL), which the generic lookup finds first (lane P29)
+			ot = NULL;
+			for (int i = 0; i < BuildingTypes.Count(); ++i) {
+				if (BuildingTypes[i] && !stricmp(BuildingTypes[i]->Name(), name)) { ot = BuildingTypes[i]; break; }
+			}
+		}
 		if (ot == NULL || ot->RTTI != RTTI_BUILDINGTYPE || PlayerPtr == NULL) {
 			RB_Step_Out("error no building type %s", name);
 		} else {
