@@ -966,3 +966,18 @@ Sidebar names (lane P25): the step server's sidebar listing and the input script
 entries too (their SuperWeaponTypes names), so an armed super weapon's cameo can be clicked as a player clicks it
 (ra2/glue/harness_input_native.inc RB_Buildable_Name).
 
+
+## Campaign missions played to wins (lane P26, 2026-11-26, same PIN)
+
+Lane P25's sweep continued with the same tools and rules (one replay per win in ra2/tests/campaign/, rerun to the same
+winning tick before its ctest row; a mission is shelved at 3 lane-hours of wall time, cumulative across lanes), the
+not-started missions first.
+
+| Mission | Result | Lane-hours | Notes |
+| --- | --- | --- | --- |
+| Soviet 12 (SOV12S, Polar Storm) | won at tick 64,411 | 1.05 | win: the chronosphere (GACSPH at 68,129, 750 strength, BadGuy3's) destroyed. The scripted chrono attacks come at fixed ticks: six IFVs at (170,100) about tick 4,600, rocketeers, four to six Grizzlies at (168,112) about 6,700, four seals from a landing craft at (178,129) about 8,400, a carrier's Hornets about 9,900, Grizzlies at (176,120) about 11,000. A lone coil loses to the six IFVs (one shot per 120-150 ticks); two coils north, one west and tesla troopers held them; the seals C4'd every power plant and the yard past two coils on low power (drain above output) and past infantry, so three Rhinos waited at the beach and killed the craft and seals. Two refineries by the ore (the first one far from it starved the build). The nuke (silo at tick 13,553, ten minutes) took the chronosphere only to 271 and BadGuy3 repaired it in 850 ticks; the patriots (NASAM: range 12, Powered, 23 of BadGuy3's 44 power plants' worth) ring it nine deep. Eight Kirovs flew round the south coast (waypoints inside the local map: x+y up to about 308, x-y down to about -72; the AEGIS at 136,149 hurts on the inner line) to a stage at (95,162) out of every patriot's reach, where they heal; from (76,142) the Iron Curtain on them (750 frames, about 14 cells of Kirov flight) and an attack on the building once seen: down in about 600 ticks |
+
+Step server (lane P26): `state` lists the defense queue (`factory defense`, BuildCat=Combat: tesla coils, flak cannons, the
+silo and the Iron Curtain build apart from other buildings, and a finished defense waits there for placement) and the naval
+yard's (`factory ship`). `mapfile <out> <name>` copies another of the game's data files read through the mix files (RULES.INI:
+weapon ranges, speeds, super weapon timers), for planning; never into the repository.

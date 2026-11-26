@@ -52,9 +52,9 @@
 //   buildable <T> <x> <y> [r] where building type T would place (origins near x,y; r 0: each blocked cell's reason)
 //   probe <x> <y>            a cell's pixel in the view and the view's position (diagnostics)
 //   screenshot <file>        the last picture as the window shows it (BMP)
-//   mapfile <file>           the scenario's own file (map, triggers, teams: the user's data, read through the game's
+//   mapfile <file> [<name>]  the scenario's own file (map, triggers, teams: the user's data, read through the game's
 //                            mix files) copied to <file>, for planning (ra2/tools/ra2_mapinfo.py); never into the
-//                            repository
+//                            repository. With a name, that data file instead (RULES.INI: weapon ranges, speeds)
 //   release                  the server stops; the game runs on freely
 //   quit                     the process ends
 // When the game ends the connected client's remaining commands are answered, then the score screen follows.
@@ -232,9 +232,9 @@ void RB_Step_Triggers(void)
 	}
 }
 
-void RB_Step_Factory(char const * label, RTTIType kind)
+void RB_Step_Factory(char const * label, RTTIType kind, bool naval = false, int category = 0)
 {
-	FactoryClass * factory = PlayerPtr ? PlayerPtr->Fetch_Factory(kind, false, 0) : NULL;
+	FactoryClass * factory = PlayerPtr ? PlayerPtr->Fetch_Factory(kind, naval, category) : NULL;
 	if (factory == NULL) return;
 	TechnoClass * object = factory->Get_Object();
 	RB_Step_Out("factory %s %s %d%%%s", label, object ? RB_Type_Name(object) : "-", factory->Completion() * 100 / 54,
@@ -261,6 +261,8 @@ void RB_Step_State(int frame)
 	RB_Step_Factory("infantry", RTTI_INFANTRY);
 	RB_Step_Factory("vehicle", RTTI_UNIT);
 	RB_Step_Factory("aircraft", RTTI_AIRCRAFT);
+	RB_Step_Factory("defense", RTTI_BUILDING, false, 5); // lane P26: the defense queue apart (BuildCat=Combat)
+	RB_Step_Factory("ship", RTTI_UNIT, true, 0);           // lane P26: the naval yard's queue apart
 	for (int strip = 0; strip < 4; ++strip) {
 		SidebarClass::StripClass & column = Map.Column[strip];
 		char line[1024];
@@ -306,11 +308,18 @@ void RB_Step_Look(int x, int y)
 	ra2_native_scroll_map(0, 0, want.X - now.X, want.Y - now.Y);
 }
 
-void RB_Step_Mapfile(char const * out)
+void RB_Step_Mapfile(char const * rest)
 {
 	if (Scen == NULL) { RB_Step_Out("error no scenario"); return; }
-	CCFileClass file(Scen->ScenarioName);
-	if (!file.Is_Available()) { RB_Step_Out("error %s not found", (char const *)Scen->ScenarioName); return; }
+	// lane P26: "mapfile <out> [<name>]": another of the game's data files by name (RULES.INI: ranges, speeds, timers
+	// for planning), read the same way; without a name, the scenario's own file.
+	char out[512];
+	char name[64];
+	name[0] = '\0';
+	if (sscanf(rest, "%511s %63s", out, name) < 1) { RB_Step_Out("error mapfile <out> [<name>]"); return; }
+	char const * want = name[0] ? name : (char const *)Scen->ScenarioName;
+	CCFileClass file(want);
+	if (!file.Is_Available()) { RB_Step_Out("error %s not found", want); return; }
 	int size = file.Size();
 	char * data = new char[size > 0 ? size : 1];
 	file.Open(1);
@@ -318,7 +327,7 @@ void RB_Step_Mapfile(char const * out)
 	file.Close();
 	bool wrote = ra2port_host_write_file(out, data, got, 0) != 0;
 	delete [] data;
-	RB_Step_Out("mapfile %s %d bytes -> %s", (char const *)Scen->ScenarioName, got, wrote ? out : "(not written)");
+	RB_Step_Out("mapfile %s %d bytes -> %s", want, got, wrote ? out : "(not written)");
 }
 
 void RB_Step_Record(int frame, char const * text)
