@@ -157,6 +157,8 @@ bool held();                 // the main thread is in the hold now
 void hold_if_paused();       // the queue reads call it when they find nothing
 // The game's clock: the monotonic clock less the time spent held (nanoseconds).
 uint64_t game_clock_ns();
+// The frame clock (lane P33): 1 starts it, 2 advances it one loop frame (16 ms), 0 stops it.
+void frame_clock(int what);
 // This installation's random id (lane C20): the app keeps one in its settings file
 // (install_id) and gives it here before WinMain; SessionClass::Compute_Unique_ID mixes it
 // into the session's UniqueID (port/fixups.json, ra2port_install_id), so two games with the

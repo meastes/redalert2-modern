@@ -17,6 +17,11 @@
 //   RA2_NATIVE_STEP_PRELOAD=<file>   live: a replay's commands run first at their ticks, then the server serves (a recorded
 //                                    run resumed at any tick)
 //   RA2_NATIVE_STEP_REPLAY=<file>    replay: the recorded commands run at their ticks, no server (every platform)
+//   RA2_NATIVE_FRAME_CLOCK=1         the game's clock advances 16 ms a loop frame from the served scenario's first frame
+//                                    to its end (port_core.cpp game_clock_ns; lane P33), recorded as "# frame clock";
+//                                    without it what the game paces by the wall clock (speech, the radar's movies, a
+//                                    trigger's pause) lasts a machine-dependent number of loop frames
+//   RA2_NATIVE_STEP_SLOW=<ms>        each served loop frame takes that much longer (a slower machine; the frame clock's check)
 // Determinism (what made a live session and its replay part, found here): the host's event pump runs at most once a
 // millisecond, so under RA2_NATIVE_SCRIPT_ONLY=1 the frame's scripted events are pumped as they are played (host.cpp
 // frame()); the game's mouse follows the pointer on the mouse thread every 16 ms of wall time, so it is processed once a
@@ -41,7 +46,7 @@
 //                            hunt ...), for what the UI path cannot reach in a script; each use is a shortcut, said
 //                            so in the replay                                                              [recorded]
 //   save <file>              Save_Game in the write folder, as the options menu's Save                    [recorded]
-//   state                    the structured state: scenario, ticks, game over, the mission timer, the player's credits,
+//   state                    the structured state: scenario, ticks, game over, the game's clock (16 ms ticks), the mission timer, the player's credits,
 //                            power and input lock, the houses (each with its power, drain and credits), the factories (what each builds, %), each sidebar tab's
 //                            build options, the view, every techno (id, kind, type, house, cell, strength/max,
 //                            mission, selected, own/ally, on a cell the player has mapped), the live triggers
@@ -73,6 +78,10 @@ extern "C" int ra2port_screenshot(const char * path);
 extern "C" int ra2_native_scroll_map(int, int, int dx, int dy);  // mainloop_native.inc
 extern "C" void ra2port_progress(const char * milestone, const char * detail);
 extern "C" void ra2port_exit_now(int code);                     // platform/sdl/host.cpp
+extern "C" void ra2port_frame_clock(int what);                   // port/src/port_core.cpp (lane P33)
+extern "C" uint64_t ra2port_monotonic_ns(void);                  // port/src/win32_time.cpp
+extern "C" uint64_t ra2port_game_ns(void);                       // the game's clock (port/src/win32_time.cpp)
+extern "C" void ra2port_sleep_until_ns(uint64_t deadline);
 extern "C" int ra2port_host_write_file(const char * path, const void * data, int size, int append);   // the host's paths
 extern "C" char * ra2port_host_read_file(const char * path, int * size);
 bool Save_Game(const char * file_name, wchar_t const * descr, bool bargraph);
@@ -244,8 +253,9 @@ void RB_Step_Factory(char const * label, RTTIType kind, bool naval = false, int 
 
 void RB_Step_State(int frame)
 {
-	RB_Step_Out("scenario %s loop %d game %d over %d win %d lose %d", Scen ? (char const *)Scen->ScenarioName : "?", frame, Frame,
-		PlayerWins || PlayerLoses ? 1 : 0, PlayerWins ? 1 : 0, PlayerLoses ? 1 : 0);
+	// clock: the game's clock in SystemTimerClass ticks (16 ms; under the frame clock one a loop frame, lane P33)
+	RB_Step_Out("scenario %s loop %d game %d over %d win %d lose %d clock %u", Scen ? (char const *)Scen->ScenarioName : "?", frame,
+		Frame, PlayerWins || PlayerLoses ? 1 : 0, PlayerWins ? 1 : 0, PlayerLoses ? 1 : 0, (unsigned)(ra2port_game_ns() / 16000000u));
 	if (Scen != NULL && Scen->MissionTimer.Is_Active()) RB_Step_Out("timer %ld frames", (long)Scen->MissionTimer.Value());
 	if (PlayerPtr != NULL) {
 		RB_Step_Out("player %s credits %ld power %d drain %d input %s", RB_House_Name(PlayerPtr), (long)PlayerPtr->Available_Money(),
@@ -684,14 +694,28 @@ void RB_Step_Server_Frame(int frame)
 			RB_Step_Park(frame + 1);   // the pointer starts in the view's middle, not at the screen's corner
 			fprintf(stderr, "step: %s from loop frame %d (scenario %d of the run)\n", scenario, frame, scenarios);
 			ra2port_progress("step-mission", scenario);
-			char note[128];
+			char note[160];
 			int n = snprintf(note, sizeof(note), "# %s: ticks are loop frames from the scenario's first\n", scenario);
 			if (rb_step_record) ra2port_host_write_file(rb_step_record, note, n, 1);
+			char const * clock = getenv("RA2_NATIVE_FRAME_CLOCK");
+			if (clock && *clock == '1') {
+				ra2port_frame_clock(1);
+				n = snprintf(note, sizeof(note), "# frame clock: the game's clock advances 16 ms a loop frame\n");
+				if (rb_step_record) ra2port_host_write_file(rb_step_record, note, n, 1);
+			}
 		} else if (scenarios > target) {
 			base = -1;
+			ra2port_frame_clock(0);
 		}
 	}
 	if (base < 0) return;
+	if (!(PlayerWins || PlayerLoses)) ra2port_frame_clock(2);   // one loop frame of the frame clock (when it runs)
+	else ra2port_frame_clock(0);                                // the score screen runs on the wall clock
+	// RA2_NATIVE_STEP_SLOW=<ms> (lane P33, ra2/tests/ra2_frame_clock.py): each loop frame of the served scenario takes that
+	// much longer, as on a slower or busier machine; a run's ticks must not depend on it.
+	static int slow_ms = -1;
+	if (slow_ms < 0) slow_ms = getenv("RA2_NATIVE_STEP_SLOW") ? atoi(getenv("RA2_NATIVE_STEP_SLOW")) : 0;
+	if (slow_ms > 0) ra2port_sleep_until_ns(ra2port_monotonic_ns() + (uint64_t)slow_ms * 1000000u);
 	// The game's mouse (WWMouseClass: the pointer the tactical view's cursor and click actions read) follows the pointer on
 	// the mouse thread, every 16 ms of wall time: at the uncapped loop's speed a replay ran several frames before it moved,
 	// while a live session's pauses let it catch up, and a click landed elsewhere. Moved here, once a frame, after the
@@ -772,5 +796,6 @@ void RB_Step_Server_Frame(int frame)
 		if (got == 0) continue;
 		if (RB_Step_Command(tick, line, true)) RB_Step_Record(tick, line);
 		if (rb_step_budget == 0) ra2port_step_reply(".");
+		ra2port_frame_clock(3);   // the wait for the client's command was not a frame's work
 	}
 }

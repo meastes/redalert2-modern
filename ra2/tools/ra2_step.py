@@ -12,7 +12,10 @@
   stop    quit the game (the step server's quit), else end the process started
 
 The game runs at game speed 0, uncapped, with the gate's fixed seed (RA2_NATIVE_SOAK_SEED, _SPEED), and only scripted
-input reaches it (RA2_NATIVE_SCRIPT_ONLY), so a recorded run replays the same (ra2/tests/ra2_campaign.py).
+input reaches it (RA2_NATIVE_SCRIPT_ONLY), so a recorded run replays the same (ra2/tests/ra2_campaign.py). The game's
+clock runs one 16 ms tick a loop frame (RA2_NATIVE_FRAME_CLOCK, lane P33; the recording says "# frame clock"), so what
+the game paces by its clock (speech, the radar's movies, a trigger's pause) lasts the same number of ticks in every run;
+--clock wall gives the wall clock of recordings made before it (a preload without the line gets it by default).
 """
 import argparse
 import os
@@ -28,6 +31,12 @@ sys.path.insert(0, os.path.join(HERE, '..', '..', 'tests'))
 import mission_soak  # noqa: E402  (the menus' points, the seed)
 
 
+def uses_frame_clock(path):
+    """A recording made with the frame clock (the step server's "# frame clock" line)."""
+    with open(path, errors='replace') as f:
+        return any(l.startswith('# frame clock') for l in f)
+
+
 def campaign_env(a, work, write):
     env = dict(os.environ, RA2_NATIVE_MOVIE_SKIP='1', RA2_NATIVE_IGNORE_FOCUS='1', RA2_NATIVE_MSG_LOG='0',
                RA2_NATIVE_CRASH_TRACE='1', RA2_NATIVE_UNCAPPED='1', RA2_NATIVE_SOAK_SEED=str(mission_soak.SEED),
@@ -35,7 +44,8 @@ def campaign_env(a, work, write):
                RA2_NATIVE_STEP_MISSION=str(a.mission), RA2_NATIVE_ENHANCEMENTS='zoomgestures=off',
                RA2_GAME_EXE=a.game_exe or os.path.join(a.data_dir, 'game.exe'))
     for k in ('RA2_NATIVE_ORDERS', 'RA2_NATIVE_TRAP_CONTINUE', 'RA2_NATIVE_FORCE_END', 'RA2_NATIVE_SOAK_DUMP', 'RA2_NATIVE_SOAK',
-              'RA2_NATIVE_SOAK_END', 'RA2_NATIVE_STEP', 'RA2_NATIVE_STEP_REPLAY', 'RA2_NATIVE_STEP_RECORD', 'RA2_NATIVE_SAVE_AT'):
+              'RA2_NATIVE_SOAK_END', 'RA2_NATIVE_STEP', 'RA2_NATIVE_STEP_REPLAY', 'RA2_NATIVE_STEP_RECORD', 'RA2_NATIVE_SAVE_AT',
+              'RA2_NATIVE_FRAME_CLOCK'):
         env.pop(k, None)
     if a.mission > 1:
         env['RA2_NATIVE_FORCE_END'] = ','.join(str(100 + 200 * k) for k in range(a.mission - 1))
@@ -63,6 +73,9 @@ def cmd_start(a):
     sock = os.path.join(work, 'step.sock')
     env = campaign_env(a, work, write)
     env['RA2_NATIVE_STEP'] = sock
+    frame_clock = a.clock == 'frame' or (a.clock == 'auto' and (not a.preload or uses_frame_clock(a.preload)))
+    if frame_clock:
+        env['RA2_NATIVE_FRAME_CLOCK'] = '1'
     env['RA2_NATIVE_STEP_RECORD'] = os.path.join(work, 'step.replay')
     if a.preload:
         # The recorded run resumed: its commands rerun first (and are recorded again in a fresh step.replay).
@@ -164,6 +177,9 @@ def main():
     s.add_argument('--seconds', type=int, default=86400)
     s.add_argument('--preload', default='', help='a replay file whose commands run first; the server serves from its end')
     s.add_argument('--until', type=int, default=-1, help='with --preload: only its lines up to this tick')
+    s.add_argument('--clock', default='auto', choices=['auto', 'frame', 'wall'],
+                   help="the game's clock: frame (16 ms a loop frame), wall; auto: frame unless the preload was recorded "
+                        "without it")
     c = sub.add_parser('send')
     c.add_argument('--work', required=True)
     c.add_argument('commands', nargs='+')

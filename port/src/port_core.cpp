@@ -436,10 +436,55 @@ void request_checkpoint()
 }
 bool pause_requested() { return pause_wanted; }
 bool held() { return holding; }
+// The frame clock (lane P33; the step server's runs, RA2_NATIVE_FRAME_CLOCK=1): while it runs the game's clock
+// advances by one SystemTimerClass tick (16 ms) a loop frame and stands still between frames, so whatever the game
+// paces by the clock (speech and its gaps, stream fades, the radar's Bink movies, a trigger's Pause for N seconds,
+// the scenario's elapsed timer) lasts the same number of loop frames on any machine at any load. Uncapped, the step
+// server's ticks are loop frames; with the wall clock a radar movie's hold began 79 game frames apart in two runs of
+// one replay (Allied 11), so every later input landed at another game frame. A frame that takes more than five
+// seconds of wall time (a busy wait on the clock inside one frame) lets the clock follow the wall clock from there.
+namespace {
+bool frame_clock_on = false;
+uint64_t frame_clock_value = 0;       // the game's clock while the frame clock runs
+uint64_t frame_clock_wall = 0;        // the wall clock at the last frame
+bool frame_clock_slipped = false;
+std::thread::id frame_clock_thread;   // the game's thread (only its reads let the clock slip)
+}
 uint64_t game_clock_ns()
 {
     std::lock_guard<std::mutex> g(game_clock_lock);
+    if (frame_clock_on) {
+        uint64_t now = os::monotonic_ns();
+        if (now - frame_clock_wall > 5000000000ull && std::this_thread::get_id() == frame_clock_thread) {
+            if (!frame_clock_slipped) fprintf(stderr, "port: frame clock: a frame ran over 5 s: the clock follows the wall clock in it\n");
+            frame_clock_slipped = true;
+            frame_clock_value += now - frame_clock_wall - 5000000000ull;
+            frame_clock_wall = now - 5000000000ull;
+        }
+        return frame_clock_value;
+    }
     return (held_since_ns ? held_since_ns : os::monotonic_ns()) - held_total_ns;
+}
+void frame_clock(int what)
+{
+    std::lock_guard<std::mutex> g(game_clock_lock);
+    uint64_t now = os::monotonic_ns();
+    if (what == 1 && !frame_clock_on) {           // start: from the game's clock now
+        frame_clock_value = (held_since_ns ? held_since_ns : now) - held_total_ns;
+        frame_clock_wall = now;
+        frame_clock_thread = std::this_thread::get_id();
+        frame_clock_on = true;
+        fprintf(stderr, "port: frame clock: the game's clock advances 16 ms a loop frame\n");
+    } else if (what == 2 && frame_clock_on) {     // one loop frame
+        frame_clock_value += 16000000ull;
+        frame_clock_wall = now;
+    } else if (what == 3 && frame_clock_on) {     // the step server answered a command: its wait is not a frame's
+        frame_clock_wall = now;
+    } else if (what == 0 && frame_clock_on) {     // stop: the wall clock goes on from the frame clock's reading
+        held_total_ns = (held_since_ns ? held_since_ns : now) - frame_clock_value;
+        frame_clock_on = false;
+        fprintf(stderr, "port: frame clock: stopped\n");
+    }
 }
 void hold_if_paused()
 {
@@ -474,6 +519,8 @@ void hold_if_paused()
 }  // namespace ra2port
 
 // The game side's end of a Main_Loop pass takes a checkpoint request (Scout1248).
+// The frame clock (game_clock_ns): 1 starts it, 2 counts a loop frame, 3 marks a step-server wait's end, 0 stops it (glue/stepserver_native.inc).
+extern "C" void ra2port_frame_clock(int what) { ra2port::frame_clock(what); }
 extern "C" int ra2port_take_checkpoint(void) { return ra2port::checkpoint_wanted.exchange(false) ? 1 : 0; }
 
 // Checkpoints saved, and resuming one at start (lane I; win32_port.hpp).

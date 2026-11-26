@@ -326,6 +326,12 @@ if(NOT WIN32)
            --binary $<TARGET_FILE:ra2-native> --data-dir "${RB_DATA_DIR}" --game-exe "${RB_GAME_EXE}"
            --work "${CMAKE_CURRENT_BINARY_DIR}/tests/walls")
   set_tests_properties(ra2-native-walls PROPERTIES SKIP_RETURN_CODE 77 RUN_SERIAL TRUE TIMEOUT 600 LABELS ra2-campaign-won)
+  # Lane P33: the step server's frame clock (16 ms of the game's clock a loop frame, whatever the machine's speed):
+  # Allied 1 twice, once slowed 5 ms a frame; the clock advances 600 over 600 ticks in both (ra2/tests/ra2_frame_clock.py).
+  add_test(NAME ra2-native-frame-clock COMMAND "${RB_PYTHON3}" -B "${RB_DIR}/tests/ra2_frame_clock.py"
+           --binary $<TARGET_FILE:ra2-native> --data-dir "${RB_DATA_DIR}" --game-exe "${RB_GAME_EXE}"
+           --work "${CMAKE_CURRENT_BINARY_DIR}/tests/frame-clock")
+  set_tests_properties(ra2-native-frame-clock PROPERTIES SKIP_RETURN_CODE 77 RUN_SERIAL TRUE TIMEOUT 900 LABELS ra2-step)
 endif()
 # Lane P5: the resave route over the user's other four saves in the install folder (ra2-native-resave is ALL01T);
 # label ra2-resaves, not ra2-quick (about 2.5 minutes each).

@@ -66,6 +66,8 @@ def main():
         f.write('d%d+2000 quit\n' % (3 + a.mission))
     env = ra2_step.campaign_env(a, work, write)
     env['RA2_NATIVE_STEP_REPLAY'] = os.path.abspath(a.replay)
+    if re.search(r'^# frame clock', text, re.M):
+        env['RA2_NATIVE_FRAME_CLOCK'] = '1'   # recorded with the frame clock (lane P33)
     cmd = [a.binary, '--data-dir', a.data_dir, '--run-to=never', '--run-seconds=%d' % a.seconds, '--write-dir=' + write,
            '--input-script=' + script, '--game-args=-noaudio -CD.']
     log = os.path.join(work, 'run.log')
