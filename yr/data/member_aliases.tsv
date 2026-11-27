@@ -2,11 +2,7 @@
 # global object a YR unit defines; yr_units.py makes each name an alias of owner + the member's native
 # offset (offset_arm64 on the Mac and iPhone, offset_win64 on Windows). Names and offsets only.
 symbol	name	address	owner_symbol	owner	unit	offset32	offset_arm64	offset_win64	member	kind
-_DAT_00A8E950	DAT_00A8E950	0x00A8E950	_CDList	CDList	globals.cpp	104	104	104	CDCount	exact
-_DAT_00A8E954	DAT_00A8E954	0x00A8E954	_CDList	CDList	globals.cpp	108	108	108	CDIndex	exact
-_DAT_00B054D4	DAT_00B054D4	0x00B054D4	_ColorSchemes	ColorSchemes	scheme.cpp	4	8	8	base:VectorClass<ColorScheme*>.Vector	exact
 _DAT_00A8ECC8	DAT_00A8ECC8	0x00A8ECC8	_CurrentObject	CurrentObject	globals.cpp	16	24	24	ActiveCount	exact
-_DAT_00ABFED8	DAT_00ABFED8	0x00ABFED8	_DAT_00ABFEC8	DAT_00ABFEC8	multiplayerteam2.cpp	16	16	16	Port	exact
 _DAT_00A8022C	DAT_00A8022C	0x00A8022C	_Houses	Houses	globals.cpp	4	8	8	base:VectorClass<HouseClass*>.Vector	exact
 _DAT_00A80238	DAT_00A80238	0x00A80238	_Houses	Houses	globals.cpp	16	24	24	ActiveCount	exact
 _DAT_00B45B5C	DAT_00B45B5C	0x00B45B5C	_IngameVQ	IngameVQ	vqa.cpp	4	8	8	base:VectorClass<MovieHandle*>.Vector	exact
@@ -39,14 +35,8 @@ __ZN20GameModeOptionsClass8InstanceE	GameModeOptionsClass::Instance	0x00A8B250	_
 __ZN8Unsorted9SWAllowedE	Unsorted::SWAllowed	0x00A8B263	_Session	Session	globals.cpp	43	51	51	Options.SWAllowed	exact
 __ZN4Game11PlayerColorE	Game::PlayerColor	0x00A8B394	_Session	Session	globals.cpp	348	356	356	PrefColor	exact
 __ZN8Unsorted14MuteSWLaunchesE	Unsorted::MuteSWLaunches	0x00A8B538	_Session	Session	globals.cpp	768	776	776	MultiplayerObserver	exact
-__ZN4Game11PlayerCountE	Game::PlayerCount	0x00A8B54C	_Session	Session	globals.cpp	788	796	796	NumPlayers	exact
-__ZN4Game7Network16PreCalcFrameRateE	Game::Network::PreCalcFrameRate	0x00A8B570	_Session	Session	globals.cpp	824	832	832	PrecalcDesiredFrameRate	exact
-__ZN4Game8ChatMaskE	Game::ChatMask	0x00A8D108	_Session	Session	globals.cpp	7888	7924	7924	PlayerChatEnabled[0]	exact
 __ZN4Game13RecordingFlagE	Game::RecordingFlag	0x00A8D5F8	_Session	Session	globals.cpp	9152	9208	9208	Record	exact (bit-field byte)
-_DAT_00A8D5FC	DAT_00A8D5FC	0x00A8D5FC	_Session	Session	globals.cpp	9156	9212	9212	IsBridge	exact
-_DAT_00A8D600	DAT_00A8D600	0x00A8D600	_Session	Session	globals.cpp	9160	9216	9216	BridgeNet	object
 _DAT_00B0E844	DAT_00B0E844	0x00B0E844	_TargetTracker	TargetTracker	target.cpp	4	8	8	IndexCount	exact
 _DAT_00B0E84C	DAT_00B0E84C	0x00B0E84C	_TargetTracker	TargetTracker	target.cpp	12	16	16	IsSorted	exact
 _DAT_00B0E850	DAT_00B0E850	0x00B0E850	_TargetTracker	TargetTracker	target.cpp	16	24	24	Archive	exact
 _DAT_00B1D4B0	DAT_00B1D4B0	0x00B1D4B0	_VoxArray	VoxArray	vox.cpp	16	24	24	ActiveCount	exact
-_DAT_00887625	DAT_00887625	0x00887625	_WinVersion	WinVersion	_winfix.cpp	141	141	141	IsWinNT	exact

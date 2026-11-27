@@ -896,6 +896,24 @@
   },
   {
    "file": "src/mainopt.cpp",
+   "old": "// FUNCTION: GAMEMD 0x0055FDB0\n",
+   "new": "void Yr_Run_Enhancements(HWND options);          // NATIVE (lane Y8): glue/mainopt_native.inc\nvoid Yr_Enhancements_Button_Text(HWND options);\n// FUNCTION: GAMEMD 0x0055FDB0\n",
+   "why": "The declarations for the two rows below."
+  },
+  {
+   "file": "src/mainopt.cpp",
+   "old": "\t\t\t\t\tcase 0x6ED:\n\t\t\t\t\t\tif (HIWORD(wparam) == 1) {\n",
+   "new": "\t\t\t\t\tcase 0x7F80:   // NATIVE (lane Y8): ENHANCEMENTS\n\t\t\t\t\t\tif (HIWORD(wparam) == 0) Yr_Run_Enhancements(window);\n\t\t\t\t\t\tbreak;\n\t\t\t\t\tcase 0x6ED:\n\t\t\t\t\t\tif (HIWORD(wparam) == 1) {\n",
+   "why": "Native addition (lane Y8, the Enhancements page; not original behaviour), carried by lane P64 from the retired draft of the Options dialog (FUN_0055FDB0, which upstream now matches): the ENHANCEMENTS button (0x7F80) opens the page, and its label is set when the dialog's controls are set up (glue/mainopt_native.inc)."
+  },
+  {
+   "file": "src/mainopt.cpp",
+   "old": "\t\t\tcase 0x497: {\n\t\t\t\t_initialized = false;\n",
+   "new": "\t\t\tcase 0x497: {\n\t\t\t\tYr_Enhancements_Button_Text(window);   // NATIVE (lane Y8): the ENHANCEMENTS button's label\n\t\t\t\t_initialized = false;\n",
+   "why": "Native addition (lane Y8, the Enhancements page; not original behaviour), carried by lane P64 from the retired draft of the Options dialog (FUN_0055FDB0, which upstream now matches): the ENHANCEMENTS button (0x7F80) opens the page, and its label is set when the dialog's controls are set up (glue/mainopt_native.inc)."
+  },
+  {
+   "file": "src/mainopt.cpp",
    "append": "mainopt_native.inc",
    "why": "The shell Options dialog's procedure FUN_0055FDB0 (0x0055FDB0) is unmatched in the YR tree (a trap: the main menu's Options crashed); a native draft from gamemd.exe's code with the RA2 twin's behaviour row as the text, and the native Enhancements page behind the port's ENHANCEMENTS button (lane Y8)."
   },
@@ -1721,6 +1739,65 @@
    "old": "\tif (!CCFileClass::Is_There_Search_Drives()) {\n\t\tFUN_004068E0(\"Calling Force_CD_Available\\n\");",
    "new": "\tif (!CCFileClass::Is_There_Search_Drives() && !CD::Is_Override_Swap()) {   /* NATIVE: -CD. (lane P64) */\n\t\tFUN_004068E0(\"Calling Force_CD_Available\\n\");",
    "why": "P64: upstream matches Init_Game (0x0052BA60) with Init_CDROM_Access inline, which retired the port's draft. The native host passes -CD. (user decision 2026-11-08: no CD check); natively \".\" adds no search drive, so the original would ask for the disk. With -CD given (CD::Override_Swap), the -CD branch runs, as the retired draft did; --cd-check (no -CD) keeps the original check."
+  },
+  {
+   "file": "src/egos.cpp",
+   "old": "while (TickCount - time < frame * speed && !Keyboard->Check()) {}",
+   "new": "while (TickCount - time < frame * speed && !Keyboard->Check()) { Call_Back(); }   /* NATIVE: the wait services the port's events */",
+   "why": "Native (lane Y3, carried by lane P64 from the retired draft of Show_Who_Was_Responsible, 0x004C3E30, which upstream now matches): the credits' frame wait spins on TickCount and the keyboard; natively the timer and input arrive through the game callback, so the wait calls it (as the RA2 game's credits do natively)."
+  },
+  {
+   "file": "src/techno.cpp",
+   "old": "// FUNCTION: GAMEMD 0x00706ED0\nSurfaceRegion TechnoClass::Techno_Render_Voxel_Object(VoxelDataStruct const & voxeldata, Matrix3D const & matrix, Point2D const & point, Rect const & xcliprect, int frame, ShapeFlags_Type flags, int brightness, unsigned short tint) const\n{\n",
+   "new": "void Yr_Hd_Owner(int kind_of);   // NATIVE (lane N19, HD vehicles): glue/yr_hd_vehicles.cpp\n// FUNCTION: GAMEMD 0x00706ED0\nSurfaceRegion TechnoClass::Techno_Render_Voxel_Object(VoxelDataStruct const & voxeldata, Matrix3D const & matrix, Point2D const & point, Rect const & xcliprect, int frame, ShapeFlags_Type flags, int brightness, unsigned short tint) const\n{\n\tYr_Hd_Owner(RTTI);   // NATIVE (lane N19): whose voxels the renderer draws (the HD counts)\n",
+   "why": "Native addition (lane N19, HD vehicles; not original behaviour), carried by lane P64 from the retired draft of Techno_Render_Voxel_Object (0x00706ED0, which upstream now matches): the renderer is told whose voxels it draws, for the HD counts (glue/yr_hd_vehicles.cpp)."
+  },
+  {
+   "file": "src/uicmnds.cpp",
+   "regex": true,
+   "old": "\\(TechnoClass \\*, int\\)",
+   "new": "(TechnoClass *, intptr_t)",
+   "why": "P64: the techno-list helpers (FUN_00731EB0 .. FUN_007321D0, gamemd.exe 0x00731EB0-0x007321D0) pass their test callbacks a context the callers fill with a pointer cast to int (the name list of FUN_00732950's type select, the type name of 0x00733xxx); natively that cut the pointer to 32 bits (yr-native-type-select faulted in Is_Named_Selectable). The context is pointer-sized in every helper, callback and cast of the unit, which keeps the value whole."
+  },
+  {
+   "file": "src/uicmnds.cpp",
+   "regex": true,
+   "old": "\\), int arg\\)",
+   "new": "), intptr_t arg)",
+   "why": "P64: the techno-list helpers (FUN_00731EB0 .. FUN_007321D0, gamemd.exe 0x00731EB0-0x007321D0) pass their test callbacks a context the callers fill with a pointer cast to int (the name list of FUN_00732950's type select, the type name of 0x00733xxx); natively that cut the pointer to 32 bits (yr-native-type-select faulted in Is_Named_Selectable). The context is pointer-sized in every helper, callback and cast of the unit, which keeps the value whole."
+  },
+  {
+   "file": "src/uicmnds.cpp",
+   "regex": true,
+   "old": "\\), int test_arg, int fn_arg\\)",
+   "new": "), intptr_t test_arg, intptr_t fn_arg)",
+   "why": "P64: the techno-list helpers (FUN_00731EB0 .. FUN_007321D0, gamemd.exe 0x00731EB0-0x007321D0) pass their test callbacks a context the callers fill with a pointer cast to int (the name list of FUN_00732950's type select, the type name of 0x00733xxx); natively that cut the pointer to 32 bits (yr-native-type-select faulted in Is_Named_Selectable). The context is pointer-sized in every helper, callback and cast of the unit, which keeps the value whole."
+  },
+  {
+   "file": "src/uicmnds.cpp",
+   "regex": true,
+   "old": "\\(TechnoClass \\* techno, int (unused|context)\\)",
+   "new": "(TechnoClass * techno, intptr_t \\1)",
+   "why": "P64: the techno-list helpers (FUN_00731EB0 .. FUN_007321D0, gamemd.exe 0x00731EB0-0x007321D0) pass their test callbacks a context the callers fill with a pointer cast to int (the name list of FUN_00732950's type select, the type name of 0x00733xxx); natively that cut the pointer to 32 bits (yr-native-type-select faulted in Is_Named_Selectable). The context is pointer-sized in every helper, callback and cast of the unit, which keeps the value whole."
+  },
+  {
+   "file": "src/uicmnds.cpp",
+   "regex": true,
+   "old": "\\(int\\)(names|type)\\)",
+   "new": "(intptr_t)\\1)",
+   "why": "P64: the techno-list helpers (FUN_00731EB0 .. FUN_007321D0, gamemd.exe 0x00731EB0-0x007321D0) pass their test callbacks a context the callers fill with a pointer cast to int (the name list of FUN_00732950's type select, the type name of 0x00733xxx); natively that cut the pointer to 32 bits (yr-native-type-select faulted in Is_Named_Selectable). The context is pointer-sized in every helper, callback and cast of the unit, which keeps the value whole."
+  },
+  {
+   "file": "src/wave.cpp",
+   "old": "unsigned int zoffset;",
+   "new": "uintptr_t zoffset;",
+   "why": "P64: the sonic wave's draw (WaveClass::Draw_Sonic and FUN_007602E0, which upstream now matches) keeps the depth buffer's address (ZBuffer::Get_Buffer_Offset) in an unsigned int; natively that is a 64-bit pointer (the header row makes Get_Buffer_Offset uintptr_t), so the local is pointer-sized (yr-native-standins faulted reading the cut address)."
+  },
+  {
+   "file": "src/wave.cpp",
+   "old": "unsigned int depth_address;",
+   "new": "uintptr_t depth_address;",
+   "why": "P64: the sonic wave's draw (WaveClass::Draw_Sonic and FUN_007602E0, which upstream now matches) keeps the depth buffer's address (ZBuffer::Get_Buffer_Offset) in an unsigned int; natively that is a 64-bit pointer (the header row makes Get_Buffer_Offset uintptr_t), so the local is pointer-sized (yr-native-standins faulted reading the cut address)."
   }
  ]
 }
