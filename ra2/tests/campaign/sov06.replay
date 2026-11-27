@@ -5,7 +5,10 @@
 # (the dreadnoughts on the carriers in the shallows), the two Allied carriers by the base, then twenty submarines into
 # Pearl Harbor, destroyers first. Replayed by ra2/tests/ra2_campaign.py (Soviet 1-5 forced won). Inputs and ticks only;
 # no game-event shortcut.
+# Re-recorded by lane P59 with the frame clock after Fire_At's radial fan went back to the original's pi/segments
+# (game.exe 0x0079D158 holds pi): the same commands, won at tick 30,688 (30,200 under the port's former 2*pi).
 # SOV06T.MAP: ticks are loop frames from the scenario's first
+# frame clock: the game's clock advances 16 ms a loop frame
 740 input move 428 368
 740 input +2 rdown 428 368
 740 input +6 rup 428 368
@@ -1748,4 +1751,4 @@
 29859 input move @^1035785
 29859 input +2 ldown @^1035785
 29859 input +6 lup @^1035785
-30200 # game over: won
+30688 # game over: won

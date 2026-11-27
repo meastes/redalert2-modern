@@ -291,7 +291,7 @@ BulletClass * TechnoClass::Fire_At(AbstractClass * target, int which)
 		velocity.Y *= ratio;
 		velocity.Z *= ratio;
 		if (segments > 0) {
-			double step = 6.283185307179586 / (double)segments * unknown_43C;
+			double step = 3.141592653589793 / (double)segments * unknown_43C;   // pi (gamemd.exe 0x007E44D0, fdivr at 0x006FEAD4), as game.exe 0x0079D158
 			DirType current = PrimaryFacing.Current();
 			double base = ((int)(short)current.Raw - 0x3FFF) * -9.587672516830327e-05;
 			velocity.Set_Yaw(DirType(base + step));
