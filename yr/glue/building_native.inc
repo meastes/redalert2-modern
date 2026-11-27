@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+#include "slavemgr.h"	// YR (lane P57): SlaveManagerClass (Exit_Object's Deploy2, the deconstruction's FUN_006B0DB0 and SetOwner)
 
 // ---------------------------------------------------------------------------------------------
 // NON-EXACT NATIVE DRAFT (lane Y4), appended to the building unit: BuildingClass::Exit_Object
@@ -387,10 +388,28 @@ int BuildingClass::Exit_Object(TechnoClass * base, Cell preferred)	// NATIVE: YR
 							return(0);
 
 						case 1:
+							/*
+							**	YR (P57): gamemd.exe 0x00445237: the node's failures are counted
+							**	(BaseClass::FailedToPlaceNode); in a multiplayer game a node that has
+							**	failed more than Rule->MaximumBuildingPlacementFailures times is dropped.
+							*/
+							{
+								int failures = House->Base.FailedToPlaceNode(node);
+								if (Session.Type != GAME_NORMAL && failures > Rule->MaximumBuildingPlacementFailures && node != NULL) {
+									int index = House->Base.Nodes.ID(node);
+									if (index < House->Base.Nodes.Count()) {
+										House->Base.Nodes.Delete_Index(index);
+									}
+								}
+							}
 							return(1);
 
 						case 0:
 							if (base->Unlimbo(placementcoord)) {
+								// YR (P57): 0x004452F0: a placed slave miner sets its slaves to wait (SlaveManagerClass::Deploy2).
+								if (building->SlaveManager != NULL) {
+									building->SlaveManager->Deploy2();
+								}
 								if (node != NULL) {
 									if (building->Class->HeapID == House->BuildStructure) {
 										House->BuildStructure = STRUCT_NONE;
@@ -399,6 +418,19 @@ int BuildingClass::Exit_Object(TechnoClass * base, Cell preferred)	// NATIVE: YR
 
 								if (base->CurrentMission == MISSION_NONE && base->MissionQueue == MISSION_CONSTRUCTION) {
 									base->Commence();
+								}
+
+								/*
+								**	YR (P57): 0x00445345: a placed wall piece becomes the wall overlay (a firestorm
+								**	wall or a wall with its ToOverlay), filling the gaps to the house's walls
+								**	along each side (MapClass::Place_Firestorm_Wall 0x00588570, Place_Wall 0x00588750).
+								*/
+								if (base->Fetch_RTTI() == RTTI_BUILDING) {
+									if (building->Class->IsFirestormWall) {
+										Map.Place_Firestorm_Wall(cellnum, House, building->Class);
+									} else if (building->Class->ToOverlay != NULL && building->Class->ToOverlay->IsWall) {
+										Map.Place_Wall(cellnum, House, building->Class);
+									}
 								}
 
 								/*
@@ -466,9 +498,14 @@ int BuildingClass::Exit_Object(TechnoClass * base, Cell preferred)	// NATIVE: YR
 // ra2-decomp. TibSun's text (TibSun archive code/building.cpp; same licence notice as above);
 // native changes are marked NATIVE. Behaviour code for the native build only. The survivors part is
 // compared with gamemd.exe 0x00449C30 (lane Y6: who leaves survivors, absorbed passengers and
-// occupants let out), and the tank bunker's release (lane P55: 0x0044AAA4); the rest (MCV repacking)
-// is not compared yet.
+// occupants let out), and the tank bunker's release (lane P55: 0x0044AAA4). Lane P57 compared the
+// whole function (0x00449C30-0x0044ABC5) step by step and restored YR's steps (marked "YR (P57)"):
+// the slave manager's redeploy to ore (0x0044AA3D) and its hand-over to the undeployed unit
+// (0x0044A03C), the deploy and pack-up sounds, the radio links (SendToEachLink, not TibSun's
+// contact only), TibSun's repair-bay sale and AuxSound2 removed (not in gamemd.exe), the passengers'
+// exit point, the undeployed unit's health, voice and selection, and the building's removal.
 // ---------------------------------------------------------------------------------------------
+
 int BuildingClass::Do_MISSION_DECONSTRUCTION(void)
 {
 	int i;
@@ -488,23 +525,30 @@ int BuildingClass::Do_MISSION_DECONSTRUCTION(void)
 	switch (Status) {
 		case INITIAL:
 
-			if (Can_Be_Undeployed() && Class->IsVehicle() /* NATIVE: YR's mobile deployer test */) {
+			// YR (P57): gamemd.exe 0x0044A8DF: an undeployer that aims (artillery, tick tank) drops its target.
+			if (Can_Be_Undeployed() && (Class->IsArtillary || Class->IsTickTank)) {
 				Assign_Target(NULL);
 			}
 
+			// YR (P57): TibSun's repair-bay check (sell what stands on it) is not in gamemd.exe's
+			// function: a sold Service Depot is sold itself.
+
+			// YR (P57): 0x0044A95E: an undeployer speaks its deploy voice and plays its DeploySound.
+			if (Can_Be_Undeployed() && Class->UndeploysInto != NULL) {
+				VoiceDeploy();
+				if (Techno_Type_Class()->DeploySound != -1) {
+					VocClass::PlayAt(Techno_Type_Class()->DeploySound, PositionCoord);
+				}
+			}
+
 			/*
-			**	Special check for the repair bay which has the ability to sell
-			**	whatever is on it. If there is something on the repair bay, then
-			**	it will be sold. If there is nothing on the repair bay, then
-			**	the repair bay itself will be sold.
+			**	YR (P57): 0x0044AA3D: a deployed slave miner undeploying to move onto ore (its archive
+			**	target a tiberium cell other than its own) has its slave manager find the ore field
+			**	and bring the slaves (SlaveManagerClass::FUN_006B0DB0).
 			*/
-			if (Class->IsCanUnitRepair && Transmit_Message(RADIO_NEED_TO_MOVE) == RADIO_ROGER && ::Distance(Center_Coord(), Contact_With_Whom()->Center_Coord()) < CELL_LEPTON / 2) {
-				TechnoClass * tech = Contact_With_Whom();
-				Transmit_Message(RADIO_OVER_OUT);
-				if (IsOwnedByPlayer) VoxClass::Play("EVA_UnitSold");	// NATIVE (lane Y11b): YR's EVA call for TibSun's Speak
-				tech->Sell_Back(1);
-				QueueMission(MISSION_GUARD, false);
-				return(1);
+			if (SlaveManager != NULL && ArchiveTarget != Get_Cell_Ptr() && ArchiveTarget != NULL
+				&& ArchiveTarget->Fetch_RTTI() == RTTI_CELL && As_Cell(ArchiveTarget)->Land_Type() == LAND_TIBERIUM) {
+				SlaveManager->FUN_006B0DB0();
 			}
 
 			/*
@@ -524,8 +568,7 @@ int BuildingClass::Do_MISSION_DECONSTRUCTION(void)
 				delete uptr;
 				Remove_Upgrade();
 				House->RecalcPower = true;
-				House->RecalcRadar = true;
-				House->IsRecalcNeeded = true;	// NATIVE: YR rechecks power through IsRecalcNeeded (TibSun: Adjust_House_Power)
+				House->RecalcRadar = true;	// YR (P57): gamemd.exe 0x0044AB08 sets these two only
 				if (IsOwnedByPlayer) VoxClass::Play("EVA_StructureSold");	// NATIVE (lane Y11b): YR's EVA call for TibSun's Speak
 				QueueMission(MISSION_GUARD, false);
 				return(1);
@@ -537,26 +580,25 @@ int BuildingClass::Do_MISSION_DECONSTRUCTION(void)
 			 */
 			// NATIVE: TibSun's juggernaut facing wait left out (YR has no juggernaut).
 
-			DestroyNthAnim(BANIM_ALL);	// NATIVE: YR's name of End_Anim
-
 			IsReadyToCommence = false;
-			Transmit_Message(RADIO_RUN_AWAY);
+			SendToEachLink(RADIO_RUN_AWAY);	// YR (P57): 0x0044AB68, every radio link (TibSun: the contact only)
 
 			if (Class->IsLaserFencePost) {
 				Toggle_Laser_Fence_Post(false);
 			}
 
-			// NATIVE: TibSun's juggernaut facing wait left out (YR has no juggernaut).
+			// YR (P57): 0x0044AB87: the damage fires go (each DamageFireAnims entry removed, as
+			// FUN_0043C2A0); TibSun's End_Anim (DestroyNthAnim(BANIM_ALL)) is not in gamemd.exe here.
+			FUN_0043C2A0();
 
-			if (Class->AuxSound2 != VOC_NONE) {
-				VocClass::PlayAt(Class->AuxSound2, PositionCoord);	// NATIVE (lane Y11b): YR's sound call for TibSun's Sound_Effect
-			}
+			// NATIVE: TibSun's juggernaut facing wait left out (YR has no juggernaut).
+			// YR (P57): TibSun's AuxSound2 here is not in gamemd.exe; YR plays PackupSound in HOLDING.
 
 			Status = HOLDING;
 			break;
 
 		case HOLDING:
-			Transmit_Message(RADIO_OVER_OUT);
+			SendToEachLink(RADIO_OVER_OUT);	// YR (P57): 0x0044A2F5
 			if (!IsTethered) {
 
 				/*
@@ -578,39 +620,33 @@ int BuildingClass::Do_MISSION_DECONSTRUCTION(void)
 
 					/*
 					 * YR (gamemd.exe 0x0044A37F-0x0044A59E): a building that absorbs units or
-					 * infantry lets them out, one per foundation cell, facing as the building.
+					 * infantry lets them out, facing as the building. YR (P57): gamemd.exe works out
+					 * an exit point per foundation cell (0x0044A3C4-0x0044A476) but unlimbos each
+					 * passenger at the building's own position, with its cell's centre height
+					 * (0x0044A499-0x0044A4D2), and then scatters it; the exit point is never read.
+					 * Each one released counts as its house's infantry again (no RTTI test,
+					 * 0x0044A510); one that cannot be placed is recorded destroyed and deleted
+					 * (0x0044A56D: RegisterDestruction(NULL), no Limbo).
 					 */
-					Cell here = Get_Cell();
 					if (Class->UnitAbsorb || Class->InfantryAbsorb) {
-						const Cell * spot = list;
 						FootClass * passenger;
 						while (Cargo.How_Many() > 0 && (passenger = Cargo.Detach_Object()) != NULL) {
-							Cell exitcell = here + *spot++;
-							if (*spot == REFRESH_EOL) spot = list;	// NATIVE: the original walks on past the list's end
-							Coord coord(exitcell.X * CELL_LEPTON_W + CELL_LEPTON_W / 2, exitcell.Y * CELL_LEPTON_H + CELL_LEPTON_H / 2 + 36, 0);
-							if (passenger->RTTI == RTTI_UNIT) {
-								coord = Map[coord].Center_Coord();
-							} else {
-								coord = Map[coord].Closest_Free_Spot(coord, false, false, false);
-							}
 							ScenarioInit++;
 							passenger->IsOnBridge = IsOnBridge;
+							Coord coord = PositionCoord;
 							coord.Z = Get_Cell_Ptr()->Center_Coord().Z;
 							if (!IsSurvivorless && passenger->Unlimbo(coord, PrimaryFacing.Current().As_Dir256())) {
-								if (passenger->RTTI == RTTI_INFANTRY) {
-									InfantryClass * inf = (InfantryClass *)passenger;
-									if (!inf->CountedAsOwnedSpecial) {
-										inf->House->CurInfantry++;
-										inf->CountedAsOwnedSpecial = true;
-									}
-									inf->Absorbed = false;
+								if (!passenger->CountedAsOwnedSpecial) {
+									passenger->House->CurInfantry++;
+									passenger->CountedAsOwnedSpecial = true;
 								}
+								passenger->Absorbed = false;
 								passenger->Scatter(COORD_NONE, true, false);
 								if (!House->Is_Human_Player()) {
 									passenger->QueueMission(MISSION_HUNT, false);
 								}
 							} else {
-								passenger->Limbo();
+								passenger->RegisterDestruction(NULL);
 								delete passenger;
 							}
 							ScenarioInit--;
@@ -663,8 +699,12 @@ int BuildingClass::Do_MISSION_DECONSTRUCTION(void)
 					}
 				}
 
-				if (House->Is_Player_Control() && !IsStrange()) {	// YR (lane N4): TibSun's Considered_Vehicle is the YR tree's IsStrange (BuildingClass: Class->IsVehicle(), vtable 0x80); the tree's Considered_Vehicle is another slot (Height > -20), true for every building
+				if (House->Is_Player_Control() && !IsStrange() && !Can_Be_Undeployed()) {	// YR (lane N4): TibSun's Considered_Vehicle is the YR tree's IsStrange (BuildingClass: Class->IsVehicle(), vtable 0x80); the tree's Considered_Vehicle is another slot (Height > -20), true for every building. YR (P57): no sell sound for an undeployer (0x0044A7CF)
 					VocClass::PlayAt(Rule->SellSound, PositionCoord);	// NATIVE (lane Y11b): YR's sound call for TibSun's Sound_Effect
+				}
+				// YR (P57): 0x0044A85B: the type's PackupSound, on the building's own sound controller.
+				if (Class->PackupSound != -1) {
+					VocClass::PlayAt(Class->PackupSound, PositionCoord, &Audio7);
 				}
 				Status = DURING;
 				Begin_Mode(BSTATE_CONSTRUCTION);
@@ -681,6 +721,7 @@ int BuildingClass::Do_MISSION_DECONSTRUCTION(void)
 			break;
 
 		case DURING:
+			FUN_00750D40(PositionCoord, &Audio7);	// YR (P57): 0x00449C94, the pack-up sound follows the building
 			if (IsReadyToCommence) {
 				House->IsRecalcNeeded = true;
 				Assign_Target(NULL);
@@ -690,11 +731,7 @@ int BuildingClass::Do_MISSION_DECONSTRUCTION(void)
 				**	Construction yards that deconstruct, really just revert back
 				**	to an MCV.
 				*/
-				if (Class->UndeploysInto != NULL &&
-					(Class->IsVehicle() /* NATIVE: YR's mobile deployer test */ ||
-					/* NATIVE: TibSun's Can_Always_Undeploy (limpet mines, mobile war factory) has no YR type */
-					(Session.Type != GAME_NORMAL && ArchiveTarget != NULL && House->Is_Human_Player() && (Session.Type == GAME_NORMAL || Session.Options.MCVRedeploy)))
-				) {
+				if (Can_Be_Undeployed()) {	// YR (P57): gamemd.exe 0x00449CEA, Can_Be_Undeployed expanded (any undeployer but a construction yard; a yard only for MCV redeploy and not mind controlled)
 
 					if (Class->IsArtillary && (BarrelPitch.Current() != Class->StartPitch || PrimaryFacing.Current() != Class->StartFace)) {
 						BarrelPitch.Set_Desired(Class->StartPitch);
@@ -716,7 +753,7 @@ int BuildingClass::Do_MISSION_DECONSTRUCTION(void)
 						AbstractClass * arch = ArchiveTarget;
 
 						Coord place;
-						if (Class->IsVehicle() /* NATIVE: YR's mobile deployer test */) {
+						if (Class->Width() <= 2 && Class->Height(false) <= 2) {	// YR (P57): 0x00449E8E, a foundation up to 2x2 undeploys in place
 							place = PositionCoord;
 						} else {
 							Coord adjacent = Adjacent_Cell(PositionCoord, DIR_SE);
@@ -750,6 +787,15 @@ int BuildingClass::Do_MISSION_DECONSTRUCTION(void)
 						if (unit->Unlimbo(place, dir)) {
 							unit->Strength = (int)(unit->Class_Of()->MaxStrength * ratio);
 							unit->Strength = max(unit->Strength, 1);
+							unit->EstimatedHealth = unit->Strength;	// YR (P57): 0x0044A039
+
+							/*
+							**	YR (P57): 0x0044A03C: a deployed slave miner's slave manager (and its
+							**	slaves) goes to the undeployed miner (SlaveManagerClass::SetOwner).
+							*/
+							if (SlaveManager != NULL) {
+								SlaveManager->SetOwner(unit);
+							}
 							unit->Group = Group;
 							unit->Veterancy.Experience = Veterancy.Experience;
 
@@ -772,8 +818,22 @@ int BuildingClass::Do_MISSION_DECONSTRUCTION(void)
 								Tag = NULL;
 							}
 
+							/*
+							**	YR (P57): 0x0044A0D4: a queued voice goes with the unit, and the building's
+							**	controller lets go of it.
+							*/
+							unit->QueuedVoiceSoundController = QueuedVoiceSoundController;
+							unit->QueuedVoiceIndex = QueuedVoiceIndex;
+							unit->unknown_4F4 = unknown_4F4;
+							QueuedVoiceSoundController.SetEvent(NULL, NULL);
+							QueuedVoiceIndex = (unsigned)-1;
+							unknown_4F4 = (unsigned)-1;
+
 							if (selected) {
+								bool voice = AllowVoice;	// YR (P57): 0x0044A123, selected without a voice
+								AllowVoice = false;
 								unit->Select();
+								AllowVoice = voice;
 							}
 
 							for (i = 0; i < targetters.Count(); i++) {
@@ -791,9 +851,9 @@ int BuildingClass::Do_MISSION_DECONSTRUCTION(void)
 					} else {
 						House->Refund_Money(Refund_Amount());
 					}
-					Detach_All();
+					Detach_All(true);
+					Audio7.EndLooping();	// YR (P57): 0x0044A1C2
 					Delete_Me();
-					House->IsRecalcNeeded = true;	// NATIVE: YR rechecks power through IsRecalcNeeded (TibSun: Adjust_House_Power)
 
 				} else {
 
@@ -812,7 +872,7 @@ int BuildingClass::Do_MISSION_DECONSTRUCTION(void)
 					**	attributed to the enemy.
 					*/
 					WhoLastHurtMe = HOUSE_NONE;
-					Record_The_Kill(NULL);
+					RegisterDestruction(NULL);	// YR (P57): 0x0044A1F9, vtable 0xE0 (TibSun: Record_The_Kill)
 
 					if (LightSource != NULL) {
 						LightSource->Disable();
@@ -838,8 +898,7 @@ int BuildingClass::Do_MISSION_DECONSTRUCTION(void)
 					*/
 					Delete_Me();
 
-					House->IsRecalcNeeded = true;	// NATIVE: YR rechecks power through IsRecalcNeeded (TibSun: Adjust_House_Power)
-					if (Class->IsCloakGenerator) {
+					if (Class->IsCloakGenerator) {	// (DURING already set IsRecalcNeeded, 0x00449CB1)
 						Disable_Cloak_Generator();
 						CurrentCloakRadius = 1;
 						Cloaking_AI(true);
@@ -1099,6 +1158,25 @@ bool BuildingClass::Captured(HouseClass * newowner, bool announce)
 	IsToDisplay = true;
 	HasEngineer = true;
 
+	/*
+	**	YR (P57): gamemd.exe 0x004484B6: a tech building (NeedsEngineer) is powered on by its capture: its
+	**	light, laser fence post and powered animations come on.
+	*/
+	if (Class->NeedsEngineer) {
+		IsPoweredOn = true;
+		if (LightSource != NULL) {
+			LightSource->Enable(false);
+		}
+		if (Class->IsLaserFencePost) {
+			Toggle_Laser_Fence_Post(false);
+		}
+		for (int a = 0; a < BANIM_COUNT; a++) {
+			if (Class->AnimData[a].Powered && Anims[a] != NULL) {
+				Anims[a]->Enable();
+			}
+		}
+	}
+
 	// Cargo and docked units change sides with it; units that only touch it are sent away.
 	if (TechnoClass * passenger = (TechnoClass *)Cargo.Attached_Object()) {
 		passenger->Captured(newowner, true);
@@ -1164,12 +1242,20 @@ bool BuildingClass::Captured(HouseClass * newowner, bool announce)
 		CurrentCloakRadius = 1;
 		Cloaking_AI(true);
 	}
+	if (Class->GapGenerator) {	// YR (P57): gamemd.exe 0x00448BB7: the old owner's gap goes
+		DestroyGap();
+	}
+	vt_entry_48C(false, false, false, NULL);	// YR (P57): 0x00448BD9, ahead of the techno's capture
 
 	TechnoClass::Captured(newowner, true);
 
 	if (Class->IsCloakGenerator && IsPowerOnline()) {	// gamemd.exe 0x00448C01: vtable slot 0x350 (lane Y14)
 		Enable_Cloak_Generator();
 	}
+	if (Class->GapGenerator && IsPowerOnline()) {	// YR (P57): 0x00448C3E: the new owner's gap
+		CreateGap();
+	}
+	FUN_00448070(false);	// YR (P57): 0x00448C69, the factory's primary flag dropped for its old owner
 	oldowner->ToCapture = this;
 	oldowner->Recalc_Center();
 	House->Recalc_Center();
@@ -1204,12 +1290,28 @@ bool BuildingClass::Captured(HouseClass * newowner, bool announce)
 		Init_Laser_Fence_Frame();
 	}
 	if (House->Is_Player_Control()) {
+		UpdateSight(false, false, false, NULL, 0);	// YR (P57): 0x00448D83, the new owner sees from it
 		Map.Flag_To_Redraw(GS_REDRAW_TACTICAL);
 	}
 	if (SpiedBy & (1 << newowner->Class->House)) {
 		SpiedBy &= ~(1 << newowner->Class->House);
 	}
 	Update_Anim_Appearance();
+
+	/*
+	**	YR (P57): gamemd.exe 0x004491D5-0x0044924B: the new owner gains what the old one lost above (ore
+	**	purifier, self-healing, helipad docks), and both houses' factories of the type are rechecked
+	**	(0x00449251: HouseClass::Update_Factories, 0x00509140).
+	*/
+	if (Class->OrePurifier) House->NumOrePurifiers++;
+	if (Class->InfantryGainSelfHeal) House->InfantrySelfHeal += Class->InfantryGainSelfHeal;
+	if (Class->UnitsGainSelfHeal) House->UnitsSelfHeal += Class->UnitsGainSelfHeal;
+	if (Class->IsHelipad) House->AirportDocks += Class->NumberOfDocks;
+	if (Class->ToBuild != RTTI_NONE) {
+		oldowner->Update_Factories(Class->ToBuild, Class->Naval, 0);
+		newowner->Update_Factories(Class->ToBuild, Class->Naval, 0);
+	}
+
 	for (int d = 0; d < docked_count; d++) {
 		Transmit_Message(RADIO_HELLO, docked[d].Contact);
 		if (docked[d].WasTethered) {
@@ -1217,6 +1319,22 @@ bool BuildingClass::Captured(HouseClass * newowner, bool announce)
 			docked[d].Contact->IsTethered = true;
 		}
 	}
+
+	/*
+	**	YR (P57): gamemd.exe 0x004492D7: in a multiplayer game a computer house that captures another
+	**	player's building (not a neutral one) sells it at once, its upgrades refunded first.
+	*/
+	if (Session.Type != GAME_NORMAL && !newowner->Is_Human_Player() && InitialOwner != newowner
+		&& !InitialOwner->Class->IsMultiplayPassive) {
+		while (UpgradeLevel > 0) {
+			House->Refund_Money(Upgrades[UpgradeLevel - 1]->GetRefund(House, true));
+			Remove_Upgrade();
+			House->RecalcPower = true;
+			House->RecalcRadar = true;
+		}
+		Sell_Back(1);
+	}
+
 	oldowner->IsRecalcNeeded = true;
 	newowner->IsRecalcNeeded = true;
 	return(true);

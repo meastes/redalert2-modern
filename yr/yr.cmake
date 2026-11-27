@@ -453,6 +453,13 @@ add_test(NAME yr-native-tank-bunker COMMAND "${Python3_EXECUTABLE}" -B "${CMAKE_
          --work "${CMAKE_CURRENT_BINARY_DIR}/yr-tank-bunker")
 set_tests_properties(yr-native-tank-bunker PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 300)
 
+# ctest yr-native-slave-miner (lane P57): a deployed Slave Miner sold with its slaves out undeploys into the vehicle, which
+# takes over the slave manager and slaves (Do_MISSION_DECONSTRUCTION's SetOwner, gamemd.exe 0x0044A03C; yr/tests/yr_slave_miner.py)
+add_test(NAME yr-native-slave-miner COMMAND "${Python3_EXECUTABLE}" -B "${CMAKE_CURRENT_SOURCE_DIR}/yr/tests/yr_slave_miner.py"
+         --binary $<TARGET_FILE:yr-native> --data-dir "${RA2_NATIVE_YR_DATA_DIR}"
+         --work "${CMAKE_CURRENT_BINARY_DIR}/yr-slave-miner")
+set_tests_properties(yr-native-slave-miner PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 300)
+
 # ctest yr-native-mirage (lane N4): a Mirage tank's camouflage draws as a tree in the tree's colours (Techno_Draw_Object's
 # disguise converter; yr/tests/yr_mirage.py)
 add_test(NAME yr-native-mirage COMMAND "${Python3_EXECUTABLE}" -B "${CMAKE_CURRENT_SOURCE_DIR}/yr/tests/yr_mirage.py"
