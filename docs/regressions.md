@@ -185,7 +185,7 @@ final check.
 | Soviet 4 (SOV04S): base built and placed through the sidebar, flak, subs against the fleet, Rhinos massed, the Korean base's construction yard first | won at tick 47,420, about 760 inputs (most of them placement attempts) | ra2-native-campaign-won-sov04 |
 | Allied 2 (ALL02S, lane P22): Tanya on the flak cannons, the Academy taken, rocketeers and Grizzlies through the Soviet base | won at tick 30,335 | ra2-native-campaign-won-all02 |
 | Soviet 1 (SOV01T, lane P22): the bridge repaired, conscripts massed by attack move, the Pentagon's four parts | won at tick 49,448 | ra2-native-campaign-won-sov01 |
-| Soviet 3 (SOV03T, lane P22): derricks, Rhinos, an engineer into the battle lab, the beacon held | won at tick 54,669 | ra2-native-campaign-won-sov03 |
+| Soviet 3 (SOV03T, lane P22): derricks, Rhinos, an engineer into the battle lab, the beacon held | won at tick 64,333 (re-recorded by lane P67 with the frame clock after BuildingClass::Take_Damage became exact: the recording's commands to 54,647, then the lab taken and the beacon held; 54,669 before) | ra2-native-campaign-won-sov03 |
 | Allied 3 (ALL03U, lanes P22 and P23): GIs in the bridge houses, Grizzlies massed at home, walked round the Soviet base in short legs, the beacon force-fired by its cell | won at tick 39,041 | ra2-native-campaign-won-all03 |
 | Allied 4 (ALL04U, lane P23): rocketeers on the grand cannons, the MCV landed and guarded, ten destroyers up the river, the amplifier force-fired | won at tick 32,994 | ra2-native-campaign-won-all04 |
 | Allied 5 (ALL05S, lane P23): Tanya and spies, coils by barrels and C4 during spy power outages, the battle lab spied, both silos C4'd | won at tick 22,647 | ra2-native-campaign-won-all05 |
@@ -193,8 +193,8 @@ final check.
 | Soviet 6 (SOV06T, lane P24): base with two tesla coils against the Grizzly landings, submarines and scorpions, the Korean fleet sunk off the base, twenty submarines into Pearl Harbor | won at tick 30,688 (re-recorded by lane P59 with the frame clock, the same commands, after the radial fan went back to pi/segments; 30,200 before) | ra2-native-campaign-won-sov06 |
 | Allied 10 (ALL10S, lane P25): the MCV by Einstein's lab, refineries, a battle lab and a second war factory on legal origins, prism tanks by short sieges on the three Soviet bases in turn | won at tick 42,660 | ra2-native-campaign-won-all10 |
 | Soviet 9 (SOV09U, lane P25): psi troopers on a GI, the engineers (barracks and battle lab), the sniper and the Grizzly in the Light Blue compound; the sniper on the west gate's seals and dogs, a spy into a power plant, the psi trooper on the President | won at tick 27,285 | ra2-native-campaign-won-sov09 |
-| Soviet 11 (SOV11S, lane P25): the two starting Kirovs round the map's south-west and north-west edges onto the Kremlin | won at tick 35,900 | ra2-native-campaign-won-sov11 |
-| Soviet 12 (SOV12S, lane P26): two refineries and tesla coils against the scripted chrono attacks (Rhinos on the seals' landing craft), a battle lab, eight Kirovs round the south coast to a stage out of the patriots' reach, the Iron Curtain on them eleven cells out, the chronosphere bombed | won at tick 64,413 (re-recorded by lane P59 with the frame clock, the same commands, after the radial fan went back to pi/segments; 64,411 before) | ra2-native-campaign-won-sov12 |
+| Soviet 11 (SOV11S, lane P25): the two starting Kirovs round the map's south-west and north-west edges onto the Kremlin | won at tick 35,900 (re-recorded by lane P67 with the frame clock: the off-view waypoint @=22,82 is @=27,82, in view) | ra2-native-campaign-won-sov11 |
+| Soviet 12 (SOV12S, lane P26): two refineries and tesla coils against the scripted chrono attacks (Rhinos on the seals' landing craft), a battle lab, eight Kirovs round the south coast to a stage out of the patriots' reach, the Iron Curtain on them eleven cells out, the chronosphere bombed | won at tick 79,289 (re-recorded by lane P67 after BuildingClass::Take_Damage became exact: the recording's commands to 63,618, then the Kirovs flown again; 64,413 before, re-recorded by lane P59 from 64,411) | ra2-native-campaign-won-sov12 |
 | Soviet 2 (SOV02T, lanes P22 and P27): the German refineries by their barrels, a base with two sentry guns by the ore, both derricks taken (the alligators shot first), the Allied base razed by Rhinos (its fire sale ends it), the land mopped up, a naval yard as bait: the last four destroyers came into the bay and died to submarines and Rhinos on the shore | won at tick 46,156 | ra2-native-campaign-won-sov02 |
 | Soviet 5 (SOV05U, lanes P22 and P27): conscripts and the starting tesla troopers along the west road, the barrel clusters by the Allied posts shot from four cells, the derrick taken, tesla troopers bought (each becomes Other3's, a house the player commands) and walked round the GI nests, Ivans' bombs on the tower's pillbox, a home guard of conscripts, the tesla troopers into the Paris Tower, which then kills every Allied unit | won at tick 51,032 | ra2-native-campaign-won-sov05 |
 | Soviet 7 (SOV07S, lanes P23 and P27): refinery, radar, coils, a war factory and Apocalypse tanks; the six prism tanks met before they reach the construction yard, flak round the lab, sixteen tanks parked round the lab against engineers and spies through the last wave, then a hunt | won at tick 42,844 | ra2-native-campaign-won-sov07 |
@@ -272,9 +272,9 @@ bar) still wins at 64,413; **Soviet 11 no longer wins**: its click at @=22,82 (t
 8,000 ticks) resolves 120 pixels left of the view, off the window, and that click was part of the win (it wins without
 the rule at 35,900). It needs re-recording (or the point given another way); ra2-native-campaign-won-sov11 fails until then.
 
-## Lane P65 (work in progress, branch fix-p65-pin): re-pin to 782562d93c; behaviour rows on exact code (2026-11-27)
+## Lane P65: re-pin to 782562d93c; behaviour rows on exact code (2026-11-27; finished by lane P67, below)
 
-NOT MERGED. At the new pin three won replays fail and the shell menus crash: Soviet 3 diverges at game frame 35,813
+As lane P65 left it (lane P67 moved the pin on to b106008ae4 and fixed the failures). At that pin three won replays fail and the shell menus crash: Soviet 3 diverges at game frame 35,813
 (BuildingClass::Take_Damage is exact now: its run-away test sends the refinery's docked chrono miner off while
 unloading, where the old draft kept it; the recording then never wins, even advanced 24,000 ticks past its end), Soviet 12
 (wins on the old pin under the off-view rule, so a pin change too, not traced), and the new parked Combo_Proc draft
@@ -293,6 +293,21 @@ fields are named), lane P28's cut rows that replaced the exact AlphaShapeClass::
 by glue drafts (now the exact text with a pointer-width row, a missing-image guard and the Enhancements button's two
 rows), and glue/tactical_native.inc (a dead copy of the now exact Building_Player_Detector_Covers_Target). Kept on
 purpose: the load dialog shown again after a load error (P12-loaderr; the original hides it).
+
+## Lane P67: re-pin to b106008ae4; P65's failures fixed (2026-11-27)
+
+vendor/ra2-rebuild moved on to redalert2-decomp b106008ae4 (15 commits past P65's 782562d93c): BuildingClass::Exit_Object
+is exact there (no ra2/fixups.json row or glue touches it); MapClass::Mark_Fill_Area, Generate_Vegetation and three guard
+notes are re-spellings. P65's classification re-run for the newly exact target: nothing to remove.
+
+| Found | Effect | Status |
+| --- | --- | --- |
+| The parked Combo_Proc draft (rewritten from ra2-decomp's bank at 782562d93c) kept the open drop list's window in WinData's int IsEditFocus (+0xF4) and read it back as an HWND to close it; its paint of a drop-down list kept CB_GETITEMDATA's answer (a TextNode pointer) in an int | signal 11 in Combo_Proc, fault addresses 0xffffffffabe4d310 and, with the first row alone, 0xffffffffe3def350 at Combo_Proc+3796 (the pointer cut to 32 bits and sign-extended): ra2-main-shell-options, ra2-native-skirmish, ra2-main-zoom-menu, ra2-main-zoom-menu-ui | **fixed**: three ra2/fixups.json rows keep both at pointer width (IsEditFocus intptr_t, its store, the paint's item LRESULT), as lane P7's ItemState row and YR's lane P66 row. A -Wpointer-to-int-cast/-Wint-to-pointer-cast/-Wshorten-64-to-32 diff of every generated unit against the old pin (66bccbbfdd) found no other new cut (the new key casts in ownrdraw.cpp are Control_Table keys only) |
+| Soviet 3 no longer won (diverged at game frame 35,813) | BuildingClass::Take_Damage is exact: at RESULT_MAJOR with BuildingRunAwayOnDamage a refinery sends its docked miner off (RADIO_RUN_AWAY) before it unloads, where the old draft kept it; the game is the original's | **re-recorded** (exact code is the original's behaviour): the recording's own commands to tick 54,647 with the frame clock, then played on (lab not yet taken, BadGuy1's new war factory by it): the war factory and IFVs killed, the four engineers and the flak troopers walked up, an engineer into the battle lab (59,719), the psychic beacon held. Won at 64,333 |
+| Soviet 12 no longer won (traced: the old and new pins stepped side by side through the step server) | the same run-away: at tick about 10,020 the refinery at 166,105 (129 of 1,000) reaches major damage and the docked miner is sent off unloaded (2,000 credits fewer, miner mission HARVEST against UNLOAD); later the recording's Kirov selection by object id picks nothing | **re-recorded**: the recording's commands to 63,618, then the nine Kirovs flown 160,145 ... 95,162, 82,152, 76,142, the Iron Curtain at 77,143, the chronosphere bombed. Won at 79,289 |
+| Soviet 11 no longer won (lane P65's off-view rule) | its waypoint click @=22,82 resolved 120 pixels left of the view | **re-recorded** with the frame clock: @=27,82, the nearest in-view point, every other command the same. Won at 35,900 |
+
+Re-recorded saves: the decompilation repository's private/campaign_saves/sov03/, sov11/ and sov12/p67/.
 
 ## Lane P50: Yuri's Revenge missions played to a real win through its step server (2026-11-27)
 

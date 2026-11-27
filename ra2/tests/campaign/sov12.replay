@@ -1,6 +1,11 @@
 # Soviet 12 (SOV12S, Polar Storm) won by lane P26 through the step server; re-recorded by lane P59 with the frame clock after
 # Fire_At's radial fan went back to the original's pi/segments (game.exe 0x0079D158 holds pi): the same commands, won at
 # tick 64,413 (64,411 under the port's former 2*pi).
+# Re-recorded by lane P67 after BuildingClass::Take_Damage became exact: at tick about 10,020 the damaged refinery at
+# 166,105 falls to major damage and its run-away test (BuildingRunAwayOnDamage) sends the docked miner off before it
+# unloads (2,000 credits fewer), and the recording's Kirov selection (by object ids) then picks nothing. The recording's
+# own commands to tick 63,618, then played on: the nine Kirovs at home flown 160,145, 150,158, 135,170, 110,170, 95,162,
+# 82,152 to 76,142, the Iron Curtain on them at 77,143, a force fire at 70,131 and the attack on the chronosphere.
 # SOV12S.MAP: ticks are loop frames from the scenario's first
 # frame clock: the game's clock advances 16 ms a loop frame
 0 input move @tab=0
@@ -2452,4 +2457,107 @@
 63618 input move @^1032530
 63618 input +2 ldown @^1032530
 63618 input +6 lup @^1032530
-64413 # game over: won
+63619 save S12P67A.SAV
+63619 input move 428 368
+63619 input +2 rdown 428 368
+63619 input +6 rup 428 368
+63631 look 179 108
+63634 input move @^1040537
+63634 input +2 ldown @^1040537
+63634 input +6 lup @^1040537
+63644 input keydown Left_Shift
+63645 look 179 109
+63648 input move @^1041756
+63648 input +2 ldown @^1041756
+63648 input +6 lup @^1041756
+63658 look 180 109
+63661 input move @^1042600
+63661 input +2 ldown @^1042600
+63661 input +6 lup @^1042600
+63671 look 179 107
+63674 input move @^1043574
+63674 input +2 ldown @^1043574
+63674 input +6 lup @^1043574
+63684 look 178 109
+63687 input move @^1047185
+63687 input +2 ldown @^1047185
+63687 input +6 lup @^1047185
+63697 look 180 108
+63700 input move @^1048455
+63700 input +2 ldown @^1048455
+63700 input +6 lup @^1048455
+63710 look 178 106
+63713 input move @^1049409
+63713 input +2 ldown @^1049409
+63713 input +6 lup @^1049409
+63723 look 180 107
+63726 input move @^1050298
+63726 input +2 ldown @^1050298
+63726 input +6 lup @^1050298
+63736 look 178 108
+63739 input move @^1051513
+63739 input +2 ldown @^1051513
+63739 input +6 lup @^1051513
+63749 input keyup Left_Shift
+63751 input keydown Left_Ctrl
+63752 input key 8
+63754 input keyup Left_Ctrl
+63756 input key 8
+63758 look 160 145
+63761 input move @=160,145
+63761 input +2 ldown @=160,145
+63761 input +6 lup @=160,145
+66171 input key 8
+66173 look 150 158
+66176 input move @=150,158
+66176 input +2 ldown @=150,158
+66176 input +6 lup @=150,158
+66986 input key 8
+66988 look 135 170
+66991 input move @=135,170
+66991 input +2 ldown @=135,170
+66991 input +6 lup @=135,170
+68001 input key 8
+68003 look 110 170
+68006 input move @=110,170
+68006 input +2 ldown @=110,170
+68006 input +6 lup @=110,170
+76016 input key 8
+76018 look 95 162
+76021 input move @=95,162
+76021 input +2 ldown @=95,162
+76021 input +6 lup @=95,162
+77031 save S12P67B.SAV
+77032 input key 8
+77034 look 82 152
+77037 input move @=82,152
+77037 input +2 ldown @=82,152
+77037 input +6 lup @=82,152
+77707 input key 8
+77709 look 76 142
+77712 input move @=76,142
+77712 input +2 ldown @=76,142
+77712 input +6 lup @=76,142
+78262 input move @tab=1
+78262 input +2 ldown @tab=1
+78262 input +6 lup @tab=1
+78272 input move @cameo=IronCurtainSpecial
+78272 input +2 ldown @cameo=IronCurtainSpecial
+78272 input +6 lup @cameo=IronCurtainSpecial
+78282 look 77 143
+78285 input move @=77,143
+78285 input +2 ldown @=77,143
+78285 input +6 lup @=77,143
+78295 input key 8
+78297 input keydown Left_Ctrl
+78298 look 70 131
+78301 input move @=70,131
+78301 input +2 ldown @=70,131
+78301 input +6 lup @=70,131
+78311 input keyup Left_Ctrl
+78353 input key 8
+78355 look 70 130
+78358 input move @^1032530
+78358 input +2 ldown @^1032530
+78358 input +6 lup @^1032530
+79289 # game over: won
