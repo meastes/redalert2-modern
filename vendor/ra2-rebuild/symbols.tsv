@@ -1816,6 +1816,7 @@ region	0x0043FD30	?Active_Click_With@BuildingClass@@UAE_NW4ActionType@@PAVObject
 region	0x0043FFE0	?Active_Click_With@BuildingClass@@UAE_NW4ActionType@@ABVCell@@1_N@Z	rebuild-building	src/building.cpp
 region	0x00440140	?Assign_Rally_Point@BuildingClass@@QAEXABVCell@@_N@Z	rebuild-building	src/building.cpp
 region	0x00440450	?Assign_Target@BuildingClass@@UAEXPAVAbstractClass@@@Z	rebuild-building	src/building.cpp
+region	0x00440520	?Exit_Object@BuildingClass@@UAEHPAVTechnoClass@@@Z	rebuild-building	src/building.cpp
 region	0x00441EB0	?Update_Buildables@BuildingClass@@UAEXXZ	rebuild-building	src/building.cpp
 region	0x00442060	?Limbo@BuildingClass@@UAE_NXZ	rebuild-building	src/building.cpp
 region	0x004425A0	?Turret_Facing@BuildingClass@@UBE?AVDirType@@XZ	rebuild-building	src/building.cpp
@@ -1959,7 +1960,7 @@ region	0x00451860	?Radar_Untrack@BuildingClass@@UAEXXZ	rebuild-building	src/buil
 region	0x004518C0	?Plot_On_Radar@BuildingClass@@UBEXXZ	rebuild-building	src/building.cpp
 region	0x00451930	?GetRadialIndicatorRange@BuildingClass@@QBEHXZ	rebuild-building	src/building.cpp
 region	0x004519D0	?Draw_Radial_Indicator@BuildingClass@@UAEXK@Z	rebuild-building	src/building.cpp
-region	0x00451BE0	_$E309	rebuild-building	src/building.cpp
+region	0x00451BE0	_$E311	rebuild-building	src/building.cpp
 region	0x00451BF0	?Draw_Radial_Ellipse@@YIXI_NVCoord@@VRGBClass@@00@Z	rebuild-building	src/building.cpp
 region	0x00452060	?Clicked_As_Target@BuildingClass@@UAEXH@Z	rebuild-building	src/building.cpp
 region	0x004521B0	?Apparent_Brightness@BuildingClass@@UBEHH@Z	rebuild-building	src/building.cpp
@@ -23886,14 +23887,37 @@ ref	0x004F52B0	?Is_Player_Control@HouseClass@@QBE_NXZ	rebuild-building
 ref	0x007CF810	??_C@_0BN@CMFF@EVA_NewRallyPointEstablished?$AA@	rebuild-building
 ref	0x00715B40	?Queue_Speech@@YIXPBDHH@Z	rebuild-building
 ref	0x006C9AF0	?Assign_Target@TechnoClass@@UAEXPAVAbstractClass@@@Z	rebuild-building
+ref	0x004F3720	?Update_Production_Mode@HouseClass@@QAEXW4RTTIType@@@Z	rebuild-building
+ref	0x0051FC80	?Ion_Sensitives_Should_Be_Offline@HouseClass@@QAE_NXZ	rebuild-building
+ref	0x006CF130	?Nearby_Location@TechnoClass@@QBE?AVCell@@PBV1@@Z	rebuild-building
+ref	0x005D4920	?Set_Height@ObjectClass@@QAEXH@Z	rebuild-building
+ref	0x00417890	?Pose_Dir@AircraftClass@@QBE?AW4Dir256@@XZ	rebuild-building
+ref	0x00636EA0	?HasFreeLink@RadioClass@@QBE_NXZ	rebuild-building
+ref	0x00636F10	?HasAnyLink@RadioClass@@QBE_NXZ	rebuild-building
+ref	0x00851A70	?AdjacentCell@@3QBVCell@@B	rebuild-building
+ref	0x00471660	?Cell_Techno@CellClass@@QBEPAVTechnoClass@@ABVPoint2D@@_NPBV2@@Z	rebuild-building
+ref	0x0055A660	?In_Local_Radar@MapClass@@QBE_NABVCell@@_N@Z	rebuild-building
+ref	0x006D6E50	?Assign_Archive_Target@TechnoClass@@QAEXPAVAbstractClass@@@Z	rebuild-building
+ref	0x004EB270	?Where_To_Go@HouseClass@@QBE?AVCell@@PBVFootClass@@@Z	rebuild-building
+ref	0x004C8BB0	?Queue_Navigation_List@FootClass@@QAEXPAVAbstractClass@@@Z	rebuild-building
+ref	0x004B8B10	?Set@FacingClass@@QAE_NABVDirType@@@Z	rebuild-building
+ref	0x0042C3A0	?Next_Buildable@BaseClass@@QAEPAVBaseNodeClass@@W4StructType@@@Z	rebuild-building
+ref	0x004F5320	?Can_Build_Here@HouseClass@@QAE_NPAVBuildingTypeClass@@ABVCell@@@Z	rebuild-building
+ref	0x004F0290	?Base_Cell_Weight_By_Distance@HouseClass@@SIHABV1@ABVCell@@HH@Z	rebuild-building
+ref	0x004F03C0	?Where_To_Place_Building@HouseClass@@QAE?AVCell@@PAVBuildingTypeClass@@P6IHABV1@ABV2@HH@ZH@Z	rebuild-building
+ref	0x004F0E30	?Where_To_Place_Upgrade@HouseClass@@QBE?AVCell@@PBVBuildingTypeClass@@@Z	rebuild-building
+ref	0x00458B10	?Flush_For_Placement@BuildingTypeClass@@QBEHABVCell@@PAVHouseClass@@@Z	rebuild-building
+ref	0x0042CB70	?Failed_To_Place_Node@BaseClass@@QAEHPAVBaseNodeClass@@@Z	rebuild-building
+ref	0x0056A480	?Place_Firestorm_Wall@MapClass@@QAEXABVCell@@PAVHouseClass@@PAVBuildingTypeClass@@@Z	rebuild-building
+ref	0x0056A660	?Place_Wall@MapClass@@QAEXABVCell@@PAVHouseClass@@PAVBuildingTypeClass@@@Z	rebuild-building
 ref	0x00A35CD8	?BuildingTypes@@3V?$DynamicVectorClass@PAVBuildingTypeClass@@@@A	rebuild-building
+ref	0x0042C3D0	?Next_Buildable_Index@BaseClass@@QAEHW4StructType@@@Z	rebuild-building
 ref	0x004E3660	?Can_Build@HouseClass@@QBEHPBVObjectTypeClass@@_N1@Z	rebuild-building
 ref	0x0067C530	?Add@SidebarClass@@QAE_NW4RTTIType@@H@Z	rebuild-building
 ref	0x00A35D48	?UnitTypes@@3V?$DynamicVectorClass@PAVUnitTypeClass@@@@A	rebuild-building
 ref	0x00A40350	?InfantryTypes@@3V?$DynamicVectorClass@PAVInfantryTypeClass@@@@A	rebuild-building
 ref	0x00A3D278	?AircraftTypes@@3V?$DynamicVectorClass@PAVAircraftTypeClass@@@@A	rebuild-building
 ref	0x004513B0	?Release_Base_Area@BuildingClass@@QAEXXZ	rebuild-building
-ref	0x00851A70	?AdjacentCell@@3QBVCell@@B	rebuild-building
 ref	0x00475FE0	?Reduce_Wall@CellClass@@QAEHH@Z	rebuild-building
 ref	0x004EABA0	?Active_Remove@HouseClass@@QAEXPBVTechnoClass@@@Z	rebuild-building
 ref	0x004F3F40	?Invalidate_Base_Node_Position@HouseClass@@QAEXPAVBuildingClass@@@Z	rebuild-building
@@ -23910,7 +23934,6 @@ ref	0x007CF84C	??_C@_0BH@JDOJ@EVA_WeatherDeviceReady?$AA@	rebuild-building
 ref	0x007CF830	??_C@_0BJ@BJBE@EVA_ChronosphereDetected?$AA@	rebuild-building
 ref	0x006FA400	??0UnitClass@@QAE@PBVUnitTypeClass@@PAVHouseClass@@@Z	rebuild-building
 ref	0x00413A40	??0AircraftClass@@QAE@PBVAircraftTypeClass@@PAVHouseClass@@@Z	rebuild-building
-ref	0x00417890	?Pose_Dir@AircraftClass@@QBE?AW4Dir256@@XZ	rebuild-building
 ref	0x007CF894	??_C@_0O@MHGH@EVA_Repairing?$AA@	rebuild-building
 ref	0x00713DB0	?PlayGlobal@VocClass@@SIPAXHMHPAUAudioController@@@Z	rebuild-building
 ref	0x006CC5D0	?What_Action@TechnoClass@@UBE?AW4ActionType@@PBVObjectClass@@_N@Z	rebuild-building
@@ -23938,15 +23961,12 @@ ref	0x0044D2D0	?Set_Anim_Translucency@BuildingClass@@QAEXH@Z	rebuild-building
 ref	0x0044C860	?Remove_Upgrade@BuildingClass@@QAE_NXZ	rebuild-building
 ref	0x0079D0F0	??_7?$VectorClass@PAVReestablish@@@@6B@	rebuild-building
 ref	0x005D5450	?Sort_Y@ObjectClass@@UBEHXZ	rebuild-building
-ref	0x00471660	?Cell_Techno@CellClass@@QBEPAVTechnoClass@@ABVPoint2D@@_NPBV2@@Z	rebuild-building
 ref	0x007CF99C	??_C@_0CG@NOKL@Weapons?5factory?5clearing?5?$CFs?5from@	rebuild-building
 ref	0x00476920	?Incoming@CellClass@@QAEXABVCoord@@_N11@Z	rebuild-building
 ref	0x007CF970	??_C@_0CL@MDJM@Weapons?5factory?5clearing?5?$CFs?5from@	rebuild-building
 ref	0x005950D0	?Current_Mission_Control@MissionClass@@QBEABVMissionControlClass@@XZ	rebuild-building
 ref	0x0079B608	__real@8@4008e100000000000000	rebuild-building
 ref	0x004454B0	?Clear_Weapons_Factory_Bib@BuildingClass@@QAE_NXZ	rebuild-building
-ref	0x00636F10	?HasAnyLink@RadioClass@@QBE_NXZ	rebuild-building
-ref	0x004B8B10	?Set@FacingClass@@QAE_NABVDirType@@@Z	rebuild-building
 ref	0x007CF9D4	??_C@_0BC@LGBI@EVA_StructureSold?$AA@	rebuild-building
 ref	0x00851AC0	?AdjacentPoint@@3QBVPoint2D@@B	rebuild-building
 ref	0x00A40C20	?Technos@@3V?$DynamicVectorClass@PAVTechnoClass@@@@A	rebuild-building
@@ -23966,11 +23986,9 @@ ref	0x004689F0	?Detach_Object@CargoClass@@QAEPAVFootClass@@XZ	rebuild-building
 ref	0x00713400	?Is_Dumbass@VeterancyClass@@QBE_NXZ	rebuild-building
 ref	0x00713520	?Set_Veteran@VeterancyClass@@QAEX_N@Z	rebuild-building
 ref	0x00713550	?Set_Elite@VeterancyClass@@QAEX_N@Z	rebuild-building
-ref	0x006D6E50	?Assign_Archive_Target@TechnoClass@@QAEXPAVAbstractClass@@@Z	rebuild-building
 ref	0x007CF9E8	??_C@_0BG@DIHB@EVA_InsufficientFunds?$AA@	rebuild-building
 ref	0x00795940	?_com_issue_error@@YGXJ@Z	rebuild-building
 ref	0x004CD9B0	?Abort_Motion@FootClass@@QAEXXZ	rebuild-building
-ref	0x0051FC80	?Ion_Sensitives_Should_Be_Offline@HouseClass@@QAE_NXZ	rebuild-building
 ref	0x00454BF0	?_QueryInterface@?$_com_ptr_t@V?$_com_IIID@UIPersist@@$1?_GUID_0000010c_0000_0000_c000_000000000046@@3U__s_GUID@@A@@@@AAEJABV?$_com_ptr_t@V?$_com_IIID@UILocomotion@@$1?_GUID_070f3290_9841_11d1_b709_00a024ddafd1@@3U__s_GUID@@A@@@@@Z	rebuild-building
 ref	0x007A1F80	_CLSID_HoverLocomotion	rebuild-building
 ref	0x007A1FF0	_CLSID_ShipLocomotion	rebuild-building
@@ -24008,7 +24026,6 @@ ref	0x0044CCE0	?Detach_Anim@BuildingClass@@QAEXPAVAnimClass@@@Z	rebuild-building
 ref	0x006D30B0	?Crew_Type@TechnoClass@@UBEPBVInfantryTypeClass@@XZ	rebuild-building
 ref	0x004E64F0	?Abandon_Production@HouseClass@@QAE?AW4ProdFailType@@W4RTTIType@@H_N@Z	rebuild-building
 ref	0x005D3C10	?Detach_All@ObjectClass@@UAEX_N@Z	rebuild-building
-ref	0x00458B10	?Flush_For_Placement@BuildingTypeClass@@QBEHABVCell@@PAVHouseClass@@@Z	rebuild-building
 ref	0x0054AAB0	?In_Radar@MapClass@@QBE_NABVCell@@@Z	rebuild-building
 ref	0x0079CB88	?INI_NAME@BuildingClass@@0QBDB	rebuild-building
 ref	0x0050CB00	?Entry_Count@INIClass@@QBEHPBD@Z	rebuild-building
@@ -24093,7 +24110,7 @@ ref	0x0047C380	?Disguise_Sensed_By@CellClass@@QAEXW4HousesType@@@Z	rebuild-build
 ref	0x00450CB0	?Crossing_Firestorm@BuildingClass@@QAE_NPAVObjectClass@@_N@Z	rebuild-building
 ref	0x0045E290	?Get_Draw_Rect@BuildingTypeClass@@QAE?AV?$TRect@H@@XZ	rebuild-building
 ref	0x006D48E0	?Assign_Destination@TechnoClass@@UAEXPAVAbstractClass@@_N@Z	rebuild-building
-ref	0x0084ED48	_?$S307@?1??Find_Unit_Repair_Facility@@YIPAVBuildingClass@@PAVHouseClass@@PAVTechnoClass@@@Z@4EA	rebuild-building
+ref	0x0084ED48	_?$S309@?1??Find_Unit_Repair_Facility@@YIPAVBuildingClass@@PAVHouseClass@@PAVTechnoClass@@@Z@4EA	rebuild-building
 ref	0x0079D150	__real@8@4003a000000000000000	rebuild-building
 ref	0x0084ECEC	_?max_dist@?1??Find_Unit_Repair_Facility@@YIPAVBuildingClass@@PAVHouseClass@@PAVTechnoClass@@@Z@4HA	rebuild-building
 ref	0x0047BFA0	?Occupation_Mask@CellClass@@QBEHW4HousesType@@@Z	rebuild-building
@@ -24104,8 +24121,8 @@ ref	0x00632620	?Radar_Pixel@RadarClass@@QAEXABVPoint2D@@@Z	rebuild-building
 ref	0x006D85A0	?GetTurretWeapon@TechnoClass@@UBEPBUWeaponDataStruct@@XZ	rebuild-building
 ref	0x006D8640	?Is_Weapon_Valid@TechnoClass@@QBE_NPBUWeaponDataStruct@@@Z	rebuild-building
 ref	0x00451930	?GetRadialIndicatorRange@BuildingClass@@QBEHXZ	rebuild-building
-ref	0x0084ECE8	_?$S308@?7??Draw_Radial_Indicator@BuildingClass@@UAEXK@Z@4EA	rebuild-building
-ref	0x00451BE0	_$E309	rebuild-building
+ref	0x0084ECE8	_?$S310@?7??Draw_Radial_Indicator@BuildingClass@@UAEXK@Z@4EA	rebuild-building
+ref	0x00451BE0	_$E311	rebuild-building
 ref	0x0084ECF8	_?white@?7??Draw_Radial_Indicator@BuildingClass@@UAEXK@Z@4VRGBClass@@A	rebuild-building
 ref	0x0078298A	_atexit	rebuild-building
 ref	0x0063CF20	?Adjust@RGBClass@@QAEXHABV1@@Z	rebuild-building
@@ -24328,7 +24345,6 @@ ref	0x006C2520	?Hidden@TechnoClass@@UAEXXZ	rebuild-building
 ref	0x006C2C40	?Draw_Post_Render@TechnoClass@@UBEXABVPoint2D@@ABV?$TRect@H@@@Z	rebuild-building
 ref	0x006C3B30	?Draw_Pre_Render@TechnoClass@@UBEXABVPoint2D@@ABV?$TRect@H@@@Z	rebuild-building
 ref	0x005D4470	?Occupy_List@ObjectClass@@UBEPBVCell@@_N@Z	rebuild-building
-ref	0x00440520	?Exit_Object@BuildingClass@@UAEHPAVTechnoClass@@@Z	rebuild-building
 ref	0x006CF3B0	?Do_Shimmer@TechnoClass@@UAEXXZ	rebuild-building
 ref	0x005D4E90	?Delete_Me@ObjectClass@@UAEXXZ	rebuild-building
 ref	0x005D2AC0	?Fall_From_Height@ObjectClass@@UAEXXZ	rebuild-building
@@ -24419,6 +24435,7 @@ ref	0x0040BB70	??_G?$VectorClass@PAVTechnoClass@@@@UAEPAXI@Z	rebuild-building
 ref	0x0043FD30	?Active_Click_With@BuildingClass@@UAE_NW4ActionType@@PAVObjectClass@@_N@Z	rebuild-building
 ref	0x0043FFE0	?Active_Click_With@BuildingClass@@UAE_NW4ActionType@@ABVCell@@1_N@Z	rebuild-building
 ref	0x00440450	?Assign_Target@BuildingClass@@UAEXPAVAbstractClass@@@Z	rebuild-building
+ref	0x00440520	?Exit_Object@BuildingClass@@UAEHPAVTechnoClass@@@Z	rebuild-building
 ref	0x00441EB0	?Update_Buildables@BuildingClass@@UAEXXZ	rebuild-building
 ref	0x004425A0	?Turret_Facing@BuildingClass@@UBE?AVDirType@@XZ	rebuild-building
 ref	0x00442650	?Greatest_Threat@BuildingClass@@UBEPAVAbstractClass@@W4ThreatType@@ABVCoord@@_N@Z	rebuild-building

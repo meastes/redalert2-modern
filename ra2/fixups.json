@@ -1887,6 +1887,24 @@
    "why": "Lane P12 (as the row above, main's case 0x14F open path): the drop list's frame is drawn one pixel outside its own rectangle (0x005EAD20) and reaches the screen only through the dialog's repaint (0x005EE460 paints a dialog, then its ComboDropWin children last); without it this port's open list had no frame and no backing, its rows drawn over the page's rows. Main invalidates the list and the parent after showing it and sets the box's Win32 dropped state, so the paint draws the arrow pressed (Draw_Arrow's dropped argument)."
   },
   {
+   "file": "hdr/ownrdraw.h",
+   "old": "\t\tint IsEditFocus;",
+   "new": "\t\tintptr_t IsEditFocus;",
+   "why": "Lane P67 (pointer width, the re-pin to b106008ae4; found by ra2-main-shell-options, ra2-native-skirmish and ra2-main-zoom-menu: signal 11 in Combo_Proc, fault address 0xffffffffabe4d310): the parked Combo_Proc draft (rewritten from ra2-decomp's bank at the 782562d93c pin) keeps the open drop list's window in WinData's IsEditFocus (+0xF4, an int: on VC6 an HWND is 4 bytes) and reads it back as an HWND to close and destroy it; natively the handle was cut to 32 bits and sign-extended. Kept at pointer width, as lane P7's ItemState/RangeMax/HadTabStop row; its other uses (a focus flag 0/1, a list box's last index or -1) are unchanged."
+  },
+  {
+   "file": "src/ownrdraw.cpp",
+   "old": "data->IsEditFocus = (int)dropdown_window;",
+   "new": "data->IsEditFocus = (intptr_t)dropdown_window;",
+   "why": "Lane P67 (pointer width): as the ownrdraw.h IsEditFocus row, the store of the drop list's window."
+  },
+  {
+   "file": "src/ownrdraw.cpp",
+   "old": "\t\t\t\tint item = CallWindowProcA(item_proc, owner, 0x199, sel, 0);",
+   "new": "\t\t\t\tLRESULT item = CallWindowProcA(item_proc, owner, 0x199, sel, 0);",
+   "why": "Lane P67 (pointer width; found by ra2-main-shell-options, ra2-native-skirmish and ra2-main-zoom-menu: signal 11 at Combo_Proc+3796): the parked Combo_Proc draft's paint of a drop-down list's selection keeps CB_GETITEMDATA's answer (a TextNode pointer) in an int, as Get_Item_Text did (lane P8's row above) and YR's ComboDropWindowHandler (lane P66); natively the pointer was cut to 32 bits and sign-extended. Kept at pointer width (LRESULT); the -1 and 0 tests compare the same."
+  },
+  {
    "file": "src/ownrdraw.cpp",
    "old": "\t\t\t\t} else if (style & WS_DISABLED) {\n\t\t\t\t\ttext_color = Disabled_Text_Color;\n\t\t\t\t}\n\n\t\t\t\tif (data->IsItemFilled && sel >= 0",
    "new": "\t\t\t\t} else if (style & WS_DISABLED) {\n\t\t\t\t\ttext_color = Light_Grey_Color;   /* NATIVE (lane P12): main's port's grey; see the row */\n\t\t\t\t}\n\n\t\t\t\tif (data->IsItemFilled && sel >= 0",
