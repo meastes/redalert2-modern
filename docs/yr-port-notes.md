@@ -2319,3 +2319,29 @@ run (they need a separate RA2_NATIVE_UBSAN_FLOAT build and run the soaks and won
 **Won replays** at lane P66's tip (left failing; a campaign lane re-records them): all01 lost at tick 186,481 (as at
 P64); all03, all05 and sov02 do not end (no game over by ctest's 2,400 s limit); sov03 now ends lost (game over, lose,
 after 1,608 s; at P64 it did not end). No fault or trap in any of the five logs.
+
+## Lane P69 (2026-11-27): Allied 5's early credits on the new pin are gamemd's (the Chrono Miner drives out)
+
+P68 found that Allied 5's recorded commands give 7,336 credits at tick 3,520 on the new pin (ra2-decomp ac45ee9e)
+against 11,061 on the old one (8719494, main at 86bd477). Both pins were stepped side by side through two step servers
+(yr/tests/campaign/all05.replay, `state` every 20 ticks, frame clock), and both reproduce those two numbers.
+
+The game parts at the first frame, before any command: the map's two CMIN (ALL05UMD [Units] 4 and 5, Harvest at 52,93
+and 52,95, the refinery GAREFN at 50,94) stand at 55,99 and 56,99 on the old pin at loop frame 0, but at 52,93 and
+52,95 on the new one. On the old pin each Chrono Miner teleported out to the ore every trip (after each unload at the
+dock, 51,94, it is at the ore 20 ticks later) and back when full: an unload about every 120 ticks a miner. On the new
+pin it drives out (about one cell every 20 ticks, 52,95 to 55,101) and teleports back when full: an unload about every
+380 ticks a miner. First credit difference: tick 480 (10,500 against 10,000, the old pin's first unload). The object
+IDs part too (12 fewer by tick 60, 210 by tick 1,603: the old pin's extra chrono warp animations), so a recording's
+"@^ID" points made on one pin do not name the same object on the other.
+
+Cause: CMIN's Locomotor is the teleport one (rulesmd.ini [CMIN] Locomotor={4A582747-...}, Teleporter=yes). Upstream's
+matched UnitClass::Assign_Destination (gamemd.exe 0x00741970, 6,167 B, in vendor/ra2-decomp/data/manifest.csv) has the
+Teleporter block: a teleporter given any destination but an unload dock's free cell ends its teleport and rides a Drive
+locomotor piggybacked on it (gamemd.exe: the Teleporter byte test at 0x007424BD, the CLSID_TeleportLocomotion compare at
+0x007424E9, the CLSID_DriveLocomotion compare at 0x007425EB and the Drive locomotor made at 0x00742688). The old pin's
+glue draft (yr/glue/unit_native.inc, TibSun's text, retired by P64) had no such block, so the miner kept its teleport
+locomotor for the trip out. rulesmd.ini's own comment on ChronoHarvTooFarDistance ("teleport super far and drive super
+far back") says the same. Do_MISSION_HARVEST's LOOKING state is the same in the draft and upstream. Verdict: gamemd's
+behaviour, not a port fault. Nothing changed in fixups or glue; the Allied 5 recording must be re-recorded (P68). The
+Soviet missions' miners are not Chrono Miners, so this does not explain Soviet 2 or Soviet 3.
