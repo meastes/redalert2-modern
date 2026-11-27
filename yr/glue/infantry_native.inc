@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "capmgr.h"   // CaptureManagerClass (Per_Cell_Process's boarding, lane P18)
+#include "revent.h"   // RadarEventClass (Per_Cell_Process's bridge repair, lane P61)
 
 // ---------------------------------------------------------------------------------------------
 // NON-EXACT NATIVE DRAFT (lane Y4), appended to the infantry unit: InfantryClass::Assign_Destination
@@ -194,6 +195,48 @@ void InfantryClass::Per_Cell_Process(PCPType why)
 		}
 
 		/*
+		**	YR (lane P61, gamemd.exe 0x0051973C-0x00519945): a soldier sent into a grinder (MISSION_EATEN) that
+		**	reaches the building's cell is ground up: its die voice (the player's only) and die sound, the
+		**	building's house refunded the soldier's Refund_Amount, its tag sprung, the grinder's sound and
+		**	grinding animation, and the soldier deleted. TibSun's text had no grinder: the soldier was never
+		**	ground. UnitClass::Per_Cell_Process's matched text has the same steps.
+		*/
+		if (Get_Mission() == MISSION_EATEN) {
+			BuildingClass * building = cellptr->Cell_Building();
+			if (building != NULL && (building == NavCom || building == TarCom)) {
+				if (building->Tag) {
+					building->Tag->Spring(TEVENT_PLAYER_ENTERED, this);
+				}
+				if (Techno_Type_Class()->VoiceDie.Count() > 0 && House->Is_Player_Control()) {
+					Coord coord = PositionCoord;
+					TypeList<int> const & sounds = Techno_Type_Class()->VoiceDie;
+					unsigned int rnd = NonCriticalRandomNumber();
+					VocClass::PlayAt(sounds[rnd % (unsigned int)sounds.Count()], coord, NULL);
+				}
+				if (Techno_Type_Class()->DieSound.Count() > 0) {
+					Coord coord = PositionCoord;
+					TypeList<int> const & sounds = Techno_Type_Class()->DieSound;
+					unsigned int rnd = NonCriticalRandomNumber();
+					VocClass::PlayAt(sounds[rnd % (unsigned int)sounds.Count()], coord, NULL);
+				}
+				building->House->Refund_Money(Refund_Amount());
+				if (Tag) {
+					Tag->Spring(TEVENT_DESTROYED_ANY, this);
+				}
+				if (building->Class->Grinding) {
+					VocClass::PlayAt(Rule->EnterGrinderSound, Center_Coord(), NULL);
+					if (building->Anims[BANIM_ACTIVE_ONE] != NULL) {
+						building->DestroyNthAnim(BANIM_ACTIVE_ONE);
+						building->PlayNthAnim(BANIM_SPECIAL_ONE, building->Get_Health_Ratio() <= Rule->ConditionYellow, false);
+					}
+				}
+				Delete_Me();
+				BEnd(BENCH_PCP);
+				return;
+			}
+		}
+
+		/*
 		**	If the infantry unit is entering a cell that contains the building it is trying to
 		**	capture, then capture it.
 		*/
@@ -244,14 +287,28 @@ void InfantryClass::Per_Cell_Process(PCPType why)
 				if (Class->IsEngineer) {
 					// are we trying to repair a bridge?
 					if (tech->RTTI == RTTI_BUILDING && ((BuildingClass*)tech)->Class->IsBridgeRepairHut) {
-						if (House->Is_Player_Control()) VoxClass::Play("EVA_BridgeRepaired");	// NATIVE (lane Y11b): YR's EVA call for TibSun's Speak
+						/*
+						**	YR (lane P61, gamemd.exe 0x00519B90-0x00519CD9): the player's repair is a radar event
+						**	(RADAREVENT_BRIDGE_REPAIRED), announced only when the event is made (a repeat close by is
+						**	suppressed); the rules' RepairBridgeSound plays at the hut; a low (wood) bridge overlay
+						**	(74-101) near the hut counts as the train bridge tiles do.
+						*/
+						if (House->Is_Player_Control() && RadarEventClass::Create(RADAREVENT_BRIDGE_REPAIRED, Get_Cell())) {
+							VoxClass::Play("EVA_BridgeRepaired");
+						}
+						if (Rule->RepairBridgeSound != -1) {
+							Coord hut = tech->PositionCoord;
+							VocClass::PlayAt(Rule->RepairBridgeSound, hut, NULL);
+						}
 
 						bool train = false;
 						for (int y = -2; y < 3; y++) {
 							for (int x = -2; x < 3; x++) {
 								Cell cell = (Cell)Cell(PositionCell + Cell(x, y));
 								IsometricTileType ittype = Map[cell].ITType;
-								if (ittype >= IsometricTileTypeClass::TrainBridgeSet && ittype < IsometricTileTypeClass::TrainBridgeSet + TRAIN_BRIDGE_COUNT) {
+								int overlay = Map[cell].Overlay;
+								if ((ittype >= IsometricTileTypeClass::TrainBridgeSet && ittype < IsometricTileTypeClass::TrainBridgeSet + TRAIN_BRIDGE_COUNT)
+										|| (overlay >= 74 && overlay <= 101)) {
 									train = true;
 								}
 							}
@@ -273,7 +330,18 @@ void InfantryClass::Per_Cell_Process(PCPType why)
 					**	it damages or captures depends on how badly damaged the
 					**	enemy building is.
 					*/
-					else if (House->Is_Ally(tech)) {
+					/*
+					**	YR (lane P61, gamemd.exe 0x00519D47-0x00519D7C, 0x00519FA2-0x00519FF6): a neutral house's
+					**	garrisonable building (IsMultiplayPassive, CanBeOccupied) is repaired as an ally's is, and a
+					**	building at full strength sends the engineer away (not used up).
+					*/
+					else if (House->Is_Ally(tech) || (tech->House->Class->IsMultiplayPassive && ((BuildingClass *)tech)->Class->CanBeOccupied)) {
+						if (tech->Strength == tech->Techno_Type_Class()->MaxStrength) {
+							Assign_Destination(NULL, true);
+							Scatter(tech->Center_Coord(), true, true);
+							BEnd(BENCH_PCP);
+							return;
+						}
 						tech->Renovate();
 					} else {
 						bool iscapturable = false;
@@ -286,6 +354,16 @@ void InfantryClass::Per_Cell_Process(PCPType why)
 							int damage = MIN((tech->TClass->MaxStrength) * ((1 - Rule->ConditionRed / 2) / 2), maxdamage);
 							tech->Take_Damage(damage, 0, Rule->C4Warhead, this, true);
 						} else if (iscapturable) {
+							/*
+							**	YR (lane P61, gamemd.exe 0x00519EB2-0x00519F2C): a building being sold, or warped
+							**	out by a chrono weapon, is not captured: the engineer is sent away.
+							*/
+							if (tech->Get_Mission() == MISSION_DECONSTRUCTION || tech->IsBeingWarpedOut()) {
+								Assign_Destination(NULL, true);
+								Scatter(tech->Center_Coord(), true, true);
+								BEnd(BENCH_PCP);
+								return;
+							}
 							if (tech->Tag) {
 								tech->Tag->Spring(TEVENT_PLAYER_ENTERED, this);
 							}
@@ -299,9 +377,17 @@ void InfantryClass::Per_Cell_Process(PCPType why)
 						}
 					}
 				} else {
+					/*
+					**	YR (lane P61, gamemd.exe 0x00519FF8-0x0051A06E): a spy infiltrates (BuildingClass::Infiltrate
+					**	speaks its own EVA lines); any other soldier is sent away, not deleted as in TibSun's text.
+					*/
 					if (Class->IsAgent) {
-						if (House->Is_Player_Control()) VoxClass::Play("EVA_BuildingInfiltrated");	// NATIVE (lane Y11b): YR's EVA call for TibSun's Speak
 						((BuildingClass *)tech)->Spied_By(House);
+					} else {
+						Assign_Destination(NULL, true);
+						Scatter(tech->Center_Coord(), true, true);
+						BEnd(BENCH_PCP);
+						return;
 					}
 				}
 				if (Tag) {
@@ -358,10 +444,37 @@ void InfantryClass::Per_Cell_Process(PCPType why)
 			}
 			if (techno->RTTI == RTTI_BUILDING) {
 				if (techno == Get_Cell_Ptr()->Cell_Building() && Transmit_Message(RADIO_IM_IN) == RADIO_ROGER) {
+					/*
+					**	YR (lane P61, gamemd.exe 0x0051A2AD-0x0051A39D): the soldier drops its weapon state and any
+					**	mind control; a bio reactor (InfantryAbsorb) plays EnterBioReactorSound and marks it
+					**	Absorbed; a soldier counted as its house's infantry (CountedAsOwnedSpecial) stops counting
+					**	(the building's sale counts it again: Do_MISSION_DECONSTRUCTION, lane P57); the bio reactor
+					**	takes no radio HELLO but has its house's power recalculated when it gives ExtraPower; the
+					**	soldier stops moving (AbortMotion). TibSun's text sent HELLO to every building and cleared NavCom.
+					*/
+					BuildingClass * building = (BuildingClass *)techno;
+					MissionAccumulateTime = 0;
+					sub_70DE00(0);
+					SetCurrentWeaponStage(0);
+					if (MindControlledBy != NULL && MindControlledBy->CaptureManager != NULL) {
+						MindControlledBy->CaptureManager->FreeUnit(this);
+					}
+					if (building->Class->InfantryAbsorb) {
+						VocClass::PlayAt(Rule->EnterBioReactorSound, Center_Coord(), NULL);
+						Absorbed = true;
+					}
 					Limbo();
-					Transmit_Message(RADIO_HELLO, techno);
+					if (building->IsAbsorbAllowed() && CountedAsOwnedSpecial) {
+						House->CurInfantry--;
+						CountedAsOwnedSpecial = false;
+					}
+					if (!building->Class->InfantryAbsorb) {
+						Transmit_Message(RADIO_HELLO, techno);
+					} else if (building->Class->ExtraPower > 0) {
+						building->House->RecalcPower = true;
+					}
 					techno->Cargo.Attach(this);
-					NavCom = NULL;
+					AbortMotion();
 					BEnd(BENCH_PCP);
 					return;
 				}
@@ -405,19 +518,31 @@ void InfantryClass::Per_Cell_Process(PCPType why)
 		**	If the infantry unit is entering a cell that contains the building it is trying to
 		**	sabotage, then sabotage it.
 		*/
-		if (Mission == MISSION_SABOTAGE) {
+		/*
+		**	YR (lane P61, gamemd.exe 0x0051A4BF-0x0051A664): only a bomber (IsBomber) sabotages; an iron-curtained
+		**	building takes no charge; a charge already set sends the soldier away; the soldier stops (AbortMotion,
+		**	where TibSun's text cleared NavCom).
+		*/
+		if (Get_Mission() == MISSION_SABOTAGE && Class->IsBomber) {
 			BuildingClass * building = cellptr->Cell_Building();
 			if (building != NULL && building == NavCom) {
 				if (building->Tag) {
 					building->Tag->Spring(TEVENT_PLAYER_ENTERED, this);
 				}
-				if (building->Mission != MISSION_DECONSTRUCTION) {
+				if (building->Get_Mission() != MISSION_DECONSTRUCTION && !building->IsIronCurtained()) {
+					if (building->IsGoingToBlow) {
+						Assign_Destination(NULL, true);
+						Arm = Rearm_Delay(true);
+						Scatter(building->Center_Coord(), true, true);
+						BEnd(BENCH_PCP);
+						return;
+					}
 					building->IsGoingToBlow = true;
 					building->Clicked_As_Target((Rule->C4Delay * TICKS_PER_MINUTE) / 2);
 					building->CountDown = Rule->C4Delay * TICKS_PER_MINUTE;
 					building->WhomToRepay = this;
 				}
-				NavCom = NULL;
+				AbortMotion();
 				Do_Uncloak();
 				Arm = Rearm_Delay(true);
 				Scatter(building->Center_Coord(), true, true);	// RUN AWAY!
@@ -479,17 +604,19 @@ void InfantryClass::Per_Cell_Process(PCPType why)
 		/*
 		**	When the infantry reaches the center of the cell, it may begin a new mission.
 		*/
-		if (MissionQueue == MISSION_NONE && NavCom == NULL && TarCom == NULL && !In_Radio_Contact()) {
+		if (MissionQueue == MISSION_NONE && NavCom == NULL && TarCom == NULL && !HasAnyLink()) {	// YR: any link (gamemd.exe 0x0051A8AA)
 			Enter_Idle_Mode();
 		}
 		Commence();
 
-		if (IsPlanningToLook) {
-			IsPlanningToLook = false;
-			Look(false);
-		} else {
-			Look(true);
-		}
+		/*
+		**	YR (lane P61, gamemd.exe 0x0051A8CB-0x0051A925, as UnitClass::Per_Cell_Process's matched text): the
+		**	sight moves by vt_entry_48C (the last sight taken back) and UpdateSight, and the cells around are
+		**	revealed by RevealArea3 out to the sight range + 3. TibSun's text called Look (RevealArea1).
+		*/
+		vt_entry_48C(false, false, false, NULL);
+		UpdateSight(false, false, false, NULL, 0);
+		Map.RevealArea3(PositionCoord, 0, LastSightRange + 3, 0);
 
 		/*
 		**	If after all is said and done, the unit finishes its move on an impassable cell, then

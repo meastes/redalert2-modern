@@ -459,6 +459,12 @@ add_test(NAME yr-native-slave-miner COMMAND "${Python3_EXECUTABLE}" -B "${CMAKE_
          --binary $<TARGET_FILE:yr-native> --data-dir "${RA2_NATIVE_YR_DATA_DIR}"
          --work "${CMAKE_CURRENT_BINARY_DIR}/yr-slave-miner")
 set_tests_properties(yr-native-slave-miner PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 300)
+# ctest yr-native-grinder (lane P61): a soldier sent into the player's Grinder is ground up and refunded, one sent into the
+# Bio Reactor is taken in and powers it (InfantryClass::Per_Cell_Process, gamemd.exe 0x0051973C, 0x0051A2AD; yr/tests/yr_grinder.py)
+add_test(NAME yr-native-grinder COMMAND "${Python3_EXECUTABLE}" -B "${CMAKE_CURRENT_SOURCE_DIR}/yr/tests/yr_grinder.py"
+         --binary $<TARGET_FILE:yr-native> --data-dir "${RA2_NATIVE_YR_DATA_DIR}"
+         --work "${CMAKE_CURRENT_BINARY_DIR}/yr-grinder")
+set_tests_properties(yr-native-grinder PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 300)
 
 # ctest yr-native-mirage (lane N4): a Mirage tank's camouflage draws as a tree in the tree's colours (Techno_Draw_Object's
 # disguise converter; yr/tests/yr_mirage.py)
