@@ -2474,3 +2474,35 @@ scripts/p73 (q.py <work> <script> <until> <save>; start.sh).
 | Soviet 7 (SOV07TMD) | not won; shelved for this lane | 0.6 (P72 0.2) | The win under the fixed decoder is unchanged: "_Win (Bldgs KIA)" springs from the "Yuri's Castle" tag, i.e. CATRAN03 at 65,67 (BadGuy1, 5,000 strength, concrete). Weapons against concrete: APOC 70% (140 a double shot), Kirov 50%, nuke 8% (48: useless), demolition truck 10%. BadGuy1's base has seven psychic towers and seven gattling cannons, with power 6,050 for a drain of 1,635, so cutting its power is out. The map's other facts: destroying a psychic beacon frees that house ("Allies Freed"/"Soviets Freed": all-change-house). The Soviet beacon NAPSYB is at 96,43, inside two tesla coils, two flak cannons and two sentry guns; BadGuy2's power is 2,750 for 1,055, most of it the nuclear reactor at 86,44. The Allied beacon is at 28,101. The freedom fighters at 187,110 unlock TERROR and DTRUCK when discovered. Raids: 5 E2 + dog + 2 FLAKT (BadGuy2), dog + 5 E1 + 2 GGI (BadGuy3), 5 initiates + Brute (BadGuy1) from 30 s, repeating. Try 1 (s7a.py): the base at the landing spot (150,149) with 10,000 credits, two refineries and War Miners, 14 APOCs by 30,000, then lost building by building (the battle lab at 30,632), so APOCs stopped. Try 2 (s7b.py: sentry guns, coils, lost key buildings re-queued): 37 APOCs by 120,000, but a 35-unit selection made team 9 of one unit, so the army never left (s7c.py moved it in groups of six). At about 122,200 the base and the first group (at 102-111,101-110) were destroyed within about 500 ticks; the cause was not identified (no enemy super weapon on the state line). Of 35 APOCs, 9 were left by 167,000 and the castle was untouched. Next: free the Soviets first (the beacon's cluster from the north back door, wp53 107,35, or the reactor at 86,44 to cut their power), then the castle from their base with APOCs, towers and Masterminds first. Recordings in private/campaign_saves/yr/sov07/p73. No crash, trap or assertion |
 
 Allied 4 was not started this lane. Its win reading is unchanged under the fixed decoder.
+
+## Lane P75 (2026-11-27): Soviet 7's two oddities; Soviet 7 won; Soviet 1's lock re-read
+
+**The 35-unit team of one was the harness's.** Replaying P73's try2.replay to 121,580 and feeding the rest through the
+live step server reproduced it: after Ctrl+9 at 122,050 one unit was selected, and game.log had 44 "no point" lines.
+s7c.py selected the 35 Apocalypses from the object list it had read at 120,881, after ordering them off in groups of
+six: each click's look and "@^ID" went where the list put the unit, the unit was outside the view by then, and the step
+server dropped the click (lane P56/P65's rule). gamemd.exe's team create (CreateTeamCommandClass::Execute 0x00535CC0 ->
+0x00731060; vendor/ra2-decomp uicmnds.cpp FUN_00731060, compared instruction by instruction) gives the group to every
+selected unit of the player's and clears the old members; no cap. Fixed in ra2/tools/ra2_commander.py `Game.select`:
+each click aimed from a fresh object list, Shift-clicks only on units not yet selected (a Shift-click on a selected one
+drops it), the selection checked and the missed ones clicked again (three rounds); it takes Obj or IDs and returns those
+left unselected. tests/commander_select.py (ctest commander-select). Also found: `Mgr(defend=True)` defends home with
+`select_all_combat` (P, then P again for the whole map), which takes every combatant, the army away included, so a
+script that keeps calling it while its army is out calls the army home; try 2's army "never left" partly for this.
+Scripts with an army out should pass defend=False and defend with a home team (scripts/p75/s7p.py home_guard).
+
+**The collapse at about 122,100 was BadGuy2's Kirovs, not a super weapon or a trigger.** The construction yard and a
+refinery were lost in the same tick (122,099-100), then the power plants, barracks, war factory and the rest; the
+`teams` order showed BadGuy2's AI team "SKirov_M+H" (ZEP) over the base at 149,151, and two Kirovs were shot down there
+(122,650 and 123,104; their wrecks killed Apocalypses under them). The base had no anti-air (no flak cannons), and with the
+selection fault about 30 Apocalypses were still at home. The first group at 102-111,101-110 died to the Temp house's
+"Combine Shock_IFV" set-piece IFVs and BadGuy1's slaves and infantry. The state line does list the AI houses' super
+weapons: only PsychicReveal, SpyPlane and ForceShield were there; no Dominator, Mutator, weather device or silo
+existed, and "Castle Attacked" had not sprung. From the map: building an Iron Curtain (24) or a nuclear silo (54) sets
+local 0, which on Medium has BadGuy1 build a Psychic Dominator at wp60 (58,85) 445 s later and then a Genetic
+Mutator, BadGuy2 a nuclear silo and BadGuy3 a weather device; P73 and P75 built neither. Real game behaviour.
+
+| Mission | Result | Lane-hours | Notes |
+| --- | --- | --- | --- |
+| Soviet 7 (SOV07TMD) | won at tick 128,891; a rerun (ra2_campaign.py --game yr) wins at the same tick | 0.3 (P72 0.2, P73 0.6) | From P73's try2.replay at 42,520 (20 APOCs, base intact; preload about 2 minutes). Try 1 (s7p.py): the two Kirovs shot down at home, 16 APOCs as team 9 (16 of 16 selected) by fight_legs along the road north; worn down leg by leg, the last died at 104,57 by 57,122. Try 2 (s7q.py, ARMYN=30 WANT=32): two more power plants first (395/485 had slowed production), two flak cannons, a third refinery, six War Miners, APOCs to 31 by 108,000 with the home team defending; 30 APOCs along 138,107 - 127,95 - 116,84 - 107,76 - 105,66 - 104,57 - 101,49 (two lost) and force fire on the Soviet Psychic Beacon (NAPSYB 96,43, BadGuy1's): gone at 122,132, Soviets Freed, BadGuy2's 37 buildings the player's (44 buildings, power 3,544). s7r.py: 1,500 ticks' rest, then 28 APOCs west by 91,49 - 83,55 - 75,56 - 67,60 (62,56 has no path; the psychic tower 80,54, NATBNK 82,52 and the gattlings first) and 16 left at the castle: CATRAN03 (67,69) gone at 128,658, then _Win (Bldgs KIA), the cheer and winner-is. yr/tests/campaign/sov07.replay; sov07 in yr_won_all. Recordings in private/campaign_saves/yr/sov07/p75, scripts in scripts/p75. No crash, trap or assertion |
+| Soviet 1 (SOV01UMD) | the lock is not the power condition (read from the dump; not run) | 0.1 | Under the fixed decoder the lock's chain (SP2.3_Sov Landing ... SP2.7_Transport 4, SP2.14 on local 9, SP2.15/16, SP2.10_BorisIntro, SP2.11 on local 23, SP2.12/12a, SP2.13_Unlock) uses only elapsed-time, destroyed-by-anything and local-set, which the fix did not change. SP3.1_Detect_Full Power (power-full, house 8) is enabled only by "Audio_Time Machine Off" (after the time machine's defences fall) or "Detect_Player Has Time" (building 314 exists), both after the lock, and it is disabled on the lose chain by the time machine's loss. Input stays locked before power can matter, so P62's three-frame unload race (Boris's SAPC recruited by "TM_Sov_1 Trans (Flak)") is still the mechanism. No port fault found |
