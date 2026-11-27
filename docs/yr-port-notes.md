@@ -2429,3 +2429,38 @@ scripts in scripts/p72. There was no crash, trap or assertion in any P72 run.
 | Allied 7 (ALL07SMD) | not won; shelved for this lane | 0.25 (P60 1.0) | Three tries (a7o.py, a7r.py, a7s.py). The Soviet base (84,125) has no ground path to Yuri's base (150-220,90-190); the Allied plateau (105,192) has one. So "no radar, mass Rhinos" is out, and the win (Win_Check: destroyed-units-all of YuriCountry and Yuri2; vehicles and infantry only, TEVENT_UNITS_DESTROYED) has to come from the plateau or by Chronosphere. Radar at 6,285: the MCV landed at 8,613 and deployed at 105,194. The Psychic Dominator (YAPPET) stands at 222,145 and the Genetic Mutator (YAGNTC) at 169,109. The Dominator first fired at 21,967, about 13,350 ticks after the MCV, on the Soviet base (six buildings round 85,129 lost at once; the NACNST lived); its next shot was due at about 35,400. On the plateau the Allied War Factory needs GAPILE, and the Allied radar is AMRADR (GAAIRC is not on the sidebar). Credits sat at 0 from about 17,000 while Chrono Miners were killed on the gold band east of the plateau (117-129,191-204), and both bases fell by 25,000-30,000. A super weapon fires by its cameo and a map click: SpyPlaneSpecial was fired that way (tab 1). Next: two refineries and a home army before the radar; miners kept off the east band, with prism towers there; NATECH and the Iron Curtain at once after the radar, so the Dominator is killed or survived before MCV+13,350 |
 | Soviet 6 (SOV06UMD, the moon) | not won; needs a video study | 0.75 | The win: Fire Sale A, B and C (Americans, Alliance and YuriCountry each without their tech types 300-303, plus 354 for Yuri), then 60 s to the fire sale and 8 s to winner-is. 70,000 credits and no ore. The MCV cannot deploy where it lands (118,145) or at 118-126,128-132 ("cannot deploy here"). It deploys at 134,126; the dossier's "go east" matches this. I suspected a port fault (the lunar WaterSet is ISOTILE_INVALID, so Is_Tile_Water is true for ITType -1..12), but gamemd does the same: 0x00546C95 sets WaterSet to -1 on lunar, and 0x00485060 makes the same signed compare. Not a port fault. A base of power plants, two war factories, the battle lab and teslas (s6b.py), Apocalypses after it. Gattling tanks (YTNK) raid from the north (140,110) and cosmonauts from the west (110-125,115-125) without pause: the teslas and power plants on the west side fall, and the base is lost at 40,553 (try 1, 14 Apocalypses sent at the Americans' War Factory at 79,102, lost to the psychic towers by 89,108) and at 22,345 (try 2 from 10,000, home guard only). Next: a video study for the base's site and defence |
 | Soviet 7 (SOV07TMD) | not won; started | 0.2 | The win: destroying the object tagged "Yuri's Castle" (05BC8BAC). That is CATRAN03 at 65,67 (BadGuy1, strength 256), inside BadGuy1's base (brutes, initiates, tank bunkers at 50-90,50-90). It is not CASLAB at 172,99: the starting army (2 TTNK, 2 HTNK, 2 HTK, infantry) walked east to it unopposed and razed it by 2,680, and nothing followed. "Castle Attacked" (attacked-by-any) sends five teams and a nuke siren. Next: a base at 140-150,140-150 and V3s or Kirovs on 65,67 |
+
+## Lane P73 (2026-11-27): the trigger decoder's event and action numbers; YR campaign wins continued
+
+**ra2/tools/ra2_mapinfo.py's tables were wrong past event 52 and action 105** (found by the Soviet 6 video study). The
+tables are now read from the executables' own dispatch: the jump tables of Event_Needs, TEventClass::operator() and
+TActionClass::operator() (game.exe 1.006: 0x006E6970, 0x006E6050, 0x006ADAE0; gamemd.exe 1.001: 0x0071F5B0, 0x0071E940,
+0x006DD8B0), with the case groups matched to vendor/ra2-decomp's tevent.cpp and taction.cpp (YR's 143 action targets
+fall in the decompilation's case order exactly; game.exe's 115 fall in the same order for cases 1-117). Both games number
+the shared entries alike; game.exe stops at event 57 and action 117, gamemd.exe at 61 and 145 (`--game ra2|yr` prints
+numbers past the end as eventN/actionN). Events that were misnamed: 53 spy entering as a house, 54 spy entering as an
+infantry type, 55 every naval unit destroyed, 56 every land unit destroyed (vehicles not on water, and infantry), 57
+building type N does not exist (the trigger's house, ABQuantity 0), 58 power full, 59 entered or overflown by, 60
+TechType exists (count >= N), 61 TechType does not exist. Actions 106-145 were shifted (106 set tech level, 107 chrono
+warp team, 108 create crate, 109 Iron Curtain at, 110 pause, 111 evict occupants, 112 centre camera at ... 145 jump to base);
+the waypoint notes now follow the handlers (the location parameter for 26 actions, the data parameter for 9). The event
+parser takes the fourth field when the parameter code is 2, as TEventClass::Read_INI does, not by event number.
+tests/mapinfo_tables.py (ctest mapinfo-tables, label ra2-quick) keeps them. The YR dumps in
+private/campaign_saves/yr/scripts/maps/*.trig are regenerated (`--game yr`); no Red Alert 2 dumps were kept.
+
+Mission notes whose win or lose reading changes under the fixed table:
+- **YR Soviet 6** (P72): the Fire Sale triggers are "building does not exist" for YACNST, YAPOWR, YABRCK, YAWEAP (indices
+  300-303) in each of the three enemy houses, and YACOMD (354, the Lunar Command) for Yuri. P72 read them as "without"
+  already; the dump had said tech-type-exists.
+- **YR Allied 6** (P60): Conditions_Win is every land unit of YuriCountry destroyed (event 56), not "destroyed-unit-type 9".
+- **YR Soviet 5** (P60/P71): "Detect_Yuri Land Dead", on the _Winner chain (Completed_Objective 3), is every land unit of
+  houses 9 and 14 destroyed (56), not destroyed-unit-type; "the pen alone wins on Medium" needs a re-read against it.
+- **YR Soviet 1** (P52/P63/P70): SP3.1_Detect_Full Power, on both the win and lose chains, is house 8's power full (58),
+  and Detect_Dominator Active is house 6's power full; the dump had said tech-type-does-not-exist.
+- **YR Allied 7, Soviet 4, Allied 1** (lose on NACNST, Romanov killed, the time machine and power plants): the dump said
+  tech-type-exists-n, but the notes already read "gone" / "killed", which is right (61).
+- **YR Soviet 2** (won): the Chronosphere (GACSPH, 27) is "does not exist", as P60 read it.
+- **Red Alert 2 Allied 12** (P37, P38: "three tech types to exist"): event 57 there is "building does not exist" for
+  NALASR, NAFLAK and TESLA; P39 already corrected this from the code.
+- No change on the win or lose chains of YR Soviet 7 (the CATRAN03 "Yuri's Castle" tag), Allied 4, Allied 2, Allied 3,
+  Allied 5 and Soviet 3: only action names changed there.

@@ -9,8 +9,10 @@ under build/; nothing of it enters the repository.
 
   ra2_mapinfo.py <map file> [--section triggers|teams|scripts|waypoints|basic|all] [--grep TEXT]
 
-Event and action names follow the scenario editors' lists for Red Alert 2 (Tiberian Sun's trigger system); a number
-without a name is printed as it is.
+Event and action numbers are those of the two executables' dispatch tables (lane P73 read game.exe's and gamemd.exe's
+jump tables in TEventClass::operator(), Event_Needs and TActionClass::operator(); events 53-61 and actions 106-145 were
+misnamed before, off by one or more). Names follow the handlers (vendor/ra2-decomp's taction.cpp/tevent.cpp); a number
+without a name is printed as eventN/actionN.
 """
 import argparse
 import re
@@ -23,24 +25,29 @@ EVENTS = {
     16: 'destroyed-units-n', 17: 'no-factories-left', 18: 'civilians-evacuated', 19: 'build-building-type',
     20: 'build-unit-type', 21: 'build-infantry-type', 22: 'build-aircraft-type', 23: 'team-leaves-map', 24: 'zone-entry-by',
     25: 'crosses-horizontal-line', 26: 'crosses-vertical-line', 27: 'global-set', 28: 'global-clear',
-    29: 'destroyed-by-anything-fake', 30: 'low-power', 31: 'bridge-destroyed', 32: 'building-exists', 33: 'selected-by-player',
-    34: 'comes-near-waypoint', 35: 'enemy-in-spotlight', 36: 'local-set', 37: 'local-clear', 38: 'first-damaged-combat',
-    39: 'half-health-combat', 40: 'quarter-health-combat', 41: 'first-damaged-any', 42: 'half-health-any',
-    43: 'quarter-health-any', 44: 'attacked-by-house', 45: 'ambient-light-below', 46: 'ambient-light-above',
-    47: 'elapsed-scenario-time', 48: 'destroyed-by-anything', 49: 'pickup-crate', 50: 'pickup-crate-any', 51: 'random-delay',
-    52: 'credits-below', 53: 'player-spied', 54: 'destroyed-by-anything-incl-infiltrate', 55: 'destroyed-building-type',
-    56: 'destroyed-unit-type', 57: 'tech-type-exists', 58: 'tech-type-does-not-exist', 59: 'power-full',
-    60: 'entered-or-overflown-by', 61: 'tech-type-exists-n',
+    29: 'destroyed-by-anything-not-infiltrate', 30: 'low-power', 31: 'bridge-destroyed', 32: 'building-exists',
+    33: 'selected-by-player', 34: 'comes-near-waypoint', 35: 'enemy-in-spotlight', 36: 'local-set', 37: 'local-clear',
+    38: 'first-damaged-combat', 39: 'half-health-combat', 40: 'quarter-health-combat', 41: 'first-damaged-any',
+    42: 'half-health-any', 43: 'quarter-health-any', 44: 'attacked-by-house', 45: 'ambient-light-below',
+    46: 'ambient-light-above', 47: 'elapsed-scenario-time', 48: 'destroyed-by-anything', 49: 'pickup-crate',
+    50: 'pickup-crate-any', 51: 'random-delay', 52: 'credits-below', 53: 'spy-as-house-entering',
+    54: 'spy-as-infantry-entering', 55: 'destroyed-naval-all', 56: 'destroyed-land-all', 57: 'building-does-not-exist',
+    # Yuri's Revenge only (game.exe's tables stop at 57):
+    58: 'power-full', 59: 'entered-or-overflown-by', 60: 'tech-type-exists-n', 61: 'tech-type-does-not-exist',
 }
+# The last event and action each executable knows (game.exe 1.006: Event_Needs 0x006E6970 and TEventClass::operator()
+# 0x006E6050 stop at 57, TActionClass::operator() 0x006ADAE0 at 117; gamemd.exe 1.001: 0x0071F5B0 and 0x0071E940 at 61,
+# 0x006DD8B0 at 145). Read from the jump tables by lane P73; both games number the shared entries alike.
+LAST = {'ra2': (57, 117), 'yr': (61, 145)}
 ACTIONS = {
     0: 'none', 1: 'winner-is', 2: 'loser-is', 3: 'production-begins', 4: 'create-team', 5: 'destroy-team', 6: 'all-to-hunt',
     7: 'reinforcement-team', 8: 'drop-zone-flare', 9: 'fire-sale', 10: 'play-movie', 11: 'text-trigger', 12: 'destroy-trigger',
-    13: 'autocreate-begins', 14: 'change-house', 15: 'allow-win', 16: 'reveal-all-map', 17: 'reveal-around-waypoint',
+    13: 'autocreate-begins', 14: 'change-house', 15: 'allow-win-noop', 16: 'reveal-all-map', 17: 'reveal-around-waypoint',
     18: 'reveal-zone-of-waypoint', 19: 'play-sound', 20: 'play-music', 21: 'play-speech', 22: 'force-trigger',
     23: 'timer-start', 24: 'timer-stop', 25: 'timer-extend', 26: 'timer-shorten', 27: 'timer-set', 28: 'global-set',
     29: 'global-clear', 30: 'auto-base-building', 31: 'grow-shroud', 32: 'destroy-attached-object', 33: 'add-one-time-super',
     34: 'add-repeating-super', 35: 'preferred-target', 36: 'all-change-house', 37: 'make-ally', 38: 'make-enemy',
-    39: 'change-zoom', 40: 'resize-player-view', 41: 'play-anim-at', 42: 'do-explosion-at', 43: 'create-voxel-anim',
+    39: 'change-zoom-noop', 40: 'resize-player-view', 41: 'play-anim-at', 42: 'do-explosion-at', 43: 'create-voxel-anim',
     44: 'ion-storm-start', 45: 'ion-storm-stop', 46: 'lock-input', 47: 'unlock-input', 48: 'move-camera-to-waypoint',
     49: 'zoom-in', 50: 'zoom-out', 51: 'reshroud-map', 52: 'change-light-behaviour', 53: 'enable-trigger',
     54: 'disable-trigger', 55: 'create-radar-event', 56: 'local-set', 57: 'local-clear', 58: 'meteor-shower',
@@ -50,23 +57,28 @@ ACTIONS = {
     74: 'ai-triggers-begin', 75: 'ai-triggers-stop', 76: 'ratio-ai-teams', 77: 'ratio-aircraft', 78: 'ratio-infantry',
     79: 'ratio-units', 80: 'reinforcement-at-waypoint', 81: 'wakeup-self', 82: 'wakeup-all-sleepers',
     83: 'wakeup-all-harmless', 84: 'wakeup-group', 85: 'vein-growth', 86: 'tiberium-growth', 87: 'ice-growth',
-    88: 'particle-anim', 89: 'remove-particle-anim', 90: 'lightning-strike', 91: 'go-berzerk', 92: 'activate-firestorm',
-    93: 'deactivate-firestorm', 94: 'ion-cannon-strike', 95: 'nuke-strike', 96: 'chem-missile-strike',
+    88: 'particle-anim', 89: 'remove-particle-anim', 90: 'lightning-strike', 91: 'go-berzerk', 92: 'activate-firestorm-noop',
+    93: 'deactivate-firestorm-noop', 94: 'ion-cannon-strike', 95: 'nuke-strike', 96: 'chem-missile-strike',
     97: 'toggle-train-cargo', 98: 'play-sound-random', 99: 'play-sound-at', 100: 'play-ingame-movie',
     101: 'reshroud-map-at', 102: 'lightning-storm-strike', 103: 'timer-text', 104: 'flash-team', 105: 'talk-bubble',
-    106: 'set-objective-text', 107: 'set-global', 108: 'add-unit-to-unit', 109: 'sabotage-building', 110: 'set-tech-level',
-    111: 'reinforce-team-at', 112: 'attack-team-at-waypoint', 113: 'create-crate', 114: 'iron-curtain-at',
-    115: 'pause-game', 116: 'evict-occupiers', 117: 'center-camera', 118: 'make-house-cheer', 119: 'set-tab-to',
-    120: 'flash-cameo', 121: 'stop-sounds-at', 122: 'play-ingame-movie-pause', 123: 'clear-smudges',
-    124: 'destroy-all-of', 125: 'destroy-all-buildings-of', 126: 'destroy-all-land-units-of', 127: 'destroy-all-units-of',
-    128: 'destroy-all-of-house', 129: 'make-ally-oneway', 130: 'make-enemy-oneway', 131: 'change-tech-level',
-    132: 'reveal-map-around-team', 133: 'create-team-and-reveal', 134: 'set-spotlight-behaviour',
-    135: 'set-team-mission', 136: 'set-tech-type-tag', 137: 'superweapon-strike-at', 138: 'set-ambient-sound',
-    139: 'set-house-lighting', 140: 'clear-team-lighting', 141: 'reshroud-team', 142: 'set-camera-zoom', 143: 'save-game',
-    144: 'goto-next-mission', 145: 'preview-waypoint', 146: 'reset-objectives',
+    106: 'set-tech-level', 107: 'chrono-warp-team-to', 108: 'create-crate', 109: 'iron-curtain-at', 110: 'pause-game',
+    111: 'evict-occupiers', 112: 'center-camera-at', 113: 'make-house-cheer', 114: 'set-tab-to', 115: 'flash-cameo',
+    116: 'stop-sounds-at', 117: 'play-ingame-movie-pause',
+    # Yuri's Revenge only (game.exe's table stops at 117):
+    118: 'clear-smudges', 119: 'destroy-all-of', 120: 'destroy-all-buildings-of', 121: 'destroy-all-land-units-of',
+    122: 'destroy-all-naval-units-of', 123: 'mind-control-base-of', 124: 'restore-mind-controlled-base-of',
+    125: 'create-building-at', 126: 'restore-starting-units-of', 127: 'start-chrono-screen-effect', 128: 'teleport-all-to',
+    129: 'set-super-charge', 130: 'restore-starting-buildings-of', 131: 'flash-buildings-of-type',
+    132: 'set-super-recharge-time', 133: 'reset-super-recharge-time', 134: 'reset-super', 135: 'set-preferred-target-cell',
+    136: 'clear-preferred-target-cell', 137: 'set-base-center', 138: 'clear-base-center', 139: 'blackout-radar',
+    140: 'set-defense-cell', 141: 'clear-defense-cell', 142: 'retint-red', 143: 'retint-green', 144: 'retint-blue',
+    145: 'jump-camera-to-base',
 }
-WAYPOINT_ACTIONS = {7, 8, 17, 18, 41, 42, 43, 48, 63, 64, 65, 66, 80, 88, 90, 94, 95, 96, 99, 101, 102, 112, 113, 114,
-                    117, 121, 145}
+# Actions whose waypoint is the last parameter (the editors' letters; TActionClass's location) and those whose waypoint is
+# the data parameter (a number), from the handlers in vendor/ra2-decomp/src/taction.cpp.
+WAYPOINT_ACTIONS = {8, 41, 42, 43, 48, 55, 58, 80, 88, 89, 90, 94, 95, 96, 99, 102, 107, 108, 109, 112, 116, 125, 128,
+                    135, 137, 140}
+WAYPOINT_DATA_ACTIONS = {17, 18, 59, 63, 64, 65, 66, 98, 101}
 
 
 def read_ini(path):
@@ -105,30 +117,43 @@ def waypoint_from_letters(text):
     return n - 1
 
 
-def events(value):
+def name_of(table, t, game, which):
+    """The name for an event or action number, or eventN/actionN past the game's last one (game None: any)."""
+    if game and t > LAST[game][which]:
+        return '%s%d' % (('event', 'action')[which], t)
+    return table.get(t, '%s%d' % (('event', 'action')[which], t))
+
+
+def events(value, game=None):
+    """Each event is its type, a parameter code and a value; code 2 (TEventClass::Read_INI: Event_Needs's number and
+    techno type, events 60 and 61) adds a type name."""
     f = value.split(',')
     count = int(f[0])
     out, i = [], 1
     for _ in range(count):
         t = int(f[i])
-        width = 4 if t in (60, 61) else 3
+        width = 4 if f[i + 1].strip() == '2' else 3
         params = f[i + 1:i + width]
-        out.append('%s(%s)' % (EVENTS.get(t, 'event%d' % t), ','.join(params)))
+        out.append('%s(%s)' % (name_of(EVENTS, t, game, 0), ','.join(params)))
         i += width
     return out
 
 
-def actions(value, waypoints):
+def actions(value, waypoints, game=None):
     f = value.split(',')
     count = int(f[0])
     out, i = [], 1
     for _ in range(count):
         t = int(f[i])
         params = f[i + 1:i + 8]
-        text = '%s(%s)' % (ACTIONS.get(t, 'action%d' % t), ','.join(params))
+        text = '%s(%s)' % (name_of(ACTIONS, t, game, 1), ','.join(params))
+        wp = None
         if t in WAYPOINT_ACTIONS and params:
             wp = waypoint_from_letters(params[-1])
-            if wp is not None and str(wp) in waypoints:
+        elif t in WAYPOINT_DATA_ACTIONS and len(params) > 1 and params[1].strip().lstrip('-').isdigit():
+            wp = int(params[1])
+        if wp is not None:
+            if str(wp) in waypoints:
                 text += '[wp%d@%s]' % (wp, waypoint_cell(waypoints[str(wp)]))
         out.append(text)
         i += 8
@@ -140,6 +165,8 @@ def main():
     ap.add_argument('map')
     ap.add_argument('--section', default='all')
     ap.add_argument('--grep', default='')
+    ap.add_argument('--game', choices=('ra2', 'yr'), default=None,
+                    help="name numbers past the game's last event/action as eventN/actionN")
     a = ap.parse_args()
     ini = read_ini(a.map)
     want = a.section
@@ -162,8 +189,8 @@ def main():
             house, linked, name = f[0], f[1], f[2]
             disabled = f[3] if len(f) > 3 else '0'
             diff = ''.join(c for c, x in zip('emh', f[4:7]) if x == '1')
-            ev = events(ini.get('Events', {}).get(k, '0'))
-            ac = actions(ini.get('Actions', {}).get(k, '0'), waypoints)
+            ev = events(ini.get('Events', {}).get(k, '0'), a.game)
+            ac = actions(ini.get('Actions', {}).get(k, '0'), waypoints, a.game)
             lines.append('trigger %s "%s" house %s%s%s diff %s tags %s\n    when %s\n    then %s' % (
                 k, name, house, ' linked ' + linked if linked != '<none>' else '', ' DISABLED' if disabled == '1' else '',
                 diff, ' '.join(tags.get(k, [])) or '-', ' + '.join(ev), ' ; '.join(ac)))
