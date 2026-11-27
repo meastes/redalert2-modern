@@ -64,12 +64,12 @@ linked here.
 ## Vendored Yuri's Revenge tree: `vendor/ra2-decomp` and `vendor/tibsun`
 
 The Yuri's Revenge port (`yr/`) builds from the tree the decompilation repository pinned for it (`yr/` of
-redalert2-decomp, here copied from its commit `887b1a2e11` by `tools/update_yr_vendor.sh`, unchanged; each folder's
+redalert2-decomp, here copied from its commit `c768a31a42` (ports lane P64, 2026-11-27; earlier `887b1a2e11`) by `tools/update_yr_vendor.sh`, unchanged; each folder's
 `PIN` holds the upstream commit, the redalert2-decomp commit and the SHA-256 of every file, and `tools/check_tree.py`
 fails when a file differs):
 
-- `vendor/ra2-decomp`: **ra2-decomp** (gibbo101/ra2-decomp) at commit `8719494727dd9d5db16f92087e3cc13ea99f4dd3`,
-  copied whole (`src/`, `include/`, `data/`, `COPYING.md`, `LICENSE`, `README.md`). Game source GPL-3.0-or-later,
+- `vendor/ra2-decomp`: **ra2-decomp** (gibbo101/ra2-decomp) at commit `ac45ee9ec1dc44ae2a9c54e37570c25de0fea994` (2026-11-27; earlier `8719494727`),
+  copied whole (`src/` with its `src/ra2asm/` MASM text, `include/`, `data/`, `COPYING.md`, `LICENSE`, `README.md`). Game source GPL-3.0-or-later,
   Copyright 2026 ra2-decomp contributors, with Electronic Arts' section 7 terms on files that carry Electronic Arts or
   OpenTS material (`COPYING.md`); its `data/` (the function map, manifest and names the YR tools read) MIT (`LICENSE`).
 - `vendor/tibsun`: the **TibSun reconstruction** (OpenTS-Developers/TibSun) at commit
