@@ -2087,3 +2087,21 @@ random sequence or the Flak SAPC's arrival by a few frames before 9,203 (another
 the team's route timing); without a gamemd.exe run of the same inputs the two cannot be told apart. Not ground further.
 Boris's SAPC still takes the north route (Find_Path_Hierarchical's 3.000 against 3.001, P58). No hovercraft behaviour
 visibly changed in this mission, so no ctest added. Checks: yr-native-campaign-won-all01, -all03, -campaign-crash-all05, -tank-bunker, -robot-tank, -slave-miner, -planning-click pass.
+
+## Lane P63 (2026-11-27): YR campaign wins continued (Soviet 3; Allied 5 re-recorded)
+
+Main at 458350f did not build yr-native (the P58 merge dropped the end of the harness's `slaves` order); main fixed it in
+865e8d3, the same two lines. The four won replays rerun on main with P57's and P59's changes (and again after P62's
+hover merge): Allied 1, 3 and Soviet 2 still win at their ticks. Allied 5's did not (the replay ran out at 112,634 with
+BadGuy2's base standing and 83 prism tanks parked at home: its early commands now meet another game), so it was
+re-recorded as lane P59 re-recorded Red Alert 2's: the whole recording preloaded, then the prism tanks band-selected and
+walked through BadGuy2's base (90,100 - 110,100 - 124,100 - 130,103) and on to the nearest BadGuy1 object in turn: won at
+141,010, a rerun wins at the same tick.
+
+Soviet 3: Boris's range is not a port bug. Ordered at the beacon from 12.5 cells (55,84, reached round the pillboxes by
+69,82 - 60,81), he stepped one cell and painted at 11.7 (the Flare, Range 12), four BPLN came and the beacon fell
+(the dossier's test). The earlier deaths were the route through the pillbox cluster at 60-66,88-93.
+
+| Mission | Result | Lane-hours | Notes |
+| --- | --- | --- | --- |
+| Soviet 3 (SOV03UMD, Brain Wash) | won at tick 29,470 | 0.3 (P60) + 1.6 | Tanks to the docks (70,79), Boris by 60,81 to 55,84 and the beacon painted (gone 5,512); the Allied base turns at about 6,900, input opens 8,213. The park (55-75,38-52: gattlings, power plants, the war factory, initiates) ate two armies of 17; the west road (57,66 - 53,56 - 49,48 - 46,41, path found with `order path`) avoids it. The Dominator fires about 9,400 ticks after the turn (about 17,300), at the biggest cluster (once at the army's rally point: three tanks controlled, Boris lost). Boris must keep painting until the planes arrive (about 600 ticks from the south edge): moved away after painting, the strike never lands. From 52,30 one strike took YAPPET to 192 (repaired about 0.5 a tick) and Boris died before a second; the win: nine tanks beside Boris at 51,32, sent at YAPPET when the planes came within 18 cells: the strike plus the tanks killed it at 24,882 (the tanks and Boris died). The fire sale leaves initiates and slaves hunting; Tanya, the sniper, the SEAL and two tanks killed the last 26 (slaves need not die): won. Replay yr/tests/campaign/sov03.replay; tries in private/campaign_saves/yr/sov03/p63 |

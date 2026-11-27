@@ -534,7 +534,7 @@ endforeach()
 # and ticks only); pass: the mission's own triggers win it at the recorded tick and its score screen shows
 # (ra2/tests/ra2_campaign.py --game yr; label yr-campaign-won, a minute or two each, Allied 5 about ten minutes: the replay
 # runs to tick 112,634, hence --seconds 2400). Entries: <name>|<side>|<mission>.
-set(yr_won_all "all01|allied|1" "all03|allied|3" "all05|allied|5" "sov02|soviet|2")
+set(yr_won_all "all01|allied|1" "all03|allied|3" "all05|allied|5" "sov02|soviet|2" "sov03|soviet|3")
 if(NOT WIN32)
   foreach(yr_won IN LISTS yr_won_all)
     string(REPLACE "|" ";" yr_won_parts "${yr_won}")
