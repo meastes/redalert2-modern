@@ -270,11 +270,11 @@ yr/tests/campaign/, checked by `yr-native-campaign-won-*` (label yr-campaign-won
 
 | Mission | Result | Check |
 | --- | --- | --- |
-| YR Allied 1 (ALL01UMD) | won at tick 33,939 (re-recorded by lane P52 after lane P44's facing fix; P50's recording won at 24,522 and goes another way under it) | yr-native-campaign-won-all01 (about two minutes) |
-| YR Allied 3 (ALL03UMD) | won at tick 12,952 (lane P52) | yr-native-campaign-won-all03 (about a minute) |
-| YR Allied 5 (ALL05UMD) | won at tick 141,010 (re-recorded by lane P63: lane P60's recording, which won at 112,634, no longer wins after lane P57's building fixes (its prism tanks stay home and BadGuy2 is never wiped); the whole recording preloaded, then the 82 prism tanks at home sent through BadGuy2's base and on to every BadGuy1 object) | yr-native-campaign-won-all05 (about twelve minutes) |
-| YR Soviet 2 (SOV02UMD) | won at tick 8,320 (lane P60) | yr-native-campaign-won-sov02 (under a minute) |
-| YR Soviet 3 (SOV03UMD) | won at tick 29,470 (lane P63) | yr-native-campaign-won-sov03 (about three minutes) |
+| YR Allied 1 (ALL01UMD) | won at tick 33,374 (re-recorded by lane P68 on the ac45ee9e pin: lane P52's recording, which won at 33,939, plays out to 16,982 with no plant taken; from there engineers at CAPOWR01-04, then P52's Tanya and carrier phases unchanged) | yr-native-campaign-won-all01 (about two minutes) |
+| YR Allied 3 (ALL03UMD) | pending (won at tick 12,952 by lane P52; on the ac45ee9e pin the recording parts by tick 3,043 and the silo stands; lane P68 shelved its re-record at the cap) | parked in yr/yr.cmake yr_won_pending |
+| YR Allied 5 (ALL05UMD) | pending (won at tick 141,010 by lane P63; on the ac45ee9e pin its opening parts by tick 3,520 and the base is lost by about 15,500; lane P68 shelved its re-record; earlier: re-recorded by lane P63: lane P60's recording, which won at 112,634, no longer wins after lane P57's building fixes (its prism tanks stay home and BadGuy2 is never wiped); the whole recording preloaded, then the 82 prism tanks at home sent through BadGuy2's base and on to every BadGuy1 object) | parked in yr/yr.cmake yr_won_pending |
+| YR Soviet 2 (SOV02UMD) | pending (won at tick 8,320 by lane P60; on the ac45ee9e pin the army dies on the way; lane P68 shelved its re-record at the cap) | parked in yr/yr.cmake yr_won_pending |
+| YR Soviet 3 (SOV03UMD) | pending (won at tick 29,470 by lane P63; on the ac45ee9e pin the recording parts on the west road after tick 11,004; lane P68 shelved its re-record at the cap) | parked in yr/yr.cmake yr_won_pending |
 ## Yuri's Revenge under AddressSanitizer (lane P44, 2026-11-26)
 
 Lane P35's RA2 sweep on Yuri's Revenge: an RA2_NATIVE_ASAN=ON, RA2_NATIVE_YR=ON build (build/asan-yr), whose yr-native
