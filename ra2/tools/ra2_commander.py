@@ -245,25 +245,50 @@ class Game:
             self.cmd('input keyup %s' % mod)
             self.adv(2)
 
-    def select(self, objs, team=None, add=False):
-        """Selects the objects by clicks (the first plain unless add, the rest with Shift); team: Ctrl+<n> after."""
-        objs = [o for o in objs]
-        if not objs:
-            return
-        start = 0
-        if not add:
-            # a click on another controlled unit while one is selected can be an order (an infantry's move onto a
-            # friendly infantry): the selection dropped first (a right click), then a plain click
-            self.deselect()
-            self.click_obj(objs[0])
-            start = 1
-        if len(objs) > start:
-            def rest():
-                for o in objs[start:]:
-                    self.click_obj(o)
-            self.with_key('Left_Shift', rest)
+    def select(self, objs, team=None, add=False, tries=3):
+        """Selects the objects by clicks (the first plain unless add, the rest with Shift); team: Ctrl+<n> after.
+
+        Lane P75: each click is aimed where the object is now, not where the caller's list last saw it, and the
+        selection is checked afterwards: objects left unselected are clicked again (with Shift, from fresh positions),
+        up to `tries` rounds. A click on an object outside the view after its look is no click at all (the step
+        server's "no point"), so a list read some hundred ticks earlier, with the units moving, selected one of 35
+        Apocalypses in YR Soviet 7 (lane P73), and Ctrl+9 (gamemd.exe 0x00731060: every selected unit of the player's
+        joins the group) made a team of that one. Objects are Obj or IDs; IDs no longer on the map are skipped.
+        Returns the listed objects still unselected (empty when all are selected)."""
+        want = [o.id if isinstance(o, Obj) else int(o) for o in objs]
+        if not want:
+            return []
+
+        def where(i):
+            return {o.id: o for o in self.objects('all')}.get(i)
+
+        left = []
+        for round_ in range(max(1, tries)):
+            now = {o.id: o for o in self.objects('all')}
+            todo = [i for i in want if i in now and not (round_ and now[i].sel)]
+            if round_ == 0 and not add and todo:
+                # a click on another controlled unit while one is selected can be an order (an infantry's move onto a
+                # friendly infantry): the selection dropped first (a right click), then a plain click
+                self.deselect()
+                first = where(todo[0])
+                if first is not None:
+                    self.click_obj(first)
+                todo = todo[1:]
+            if todo:
+                def rest():
+                    for i in todo:
+                        cur = where(i)
+                        # a Shift-click on a selected object takes it out of the selection
+                        if cur is not None and not cur.sel:
+                            self.click_obj(cur)
+                self.with_key('Left_Shift', rest)
+            now = {o.id: o for o in self.objects('all')}
+            left = [now[i] for i in want if i in now and not now[i].sel]
+            if not left:
+                break
         if team is not None:
             self.with_key('Left_Ctrl', self.key, str(team))
+        return left
 
     def team(self, n):
         self.key(str(n))

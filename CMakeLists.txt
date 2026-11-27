@@ -216,3 +216,7 @@ set_tests_properties(host-paths PROPERTIES LABELS "ra2-quick;static")
 # Lane P73: ra2/tools/ra2_mapinfo.py's trigger event/action numbers, as the two executables' jump tables give them.
 add_test(NAME mapinfo-tables COMMAND "${Python3_EXECUTABLE}" -B "${CMAKE_CURRENT_SOURCE_DIR}/tests/mapinfo_tables.py")
 set_tests_properties(mapinfo-tables PROPERTIES LABELS "ra2-quick;static")
+# Lane P75: ra2/tools/ra2_commander.py's select() aims at where units are now and checks the selection (YR Soviet 7's
+# 35-unit team of one).
+add_test(NAME commander-select COMMAND "${Python3_EXECUTABLE}" -B "${CMAKE_CURRENT_SOURCE_DIR}/tests/commander_select.py")
+set_tests_properties(commander-select PROPERTIES LABELS "ra2-quick;static")
