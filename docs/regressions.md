@@ -1,1261 +1,233 @@
-> **History.** This is the record of how the port began: redalert2-decomp's `native/rb/README.md` from the
-> `ports-on-rebuild` branch (lanes P1 to P11), kept as written. There the work was a trial beside the src-based port,
-> and its paths, names (`rb-native-trial`, `RBTrial.app`, `rb_trial.sh`) and "trial" wording are that repository's.
-> In this repository it is the port: the target is `ra2-native`, the iOS app `RA2.app`, the scripts `ra2/tools/ra2_*`,
-> and the src-based port is the old port (README.md, History).
+# The user's own bugs, checked on this port
 
-# native/rb: the native ports on the rebuild tree (branch ports-on-rebuild, lanes P1 to P11)
+Every bug the user found by hand in the old port (Mac, iPhone Duo, LAN), from redalert2-decomp's
+`docs/PORTS_FACTS.md`, `docs/PORTS_REMAINING.md`, `docs/CAMPAIGN_PLAY_LIST.md`, `docs/HANDOFF.md`, `native/README.md`
+(lanes N1-N33, C, Y, Scout and R rows) and lane P12's Duo report on this port; lane P14, 2026-11-24. The id after each
+bug is the one those notes use.
 
-User, 2026-11-23: start moving the ports onto the rebuild code on a branch, below recovery work.
-Plan: `docs/REBUILD_HANDOVER_PLAN.md` section 2 (work items 1 and 2 here; item 3, `link/` and
-`drafts/` renaming, waits for the user's 11-29 flex decisions). This area never edits `src/`,
-`rebuild/` or the rest of `native/`; the src-based port stays the built and played one, and nothing
-here lands on main until the rebuild-based port passes what the src-based port passes.
+Status: **scripted, passing** a check on this port runs it and passed (the ctest named; the P12 full run of 60 rows
+at e084c67 plus lane P14's new rows); **fixed** the old port's fix is carried (a `fixups.json` row or glue) but no
+script reaches it; **same code** the code is the shared host's, byte for byte the old port's; **needs his check**
+nothing scripted reaches it: worth a look while playing.
 
-| Path | What |
-| --- | --- |
-| `PIN` | the main commit whose `rebuild/` the branch builds against (re-pinned only deliberately) |
-| `tools/rb_units.py` | the generator (from `native/yr/tools/yr_units.py`): the pinned tree by `git archive`, one native TU per `rebuild/src` unit, the header directory, the port rewrites (`native_units.port`), `fixups.json`; units ordered by the original `_initterm` order (`data/initterm.json`) |
-| `fixups.json` | clang fixups on the generated copies, each with its VC6 meaning |
-| `glue/`, `sdk/` | native replacements appended to units; headers searched before `native/yr/sdk` |
-| `tools/rb_probe.py` | compiles the units with the YR build's flags (`--obj`; `--non-matching` adds the rebuild's parked drafts) |
-| `tools/rb_data.py` | the rebuild's `data_globals.py`: zero storage for undefined .bss names bound by the rebuild catalog, the initialised ones listed for the run-time load |
-| `tools/rb_original_data.py` | the initialised globals' storage and the run-time load table (`ra2_original_globals`, `ra2_original_storage`) the port fills from the user's game.exe, from `yr_data.py`'s declaration reader |
-| `tools/rb_rekey.py` | main's address-keyed tables re-keyed to rebuild names: `data/initterm.json`, `data/rekeyed.tsv` |
-| `tools/rb_trial.sh` | the whole trial outside CMake: generate, compile, bind data, bind functions by address, close the link, weaken repeated header constants, defer the static initialisers, link against a src-based build's `ra2_port` and host (read only). `RB_NON_MATCHING=1`: the parked drafts too (WinMain is one; the played trial); `RB_ASAN=1`: AddressSanitizer units (diagnosis) |
-| `tools/rb_aliases.py` | undefined functions bound to the rebuild's definition at the same original address (catalog references and regions; same argument shape required; overloads told apart by their decorated argument types) |
-| `tools/rb_run.sh` | runs a trial binary to a milestone with the user's installed game read at run time (`--nm`, `--bin`; `RA2_DATA_DIR`, `RA2_GAME_EXE`, `RB_WRITE_DIR`) |
-| `tests/rb_routes.py` | the checks (lanes P3 to P7; P7 adds `forcewin\|forcelose\|chain --side allied\|soviet`): the scripted runs through the real menus, each in a fresh write folder (`--route skirmish\|soak\|exit\|audio\|save\|resave\|original\|combat\|combatsave\|campaign\|production`); ctest rows in `CMakeLists.txt` |
-| `tools/rb_ios_sim.sh` | lane P7: the Simulator app as a drop-in `--binary` for rb_routes.py (RA2_* passed as SIMCTL_CHILD_*; `--setup <udid>` boots and installs, `--cleanup` shuts down what it booted); the rb-ios checks |
-| `tools/rb_ios.sh` | lane P6: the iOS form, opt in (`build simulator\|device`, `run <udid> [seconds] [run-to] [host args]`; lane P11: `run-imported <udid> [seconds]`, the import path without Mac paths): RBTrial.app (bundle id io.github.ra2native.RBTrial) from native/rb's CMake in its iOS form, against a src-based iOS build's port library, host objects and static SDL3 (only those built) |
-| `tools/rb_skirmish_wrap.py`, `tests/rb_identity.py` | lane P8: main's tests on the trial (rb-main); frame identity against the src-based port |
-| `glue/harness_native.inc` | lane P5: the order harness (`RA2_NATIVE_ORDERS`: spawn, select, fire, health, draws), appended to the conquer unit and called each loop frame from the Main_Loop seam; test scaffolding |
-| `tools/rb_original_layouts.py`, `data/original_save_types.txt` | lane P4: the field maps for the original's save format over the rebuild units (`native/tools/original_layouts.py` imported, its dump replaced) |
-| `CMakeLists.txt` | the opt-in CMake form of the trial, a project of its own beside `ra2-native` (this lane edits only `native/rb/`): `cmake -S native/rb -B build/rb-cmake -G Ninja [-DRA2_SRC_BUILD=...] [-DRB_NON_MATCHING=OFF]`, target `rb-native-trial`; `weaken_duplicates.py` and `defer_initializers.py` as PRE_LINK. Hooking it into `native/CMakeLists.txt` (one include behind an option, as `yr/yr.cmake`) is left to a lane that may edit that file |
-| `glue/rb_host_glue.cpp` | the host's `ra2_native_original_records`: the units' static initialisers (moved to `__DATA,__rb_init_func`) run after the game.exe load, in the units' (original `_initterm`) order |
-| `glue/rb_behaviour.cpp`, `glue/rb_asm_draw.cpp`, `glue/*_native.inc` | native bodies the trial reaches that the rebuild carries neither exact nor as a compiling draft: main's text (link/, drafts/, exact rows the rebuild lacks) under the rebuild's names; each `.inc` is appended to its unit by a `fixups.json` row. Item 3 replaces them with the renamed link/ and drafts/ |
+Counts (RA2 rows, 66): scripted and passing 30 (2 of them, the Movies menu, failed here first and lane P14 fixed
+them), fixed 10, same code 5, needs his check 19, waiting for other lanes 2 (the both-games toggle, Windows). The 25
+Yuri's Revenge-only rows wait for the YR port (lane P13): N32, N13, Y15-diff, N3-mac-defeat, Y13-anim, N4-garrison,
+N18-internet, N18-slide, N18-rows, Y11-backdrop, Y11-focus, N21-banner, N27, Y14-bar, N3-typesel, N3-savedlg,
+N5-origload, N3-netcrash, N3-yrkbd, N21-abort, Y14-noise, N4-mirage, N12-mirage1, N4-derrick, Y14-skip.
 
-## State at PIN 4d8ce026ed (lane P1, 2026-11-23)
+| Bug | Where found | Status on the new port | Check |
+| --- | --- | --- | --- |
+| Map could be panned (and pinch-zoomed) during a mission intro whose input is locked (Allied 'Hail to the... (N31-3) | iPhone Duo, campaign | scripted, passing | ra2-main-locked-input |
+| With one unit selected, a tap on another of the player's units moved the selected one ('not able to select... (C18-cross) | iPhone Duo, campaign | scripted, passing | ra2-main-touch-cross-classic, -cross-modern, -cross-mouse; ra2-ios-sim-touch-cross-classic |
+| 'Pink flag' seen by the user; unexplained (user will report again if seen) (U-pink) | iPhone Duo, campaign | needs his check | never explained; watch for it |
+| Allied 1 crash around Tanya's C4 (uncertain whether user-reported; the commit names only 'Allied 1 Tanya... (r20) | Mac, campaign | scripted, passing | ra2-native-chain-allied; the gate: Allied 1 identical to the old port for 6,000 frames, with Tanya clicked through (allied-01-orders) |
+| A skirmish started from the menus ran ~95 frames/s ('way too fast') at the slider's default Fastest (M20-speed) | Mac, skirmish | scripted, passing | ra2-native-skirmish (3,747 frames in 75 s at the 16 ms floor); P12 row keeps the floor to game speed 0 |
+| Tank shells did no damage (in a LAN game tanks never damaged each other; GIs did); Sight_From also... (C22-tank) | Mac + iPhone LAN (affects every mode), combat | scripted, passing | ra2-native-tankdamage (new, lane P14): a Grizzly shells an enemy Rhino, strength 400 to 264 to 60, dead at frame 350 |
+| Ctrl+click force fire did not work (the user's force-attack bug) (S1209-force) | Mac, combat | needs his check | Ctrl+click force fire: the gate's order scripts use Ctrl+click on Allied 1 (identical), no damage check |
+| Units would not select, move or deploy with the trackpad (default skirmish, windowed, tap-to-click) (S1209-trackpad) | Mac (trackpad), combat | needs his check | host code identical to the old port |
+| Crash when the mouse moved over the map (U-mousecrash) | Mac, combat | scripted, passing | every gate run and ra2-main-controls-* move the mouse over the map |
+| Menu buttons drawn with the wrong art (main menu and in-game menus need the red/blue sidebar button shapes) (M20-buttons) | Mac, menus/shell | scripted, passing | ra2-shell-frames-mac / -iphone (menu frames against the old port) |
+| Menu buttons invisible after the window lost and regained focus (S1209-invis) | Mac, menus/shell | fixed by lane P14, scripted, passing | ra2-main-menu-movie (new): failed here first, the Movies list was empty (the movie tables were zero storage); passes after the fix |
+| Main menu flashed (user video); labels missing right after the slide-in (S1209-flash) | Mac, menus/shell | needs his check | no script |
+| Window went unresponsive (beachball) in long busy stretches such as loads (S1209-beachball) | Mac, menus/shell | needs his check | host code identical |
+| Loads from a game folder on a network share slow or failing (directory-listing cache, negative opens;... (S1209-share) | Mac, menus/shell | needs his check | host code identical |
+| A movie from the Movies menu was cut at the sidebar edge (its right part drawn lower and larger); the main... (C11-movie) | iPhone Duo, menus/shell | fixed by lane P14, scripted, passing | ra2-main-menu-movie (as S1209-invis) |
+| Main menu art and buttons apart with noise around them at the Duo's 944x634 (sizes between 800x600 and... (Scout1274-menu) | iPhone Duo, menus/shell | scripted, passing | ra2-main-widescreen; P12 carried the menu panel rows |
+| Exit Game -> OK left a black screen instead of quitting the app (r31-exit) | iPhone Duo, menus/shell | needs his check | iOS host code identical; Simulator only |
+| Internet button clickable (showed a message box); the user wanted it disabled (C20-internet) | Mac / all, menus/shell | fixed | P12 row (Internet disabled at the main menu); lan_lobby.py not yet run on the new port |
+| One-game toggle read as help text, then flickered over the menu movie (C23-toggle) | iPhone Duo, menus/shell | YR port pending | the one-game toggle comes with lane P13 |
+| With Menu fill = Scale to fit and Pinch zoom on, RA2's menus were letterboxed on all four sides (YR's... (N28-fit) | iPhone Duo, menus/shell | needs his check | zoom rows carried; one-game-menu-backdrop is a both-games check (lane P13) |
+| Enhancements page talked about gestures on the Mac and Windows (Y8-labels) | Mac / Windows, menus/shell | same code | platform/sdl/enhancements.cpp is the old port's |
+| Enhancements page did not look like the game's own dialogs (the user's restyle request) (C7-restyle) | all, menus/shell | scripted, passing | ra2-shell-frames (Enhancements page); P12 fixed the Cancel button |
+| A double tap in the LAN lobby read as a right click (probably user-reported) (r29-lobbytap) | iPhone Duo, menus/shell | needs his check | host code identical |
+| Building placement preview did not follow the mouse (M20-place) | Mac, sidebar/command bar | needs his check | placement preview: the gate's skirmish order script places a power plant by clicks (both ports), the preview is not checked |
+| Sidebar flickered (cursor-erased sidebar every frame while a cameo's clock ran) (M20-flicker) | Mac, sidebar/command bar | scripted, passing | cursor_stress.py passed on this port (lane P9) |
+| With Game interface size above 1x the command bar ran across the Escape menu and the column ended above... (C16-dlg) | iPhone Duo, sidebar/command bar | scripted, passing | ra2-main-zoom-menu, ra2-main-zoom-menu-ui |
+| A command bar closed with its close thumb could not be opened again with Zoom gestures on (open thumb off... (N31-1) | iPhone Duo, sidebar/command bar | scripted, passing | ra2-main-command-bar-thumb |
+| Command bar flashed higher up the map when its icons were tapped (after any in-play dialog) (N31-2) | iPhone Duo, sidebar/command bar | scripted, passing | ra2-main-command-bar-thumb |
+| No way to set a command-bar team on touch (the toolbar's Fire/Ctrl did nothing on team buttons) (probably... (Y15-team) | iPhone Duo, sidebar/command bar | scripted, passing | ra2-main-touch-team-hold, ra2-ios-sim-touch-team-hold |
+| Game crashed after a few minutes with two machines (reused control-group orders) (r21-lancrash) | Mac + Mac (two machines), multiplayer/LAN | scripted, passing | ra2-main-lan-pair (18,000 frames, no CRC difference) |
+| Opening Escape > Game Controls > Sound in a network game crashed (r22-sound) | Mac LAN, multiplayer/LAN | scripted, passing | ra2-main-lan-pair |
+| Edge scrolling 'way too fast' in a network game (r19-scroll) | Mac LAN, multiplayer/LAN | scripted, passing | ra2-main-lan-pair |
+| First LAN lobby issues: name entry, name focus and caret across activation, lobby list background, slot... (r17-lobby) | Mac LAN, multiplayer/LAN | needs his check | lan_lobby.py not yet run on the new port |
+| Return in the lobby's chat line sent nothing (C20-chat) | Mac + iPhone, multiplayer/LAN | needs his check | lan_lobby.py not yet run on the new port |
+| The iOS app saw the other players but no hosted game, in either direction (C20-ios-host) | iPhone + Mac, multiplayer/LAN | needs his check | lan_lobby.py not yet run on the new port |
+| Two games with the same PATH got the same session UniqueID about half the time and ignored each other's... (C20-uniqueid) | iPhone / Mac, multiplayer/LAN | fixed | P12 carried main's C20 install id row |
+| iPhone in a LAN game: a notification, Control Center or the background held the game and stalled or... (C22-bg) | iPhone + Mac, multiplayer/LAN | needs his check | lan_pair.py --background not yet run on the new port |
+| 'Reconnection Error!' with Stop (once): out of sync between an old Mac build and a newer phone build, not... (C22-reconn) | Mac + iPhone, multiplayer/LAN | needs his check | a LAN game between the old port and the new one was not tried |
+| Game froze after the glass toolbar closed (host pause never lifted: a background/focus pause without SDL's... (r27-freeze) | iPhone Duo, iPhone touch | same code | iOS host identical |
+| The '...' button stayed pressed (grey) without opening the toolbar, and from then on taps did nothing (r28-stuck) | iPhone Duo, iPhone touch | same code | iOS host identical |
+| Two-finger tap (right click: deselect) often came out as a one-finger tap that moved the units (r28-2finger) | iPhone Duo, iPhone touch | scripted, passing | ra2-main-touch-two-finger, ra2-ios-sim-touch-two-finger |
+| Two-finger tap kept panning; a single tap once began a selection box at a skirmish's start (UIKit reused... (r31-fingerid) | iPhone Duo, iPhone touch | scripted, passing | ra2-main-touch-two-finger (partly) |
+| Two-finger tap did not deselect; the toolbar's A-Move tap gave no order (a selection band instead)... (C8-race) | iPhone Duo, iPhone touch | scripted, passing | ra2-main-touch-two-finger, ra2-main-touch-attack-move, ra2-ios-sim-touch-attack-move |
+| The user's choice: Fire/Move/Add/A-Move as one either-or group, A-Move a toggle (it was one-shot) (C10-modes) | iPhone Duo, iPhone touch | same code | touch modes are host code; ra2-main-touch-modern |
+| Keys button misplaced right of the menu panel (C12); black safe-area bars in play though the Duo has no cutout (C13-keys) | iPhone Duo, iPhone touch | same code | host code |
+| On-screen keyboard did not come up for the player-name fields or the chat line (probably a user request;... (C14-kbd) | iPhone Duo, iPhone touch | needs his check | the game-side hook is carried (glue/ownrdraw_native.inc); no route types into a field |
+| Abort Mission screen laid out wrong at render scale 2 (Zoom gestures) (C16-abort) | iPhone Duo, display/zoom/HD | scripted, passing | ra2-main-zoom-menu |
+| After Abort Mission the zoomed screen was shown whole: tactical part in the top-left corner, bottom half black (C16-abort2) | iPhone Duo, display/zoom/HD | scripted, passing | ra2-main-zoom-abort |
+| The Mac app did not lay the game out at the window's aspect (the iOS app did) (Y8-wide) | Mac, display/zoom/HD | scripted, passing | ra2-main-widescreen |
+| Black bars around the 800x600 menus (the user's 'no black bars'; a request) (C12-fill) | iPhone Duo / all, display/zoom/HD | needs his check | enhancements_frames.py not run on the new port |
+| Crash when a vehicle took the veteran crate (Allied 'Hail to the Chief'): SIGSEGV in Audio_List_Remove... (N30-crate) | iPhone Duo, audio/movies | needs his check | the sacrifice event offset (N30): the new port's EventClass is typed (lane P8); no crate route |
+| Music never played in the menus or in game (the theme restarted every frame) (M20-music) | Mac, audio/movies | scripted, passing | ra2-native-audio |
+| Movies did not play properly (Bink tables) (M20-movies) | Mac, audio/movies | scripted, passing | ra2-native-audio (Bink intro with sound) |
+| No Windows-specific bug reported by the user: RA2 LAN Mac + PC 'works great', the installed game loaded... (W-none) | Windows PC, Windows | pending | Windows targets come with lane P13 |
+| Enhancements page: Cancel drawn as a grey push button in the page body (P12-cancel) | iPhone Duo (this port, lane P12), menus/shell | scripted, passing | ra2-shell-frames |
+| Dropdown lists: no frame, rows left on screen after closing, the arrow never pressed (P12-combo) | iPhone Duo (this port, lane P12), menus/shell | scripted, passing | ra2-shell-frames |
+| Dropdown click played the generic click instead of the combo open sound (P12-combosound) | iPhone Duo (this port, lane P12), audio/movies | fixed | P12 row |
+| Fullscreen 'Automatic' row drawn dark red on touch hosts (P12-auto) | iPhone Duo (this port, lane P12), menus/shell | fixed | P12 row (owner ruling: the played look) |
+| Internet button live on the main menu (P12-internet) | iPhone Duo (this port, lane P12), menus/shell | fixed | P12 row |
+| Every list box empty (Load/Save/Delete, Keyboard commands); the column lists drew no text (P12-lists) | iPhone Duo (this port, lane P12), saves | scripted, passing | ra2-shell-frames (Load list); the Movies list was still empty: fixed by lane P14 |
+| After a load error nothing was left to click (P12-loaderr) | iPhone Duo (this port, lane P12), saves | fixed | P12 row |
+| LAN UniqueID could collide between devices (P12-uniqueid) | iPhone Duo (this port, lane P12), multiplayer/LAN | fixed | P12 row |
+| 16 ms frame floor applied at every game speed (P12-floor) | iPhone Duo (this port, lane P12), skirmish | fixed | P12 row |
+| Pinch zoom off on iOS by default (no 0.5x map zoom); the old app's On was the user's saved choice (P12-pinch) | iPhone Duo (this port, lane P12), display/zoom/HD | fixed | P12 (iOS default on) |
+| Play resolution differs from the old app (976x720 vs 1024x720 at 944x634 points, interface 1.25x); not... (P12-res) | iPhone Duo (this port, lane P12), display/zoom/HD | needs his check | 976x720 on the Duo against 1024x720 here; the app log line settles it |
+| Home-screen name was 'RA2 Rebuild Trial' (P12-name) | iPhone Duo (this port, lane P12), iPhone touch | fixed | P12 |
 
-* All 438 units compile under clang for arm64 (`wonline.cpp`, Westwood Online, left out as in the
-  YR port: 439 units in the tree); also with `-DRA2_NON_MATCHING` (the rebuild's parked drafts).
-* The two header fixes the probe found: `int.h:175` (the friends become friend templates) and
-  `tag.h`'s static `Init` (renamed `Init_Static` with its definition and one caller); 35 fixups in all.
-* The trial links (`rb-native-trial`, about 10 MB; not run yet). Link closure against the units,
-  `ra2_port` and the SDL host, without any of main's `native/link`, `drafts` or data objects:
-  602 undefined; 385 after `rb_data.py`'s .bss storage (217 names); **202** after
-  `rb_original_data.py` (172 initialised globals, 163 loaded from game.exe) and the YR port's CRT
-  glue: all functions, no data. With the parked drafts compiled (`RB_NON_MATCHING=1`): **158**.
-  Main's src-based port closes at 180 with all of its `link/`, `drafts/` and data. Of the 202: about
-  93 are main-exact functions (item 4 overlay; many Westwood Online, whose unit is left out), 77
-  have a behaviour rewrite or draft in main's port by address (item 3: the assembly routines,
-  blitters, codecs), 22 carry no catalog address (WinMain, constructors the rebuild parks), 9 are
-  library or assembly at or past 0x781000, 1 is exact in neither tree.
-* `data/initterm.json`: 3,553 of main's 3,610 `_initterm` entries re-keyed to rebuild units and
-  symbols (the 57 others are header-static copies in units outside the rebuild's 438, and three
-  seed views); in the rebuild every initialiser is a unit's own static object, so no explicit calls.
+## Yuri's Revenge rows (lane P13, 2026-11-24)
 
-## State at PIN 5932814e42 (lane P2, 2026-11-23)
+The Yuri's Revenge port here is the old port's (vendor/ra2-decomp at the same pin, yr/fixups.json, yr/glue and the
+shared host copied from redalert2-decomp's native/yr at 887b1a2e11; lane P15's skirmish-screen fix on top), so every row
+is **same code** as the old port; the check column says what ran on this repository. The runs: lane P13's full Mac
+ctest at 23ebd62/efc9665 (every yr-native row passed except member-aliases and save, two test-setup faults fixed in
+79472b1 and passing on the recheck), the recheck after the P15/P16/P14 merges, and the "RA2 Duo Validation" Simulator
+rows of the combined app. The mapping from id to bug follows the old port's notes (docs/yr-port-notes.md lanes Y11 to
+N32); where the notes do not say which check covers a row, it is marked needs his check.
 
-Re-pinned from 4d8ce026ed (deliberately: the skirmish dialog trapped on `OwnerDraw::Combo_Proc`, whose
-first draft, with `List_Proc`'s, landed in chunk 77 after the old pin).
+Counts (25): scripted and passing 20, same code (no script) 2, needs his check 3.
 
-**The trial plays a skirmish.** `RB_NON_MATCHING=1 native/rb/tools/rb_trial.sh`, then
-`native/rb/tools/rb_run.sh --nm frame 100 --input-script=<s1+1000 click 834 304 / s2+1000 click 834 388 /
-s3+1500 click 834 346>` (Single Player, Skirmish, Start Game), reading the installed game at run time:
-WinMain, RA2.INI, LANGUAGE.MIX and the MIX keys, the window and DirectDraw surfaces, the main menu (about
-14 s in, as main's port), Single Player, the skirmish setup, the map load, then Main_Loop: map, shroud,
-units, sidebar and command bar drawn, logic and AI running, no trap and no fault: 4,803 frames in a
-100 s run (main's port: 4,602 on the same script), with the Main_Loop seam (`glue/mainloop_native.inc`:
-main's native frame floor, 62 frames a second at the slider's default GameSpeed 0, and the run-to frame
-count); a 420 s soak played 16,918 frames with no trap until the idle player lost and the score
-screen showed; an exit route (frame 600 Escape, Abort Mission, Quit, then the menus) returns to the main
-menu and ends with WinMain returning 0 (`build/rb-native/run/exit.script`, as main's
-`tests/exit_route.py`). Without the floor the game ran uncapped (frame 19,301 after a minute) and the computer won. The
-CMake build (`build/rb-cmake/rb-native-trial`) gives the same closure and runs the same way. Without the drafts the
-trial stops at WinMain (parked in the rebuild).
-
-Link closure (functions with no definition; the rest are bound): **93** with
-the parked drafts, the played build (P1: 158; 202 for the exact text, now 179: the glue bodies call functions only the drafts define); main's src-based port closes at 180 with all of its link/, drafts/
-and data. 33 functions bound by address (`rb_aliases.py`), 168 initialised globals loaded from game.exe.
-
-Fixed (each a `fixups.json` row or a glue file, with its why):
-
-* start-up: static initialisers deferred until after the game.exe load; the WinMain draft compiled
-  (SEH dropped, as main's port); the launcher strings loaded (host declarations read too); base64's
-  `BIG_ENDIAN` test (Darwin defines it: the MIX header keys decoded to garbage; YR's row); the
-  theater, z-gradient and cursor tables loaded as plain records;
-* pointer width: WinData's drawer and backdrop shapes, its raw 32-bit offsets, the replacement list
-  box's GWL_USERDATA words, `TextNode`'s header size, `NodeList`'s view of WinData, message 0x4E9's
-  two record declarations; the notice interfaces' pointer arguments; the radio parameter (`intptr_t &`
-  in every Receive_Message/Transmit_Message, `LParam`); IsoBlitState's source pointers; RLE_Blit's and
-  the wave draws' buffer addresses; YR's rows for abuffer, zbuffer, isotype, audmpool, radar, voxlib
-  where the rebuild has the same text;
-* native bodies (main's text, rebuild names): set_control_word, the CPU probes and Get_CPU_Type(_Name),
-  the mono pages, Adjust_Color_565/555, Intersect, AlphaShapeClass::Draw_All,
-  Building_Player_Detector_Covers_Target, TechnoClass::Is_Weapon_Valid, the assembly voxel drawers,
-  Get_CPU_Clock, the spot-light brighteners.
-
-Findings for the rebuild (no edit here): `ScorePalette` names two objects (`_palette.cpp`'s
-PaletteClass and `txtlabel2.cpp`'s pointer at 0x00AC1160), which per-unit compilation never links
-together; message 0x4E9's record and WinData's Nodes each have two declarations (TextRequest /
-ToolTipTextRequest, NodeList); `TechnoClass::Is_Weapon_Valid` and `Is_Weapon_Present` are one address
-under two declarations.
-
-Next:
-
-1. Turn the scripted runs (skirmish, soak, exit route) into checks beside the src-based port's (YR's
-   yr_skirmish_smoke.py / yr_skirmish_score.py are the model), then the score screen's Continue.
-2. Use a fresh `RB_WRITE_DIR` per comparison: the game writes its RA2.INI there (the skirmish setup's
-   last choices).
-3. The rest of the closure as the runs reach it (93 with drafts: Westwood Online, the VQA/LCW codecs,
-   the 556/655 colour formats, Asm_Interpolate, WDT, a few class methods), then item 3 (link/, drafts/
-   renamed) after the 11-29 flex decisions; item 4's overlay for main-exact rows the rebuild lacks
-   (the mono pages and Get_CPU_Type here are its first members).
-4. Member aliases by offset in the rebuild layouts (P1's step 3) are still open; this lane did the
-   function aliases by address.
-5. The movies and audio (the runs use -noaudio; the VQA codecs are still traps), then saves (item 6).
-
-
-## Checks, audio and saves (lane P3, 2026-11-23, same PIN)
-
-**Checks.** `ctest --test-dir build/rb-cmake` (or `-L rb-quick`, everything but the soak) runs
-`tests/rb_routes.py` against `rb-native-trial`, each run in a fresh write folder under
-`build/rb-cmake/tests/<route>`, the user's installed game read at run time (`RB_DATA_DIR`, default the
-Lesalia install; `RB_GAME_EXE`, the pinned target); skipped (77) without them. All five pass:
-
-| ctest | route | checks |
+| Bug | Status on the new port | Check |
 | --- | --- | --- |
-| `rb-native-skirmish` | Single Player, Skirmish, Start Game, 75 s | no trap or fault; the time limit ends it; the game loop reached; at least 3,000 frames (3,747) |
-| `rb-native-soak` | the same, 420 s idle | at least 6,000 frames (the count stops when the computer wins: 12,339 to 16,918 seen); the score screen (Do_Lose's 50-control dialog) shown |
-| `rb-native-exit-route` | frame 600 Escape, Abort Mission, Quit, Back, Back, Exit Game, OK (main's `tests/exit_route.py` route) | the main menu shown again; WinMain returns 0; exit 0 |
-| `rb-native-audio` | the skirmish route without `-noaudio` and without the movie skip | the start-up movie opened with its sound track (Bink, the user's BINKW32.DLL tables); the mixer not silent before the menu; in the game at least three sound buffers playing with a nonzero peak (`RA2_PORT_TRACE`, `RA2_NATIVE_AUDIO_LOG`) |
-| `rb-native-save` | skirmish with a harness save at loop frame 600, then a new process with `--load-save` | the save written; `resume: loaded RBROUTE.SAV`; the game loop reached again, at least 1,500 frames |
+| Touch pan and zoom gestures during a mission intro's input lock (N32) | scripted, passing | yr-native-locked-input |
+| Allied 1's Guardian GIs did not deploy; deployers on command (N13) | scripted, passing | yr-native-deployers |
+| Campaign dialog's Difficulty label read MISSING (Y15-diff) | same code | yr-native-campaign-allied/-soviet pass through the dialog; the label text is not checked |
+| Immediate defeat in a Yuri's Revenge skirmish (Mac report; a stale build) (N3-mac-defeat) | scripted, passing | yr-native-skirmish-long (ten minutes against three hard AI), -smoke, -score |
+| Unit walk and idle animation glitches (Y13-anim) | needs his check | no script compares the animation frames |
+| A GI could not garrison a civilian house (N4-garrison) | scripted, passing | yr-native-garrison |
+| Internet button live in Yuri's Revenge's main menu (N18-internet) | needs his check | no row clicks it |
+| Main menu slide-in drawn wrong (N18-slide) | same code | one-game-ios-sim-menus walks the menus; the slide-in frames are not compared |
+| Menu list rows (N18-rows) | needs his check | no row compares them |
+| Shell dialogs' backdrop black (Options) or noise (Enhancements) (Y11-backdrop) | scripted, passing | one-game-menu-backdrop, one-game-ios-sim-menus |
+| The toggle and the menu's focus after a swap (Y11-focus) | scripted, passing | one-game-toggle (Mac), one-game-toggle-wine (Windows), one-game-ios-sim |
+| End-of-game banner dark (N21-banner) | scripted, passing | yr-native-end-banner |
+| Command bar thumbs with Zoom gestures on (N27) | scripted, passing | yr-native-command-bar-thumb |
+| Bottom command bar missing (Y14-bar) | scripted, passing | yr-native-graphics |
+| Command bar's TypeSelect did nothing (N3-typesel) | scripted, passing | yr-native-type-select |
+| Save through the Save dialog failed (N3-savedlg) | scripted, passing | yr-native-save-dialog |
+| The user's own original Yuri's Revenge saves (N5-origload) | scripted, passing (partly) | yr-native-save (the installation here has no YR saves: that part is skipped) |
+| Crash on the Network screen (N3-netcrash) | scripted, passing | yr-native-lan-lobby, yr-native-lan-pair |
+| No on-screen keyboard in Yuri's Revenge's name field (N3-yrkbd) | scripted, passing | one-game-ios-sim-menus (both games' name fields; Red Alert 2's fixed by lane P13) |
+| Abort Mission when scaled showed the zoomed map small (N21-abort) | scripted, passing | yr-native-zoom-abort |
+| Noise drawn while the MCV deploys and a Grizzly first moves (Y14-noise) | scripted, passing | yr-native-graphics |
+| Mirage tank camouflage in the wrong colours (N4-mirage) | scripted, passing | yr-native-mirage |
+| Mirage tank's first camouflage animation corrupted (N12-mirage1) | scripted, passing | yr-native-mirage (first animation against the second) |
+| Oil derrick and power plant animations missing (N4-derrick) | scripted, passing | yr-native-building-anims |
+| Skip button left on the start-up loading screen (Y14-skip) | scripted, passing | one-game-ios-sim-menus (failed once in the full run, passed on the recheck: the check reads the host's touch-control states) |
+| Windows: a Yuri's Revenge save made by the save menu failed its load in a fresh process, 3,333 unmatched fields and signal 8 (codex1's PC check of 3182afe, P19-yrsave) | scripted, passing | yr-native-save-wine (fails on 3182afe's yr-native.exe as on the PC), yr-native-original-layouts on build/windows-one |
+| Windows: Yuri's Revenge stopped ("Red Alert 2 stopped", details "printed to the terminal") in early play after the MCV was selected, speed 2, after a swap from Red Alert 2 (codex1's PC check of 3182afe, P19-yrcrash) | scripted, passing | one-game-yr-play-wine: under Wine the click on the selected MCV trapped in TechnoClass::VoiceDeploy (no return: mingw's clang put int3 there; -fno-strict-return now), and a later fault in fastmath::atan2f (yr/fixups.json); the crash dialog of an engine started by a swap now names the log |
 
-**Audio and movies work.** RA2's movies are Bink (the port's player, as main's port): the intro plays with
-sound, the menu's animated backdrop plays, and the game's sound effects and music mix. Carried for it:
-`Sound_Effect` (TibSun's two declarations, called by parked drafts: through VocClass::PlayGlobal/PlayAt,
-`glue/voc_native.inc`) and MSSfx (the rebuild's own mssfx unit text from chunk 80, after this pin,
-`glue/mssfx_native.inc`). The VQA/LCW codecs are no longer traps (`glue/rb_vqa.cpp`: main's
-`behaviour_asm_vqa.cpp`, the C16 `UnVQ1_4x2_Table` and `LCW_Comp` under the rebuild's names; RA2 itself
-never reached them in these runs).
+Rows that change with the combined app (the RA2 table above): C23-toggle is **scripted, passing** (one-game-toggle,
+one-game-toggle-wine, one-game-ios-sim), C14-kbd is **scripted, passing** in the Simulator (one-game-ios-sim-menus), and
+W-none has the Windows builds (ctest label ra2-wine and the YR and one-game rows on build/windows, build/windows-one).
 
-**Saves round-trip, in the port's container (not yet the original's format).** The harness save
-(`RA2_NATIVE_SAVE_AT=<frame>[,<file>]`, `RA2_NATIVE_SAVE_LEAVE`) is in the Main_Loop seam
-(`glue/mainloop_native.inc`), resume at start (`--load-save`) in LoadOptionsClass::Load
-(`glue/loaddlg_native.inc`). Fixed on the way (each a `fixups.json` row): SaveVersionInfo's constructor
-(`glue/savever_native.inc`; the unit defines it under saveload.h's SavegameInformation, the same class
-declared twice), LZO1X-1's pointer dictionary (YR's row), LayerClass::Save's 4-byte pointers against
-Load's 8, the swizzle manager's ids and its 4-byte pointer store in Process_Tables, the object ids of
-AbstractClass/LocomotionClass/the veinhole monsters (YR's rows). The check sets
-`RA2_NATIVE_TEST_PORT_SAVE=1`: without it the port refuses to save ("no field maps for the original's
-save format"): the original's format needs `native/tools/original_layouts.py` run over the rebuild units
-(a `--game rb` mode beside `--game yr`: the i686 and arm64 layouts of the types in
-`data/original_save_types.txt`), which is the next save step and where member aliases by offset come in.
+Lane P17 (the user's Duo reports of 2026-11-24): C14-kbd ("Keyboard does not automatically show when selecting text
+fields"). Every text field of both games is covered by the two hooks the host asks: the dialogs' fields are one
+mechanism in each game (Red Alert 2's Replace_Edit and Yuri's Revenge's FUN_0060F320 hide each dialog Edit behind a
+NewEdit list box: the skirmish and LAN player names, the lobby chat line, the save description), answered by
+`ra2_native_new_edit_focused` (Red Alert 2's took the rebuild's list box only from lane P13's fix, after the build the
+user had); the in-game chat and beacon line by `ra2_native_message_edit_open` (both games). The host now also takes
+the keyboard's own hide key (SDL stops text input behind its back) as a dismissal, so a tap on the field brings the
+keyboard back; before, it thought the keyboard still shown and never asked again while that focus lasted.
+**scripted** in the Simulator: one-game-ios-sim-keyboard (both games: the name field raises it, Keys puts it away, a
+second tap brings it back, a tap away puts it away; in play the chat line opened and closed by the harness's
+`chat open|close` raises it and puts it away). The toggle flash ("the Play Yuri's Revenge button flashes between menu
+changes, after buttons slide out and before they slide in"): the toggle was not among the controls
+Enable_Animated_Control rests through the sidebar slide, so a repaint asked during the slide-out drew it alone over
+the emptied column (two presents in Red Alert 2, four in Yuri's Revenge, main menu -> Options); fixed in both games
+(ra2/fixups.json, yr/fixups.json), **scripted, passing**: one-game-toggle-slide (Mac; fails without the rows).
 
-Link closure: **75** with the parked drafts (93 before: the VQA/LCW helpers, Sound_Effect, MSSfx,
-SaveVersionInfo). Left: Westwood Online (unit left out), the 556/655 colour formats, Asm_Interpolate,
-Iso_Blit_Asm2, WDT, the ice tile statics (no catalog reference), a few class methods
-(TechnoClass::Get_Collateral_Damage, Unknown_Virtual_3DC, CellClass::Is_Tile_Ice,
-XSurface::Draw_Ellipse, DSurface::Draw_Depth_Antialiased_Line), the host self-tests.
+Lane P32 (2026-11-26): lane P28's full ctest on a clean main (a360d48, busy Mac at night: other lanes' games running,
+tests in parallel, the display possibly asleep) reported one-game-toggle and one-game-saves aborting in Metal ("texture
+height zero") when Yuri's Revenge started after the swap from Red Alert 2 (P28-swap0). **Not reproduced**: on a clean
+build of a360d48 both passed alone (193 s, 198 s), and with every one-game row and the four yr-native-skirmish rows at
+`ctest -j6` beside lane P31's running game; P28's worktree and logs were gone. So no commit is named as the cause (the
+combined app's host, yr/combined, last changed in e27a880, lane P13; the host's release for the next engine not since
+the import). The only path to that abort the host can
+reach is drawing to a window whose drawable has no size (Metal's next drawable for a zero-height layer): the renderer
+the swapped engine makes on the kept window, or a window with no screen to draw on. Guarded: `present_now`
+(platform/sdl/host.cpp) draws nothing while the render output size is zero, keeps the picture in its texture, logs
+`host: the window's drawable is WxH: drawing waits for its size`, and redraws on the window's pixel-size event.
+**fixed, unreproduced**: the one-game rows pass with the guard; if the log line ever shows in a run, that run is the
+reproduction.
 
-Findings for the rebuild (no edit here): `savever.cpp` defines SaveVersionInfo's constructor and
-Set_Version/Get_Version as `SavegameInformation::` (saveload.h's declaration of the same class);
-LayerClass::Save writes `sizeof(int)` where Load reads `sizeof(ObjectClass *)` (equal on VC6).
+## Lane P21: missions played to a real win through the step server (2026-11-25)
 
-Next (lane P3's view):
+A pilot: the game paused by default and advanced by a requested number of ticks (ra2/glue/stepserver_native.inc, client
+ra2/tools/ra2_step.py), input through the port's SDL input path (clicks on the map, the sidebar's tabs and cameos, keys),
+state as text, plans from each mission's own map file read from the installation at run time (ra2/tools/ra2_mapinfo.py)
+and from text walkthroughs. Each win is a replay of inputs and ticks (ra2/tests/campaign/*.replay), checked by
+`ra2-native-campaign-won-*` (label ra2-campaign-won): the mission's own triggers win it at the recorded tick and its score
+screen shows. One path per mission; it does not stand for the variety of real play, and the user's own play stays the
+final check.
 
-1. Original-format saves: an rb mode for `native/tools/original_layouts.py` (or a copy under
-   `native/rb/tools/`), generating `ra2port_original_layouts` for the rebuild units; then drop
-   `RA2_NATIVE_TEST_PORT_SAVE` from the save check and add a load of one of the user's original saves
-   (main's `original_save_load.py` route).
-2. The score screen's Continue (a won or lost game back to the menus) as a check; a combat route
-   (YR's yr_combat.py) to reach Get_Collateral_Damage and the other class-method traps.
-3. Re-pin when the rebuild's mssfx and mono rows (chunks 80, 81) make the overlay copies redundant:
-   drop `glue/mssfx_native.inc` and the duplicate parts of `glue/mono_native.inc` at the same time.
-4. Item 3 (link/, drafts/ renamed) after the 11-29 flex decisions.
-
-
-## Original-format saves, score Continue, surface slots (lane P4, 2026-11-23, same PIN)
-
-**The user's original RA2 saves load.** `tools/rb_original_layouts.py` runs `native/tools/original_layouts.py`
-(imported, not edited: the src and YR modes are untouched) over the generated rebuild units, its record
-layouts dumped with the units' own flags (`rb_probe.py`: the YR dialect, `native/rb/sdk`, `-DRA2_NATIVE_RB`);
-the vtable pointers by address from `manifests/rtti_classes.json` (the rebuild's classes carry the RTTI
-names). Its type list is `data/original_save_types.txt` (main's list under the rebuild's names: EnvironmentClass
-read by its own Load, VeinholeMonsterClass left out, no rebuild unit defines it at this pin): 74 listed types and
-2,884 member records, 21,057 copy operations, 0 problems, 0 unmatched members. The trial links the strong
-`ra2port_original_layouts` tables (`rb_trial.sh`, and `rb_data_objs` in CMake) over the port's weak empty
-ones, so the port reads and writes the original's compound-file format; its own container is no longer used.
-All five of the user's saves in the install folder (ALL01T, ALL02S, ALL03U, SAVE397A, SAVE4FBD), read in
-place at run time and never copied, load and play on (1,624 to 2,122 frames in 60 to 75 s, no swizzle failure).
-
-Fixed on the way (fixups.json rows, each with its why): LocomotionClass::Load read the locomotor's image
-through `void *` (raw i686 bytes over the arm64 object; the stream desynchronised after the first ship
-locomotor: YR row Y10, the typed read); SwizzleManagerClass::Process_Tables' walk bounded and an unmatched
-request reported and nulled before the original's 1 / 0 (YR row Y10; arm64 division does not trap, the walk
-spun); Static_Sounds_Load's unnamed four-int entry read through `void *` (the same raw read, without the
-"no layout" report); ObjectClass::Load's swizzle of AbstractClass +0x18 (a 4-byte int natively, so Swizzle
-patched it and RefCount as one 8-byte id) skipped for a null field, main's port fixup for the same case (a
-resaved bullet with references failed to load: unmatched id 0x200000000).
-
-**Checks** (`ctest --test-dir build/rb-cmake`: all nine pass, rb-native-soak run through rb_routes.py on the trial binary): the save check no longer sets `RA2_NATIVE_TEST_PORT_SAVE`; it
-requires the harness save to be a compound file and its reload to open as an original. New:
-`rb-native-original` (ALL01T.sav from `RB_DATA_DIR`: opened as an original, loaded, objects converted by the
-field maps, no type read without a map, the game loop, at least 900 frames: a loaded game runs at its save's
-game speed, about 20 frames a second), `rb-native-resave` (ALL01T.sav loaded, a harness save at frame 300
-in the original's format, that save loaded by a new process and played on: main's original_save_write.py for
-one save) and `rb-native-original-layouts` (the field-map check, `--check`).
-The soak route now band-selects the player's units at frame 300 (brackets and health bars drawn) and after
-the score screen presses Continue, the setup's Back and Single Player's Back: the main menu must show again.
-
-**Closure 72** with the parked drafts (75 before): main's behaviour bodies under the rebuild's names for
-XSurface::Draw_Ellipse 0x007746C0 (`glue/xsurface_native.inc`) and DSurface::Draw_Depth_Antialiased_Line
-0x004AC650 (`glue/dsurface_native.inc`; main's buffer names mapped to the rebuild's ZBuffer/ABuffer
-accessors), both kept by the rebuild as TibSun text under `#if 0`; TechnoClass slot 247 (+0x3DC) 0x006C3B20, an
-empty body in RA2, which the rebuild defines as Draw_Health_Bar_Old and declares apart as the virtual
-Unknown_Virtual_3DC (`glue/techno_native.inc`). Left as traps on purpose: TechnoClass::Get_Collateral_Damage
-(called only by BuildingClass::Get_Collateral_Damage, an unplaced draft no RA2 code calls), CellClass::Is_Tile_Ice,
-Pick_Ice_Tile_Set and the ice/swamp tile statics (called only by the unplaced Seed_Ice / Smoothen_Full_Ice
-drafts: TibSun's ice, absent from RA2); main has no body for any of them.
-
-Not re-pinned (nothing above needed it): `glue/mssfx_native.inc` and the duplicate parts of
-`glue/mono_native.inc` stay until a re-pin. Member aliases by offset were not needed for the saves (the field
-maps pair the i686 and arm64 layouts of the same rebuild source by member path); they remain for carrying
-main's link/ and drafts/ text over the rebuild layouts (item 3).
-
-Findings for the rebuild (no edit here): LocomotionClass::Load reads `(void *)this` where Save writes `this`
-(equal on VC6); TechnoClass 0x006C3B20 has two declarations (Draw_Health_Bar_Old, Unknown_Virtual_3DC); the
-`#if 0` Draw_Ellipse/Draw_Depth_Antialiased_Line text is not RA2's (main's notes give RA2's walk).
-
-Next (lane P4's view):
-
-1. A combat route reaching the laser and radial-indicator draws (Prism towers; a placed Gap Generator or
-   Psychic Sensor) to exercise the two surface bodies; YR's yr_combat.py needs a harness order the rebuild
-   trial lacks.
-2. The resave check over all five saves (`--save`), and a save made mid-combat.
-3. Re-pin when chunks 80/81 matter (drop `glue/mssfx_native.inc` and the mono duplicates then).
-4. Item 3 (link/, drafts/ renamed) after the 11-29 flex decisions.
-
-
-## Combat, all saves resaved, re-pin (lane P5, 2026-11-23, PIN b873d2b3c6)
-
-**Combat route** (`rb-native-combat`). The trial had no order harness; `glue/harness_native.inc` (appended to the
-conquer unit, called each loop frame from the Main_Loop seam) is a small subset of the YR port's and main's
-under the rebuild's names: `RA2_NATIVE_ORDERS` with `spawn <ID> [enemy] [dx dy]`, `select <ID>`, `fire <ID> <TARGET>`
-(Queue_Mission MISSION_ATTACK, the target watched to its death), `health` and `draws` (the call counts of the
-carried XSurface::Draw_Ellipse and DSurface::Draw_Depth_Antialiased_Line bodies and the laser beams seen). The route:
-the skirmish start, then three Allied power plants, two Prism towers and a Gap Generator for the player, the Gap
-Generator selected, a Prism tank, two enemy Rhinos, the Prism tank sent at one. Seen: the Gap Generator's radial
-indicator (two Draw_Ellipse calls a frame, four sweep spokes through Draw_Depth_Antialiased_Line), 17 to 18 laser beams
-(the tank and towers), the Rhino killed at about frame 350, a tower damaged; no trap, no fault, about 2,800 frames
-in 60 s. Finding: in RA2 every laser weapon in use is house-coloured (PrismShot, PrismSupport; LaserFire/LaserFire2
-are defined but no unit carries them, the railgun particle systems likewise), so lasers draw through
-LaserDrawClass::Draw_House_Color (Draw_RGB_Multiplying_Line, Draw_Depth_Shaded_Line) and the anti-aliased line is
-reached only by a radial indicator's sweep: the check counts both bodies and the beams.
-
-**Saves.** `rb-native-combatsave`: the combat route saved at frame 260 (the Prism tank's attack under way), in the
-original's format, then loaded by a new process and played on (1,103 frames in 60 s at the save's game speed).
-`rb-native-resave-<save>` (label `rb-resaves`): the resave route over the other four saves in the install folder;
-all five (ALL01T, ALL02S, ALL03U, SAVE397A, SAVE4FBD) load, resave at frame 300 in the original's format, reload
-and play on (2,121 to 2,128 frames in 75 s), read in place, never copied.
-
-**Re-pin** from 5932814e42 to b873d2b3c6 (main's head at 2026-11-23: chunks 80-84, the mono and mssfx units, the
-voxel and astar twins): 439 units compile (mssfx new; wonline still left out). Dropped in the same change, now the
-rebuild's own: `glue/mono_native.inc` (Mono_Window_Init, Get_Page, Mono_Clear_All_Pages, Mono_Window_Shutdown),
-`glue/mssfx_native.inc` (MSSfx), `Get_CPU_Type_Name` from `glue/getcpu_native.inc` and UnVQ1_4x2_Table from
-`glue/rb_vqa.cpp`. One new fixup: the parked Mono_Dialog_Proc draft reads vox.cpp's `Voxs`, which no header declares
-(declared after the draft's includes). `data/initterm.json` and `data/rekeyed.tsv` re-keyed at the new pin
-(`rb_rekey.py`). **Closure 70** with the parked drafts (72 before). After the re-pin all 14 ctest checks pass
-(`ctest --test-dir build/rb-cmake`, 27 minutes: the nine before, rb-native-combat, rb-native-combatsave and the four
-rb-resaves rows; the soak played 13,611 frames to the score screen and back to the main menu).
-
-Findings for the rebuild (no edit here): mono.cpp's Mono_Dialog_Proc draft uses `Voxs` with no declaration in scope
-(its unit's extern was dropped for the structure gate; a compile of the guarded draft needs it).
-
-Next (lane P5's view):
-
-1. The trial's remaining reachable traps are the same as P4's list (Get_Collateral_Damage and the ice statics,
-   reached only by unplaced drafts); a campaign-mission route (a loaded Allied save played to a trigger) would
-   widen coverage next.
-2. More harness orders as routes need them (main's `harness_orders.cpp` is the model: super weapons, production,
-   infiltration).
-3. Item 3 (link/, drafts/ renamed) after the 11-29 flex decisions.
-
-
-## Campaign route and iOS (lane P6, 2026-11-23, same PIN b873d2b3c6)
-
-**Campaign route** (`rb-native-campaign-ALL02S.sav`, `rb-native-campaign-ALL03U.sav`, label `rb-campaign`). The user's
-two later Allied saves, read in place from the install folder at run time, are loaded and played on with the harness's
-new trigger watch (`RA2_NATIVE_TRIGGERS=1`: `harness-trigger <frame> gone|new|tripped <ID> <name>`, main's
-harness_soak.cpp under the rebuild's names; TriggerClass::IsTripped is private, read through a member pointer) and its
-`hunt` order at frames 1,200 and 2,400. Each check requires the mission's scripted triggers (`CAMPAIGN` in
-`tests/rb_routes.py`) to fire:
-
-| Save | Seconds | Triggers required (frame seen) |
-| --- | ---: | --- |
-| ALL02S (Allied 2) | 120 | Destroy Airplane Team (76), Play Rocketeer Movie (451), Rocketeers Move (452), Rocketeers Have Arrived (526: the reinforcement), Rocketeers Become USA (601: the house change), Attack Here - first time (901), Txt Flak Cannons (1,351), txt Flak Reminder (2,026), 1st Patrol has been shot (2,675 to 2,706, after the hunt) |
-| ALL03U (Allied 3) | 150 | Garrison1 (46), Hint-IFV -- pt1 (76), Garrison3 (226), UnlockInput (421), StateObjective (511), AttackParty (1,463), ShockTrooperHint-pt2 (1,528), CivAttack1 (1,801), CivAttack2 (3,301), ShockTroopIntro (3,751) |
-
-About 29 frames a second (the save's game speed); no trap, no fault.
-
-**An intermittent fault, open:** one load of ALL02S in about a dozen (rb-native-resave-ALL02S.sav in this lane's full ctest
-run; the re-run passed) stopped at loop frame 20 with SIGBUS in the rebuild's `Draw_Voxel_Regular_Normals_Lighting`
-(VoxelLibrary::Render_Object, UnitClass::Draw_It), reading at 0xa13fcf0b1. The drawer's text is the same as main's exact
-0x0071A950, so the bad input comes from upstream (the layer's StartOffset/DataOffset or ZSize from Get_Layer_Info, or a
-run running past its column); malloc scribbling (MallocPreScribble) did not make it repeat. Next: an AddressSanitizer
-trial (`RB_ASAN=1 tools/rb_trial.sh`) looped over ALL02S loads. Neither mission is won or lost in the time (the
-`state` order reports `win 0 lose 0`); a forced end (main's RA2_NATIVE_FORCE_END) is not in this harness yet.
-
-**Production and a super weapon** (`rb-native-production`, rb-quick). New harness orders under the rebuild's names, after
-main's harness_orders.cpp: `train <ID>` (PRODUCE of the infantry or unit type, the factory cameo's click), `count <ID>`,
-`supers`, `super <index> enemy` (SuperClass::Enable and Forced_Charge, then SPECIAL_PLACE on the strongest enemy house's
-first building, which is then watched). The route: the skirmish start, power plants, a barracks and a war factory
-placed, a GI and a Grizzly ordered, the nuclear missile (SuperWeapon 0, MultiSpecial; the player's list is MultiSpecial,
-IronCurtainSpecial, LightningStormSpecial, ChronoSphereSpecial, ChronoWarpSpecial, ParaDropSpecial,
-AmericanParaDropSpecial) launched at the Soviet construction yard. Seen: one more GI (7 to 8) and Grizzly (5 to 6), money
-10,000 to 9,100, the missile's hit at about frame 600 (the yard 1,000 to 383, then repaired by the computer); no trap.
-Infiltration (a spy or engineer order) is not in the harness yet: the enemy base on this map is about 60 cells away.
-
-**The fault it found:** VoxelAnims (0x008399D0) is declared by the rebuild (`_vanim.h`) but defined by no unit at the
-pin (main: `VoxelAnimClass_list_init.cpp`, `_initterm` 0x0040EC40, the one real global among the 41 unmapped `_initterm`
-entries; the other 40 are header-static rectangle copies the rebuild's units carry themselves). rb_data.py bound it to
-zero storage, so its constructor never ran and the vector had no vtable: the first VoxelAnimClass destroyed
-(Process_Deferred_Deletion, VoxelAnims.Delete) faulted at address 0x30 in ALL03U at about frame 3,500.
-`glue/vanim_native.inc` defines it (finding for the rebuild). No other zero-bound global has a class type with a
-vtable (checked over all 217 in `rb_bss_globals.cpp`).
-
-**iOS (plan item 8), opt in.** `native/rb/tools/rb_ios.sh build simulator|device` configures a src-based iOS build as
-`native/build-ios.command --ra2` does (`build/rb-ios-src-<platform>`) but builds only `ra2_port`, `ra2_host_objs` and
-`SDL3-static`, then native/rb's CMake in its iOS form (`CMAKE_SYSTEM_NAME=iOS`: the static SDL3, the iOS and SDL
-frameworks, the link closure over the iOS SDK, main's `packaging/ios/Info.plist.in`, SDL's licence and the placeholder
-icons): `build/rb-ios-<platform>/RBTrial.app`, bundle id io.github.ra2native.RBTrial and home-screen name "RA2
-Rebuild Trial", so it never replaces the played app. Both bundles pass main's `packaging/audit_ios_bundle.py` (no game
-files, no libraries outside the system); closure 70, the Mac's.
-
-* **Simulator: reaches the main menu** (`rb_ios.sh run <udid>`: installed in the iPhone 17 Simulator, launched with the
-  user's install folder as `--data-dir` and the pinned game.exe, read at run time: main menu at 6.4 s), **plays a
-  skirmish** (the skirmish route's script, 3,727 frames in 75 s; the Mac: 3,747) and **plays the ALL02S campaign route**
-  (3,515 frames in 120 s, the same triggers as on the Mac, the patrol at 2,704), no trap or fault. Extra environment
-  reaches the app as `SIMCTL_CHILD_<name>`.
-* (The iOS builds were made before the production orders; `rb_ios.sh build` picks them up.)
-* **Device: builds, unsigned, not installed.** `rb_ios.sh build device` links an iphoneos arm64 RBTrial.app (platform 2,
-  minimum iOS 17.0). To run it on the user's iPhone it needs: (1) signing with the user's team id (RA2_IOS_TEAM on the
-  command line) through `native/packaging/ios_sign.py`, whose profile must cover io.github.ra2native.RBTrial (the team
-  wildcard profile does; an explicit RA2 profile does not); (2) the user's Red Alert 2 files in the app's own Documents
-  (the port's import flow, as the played app; RBTrial's container is separate, so the files would be imported again,
-  or shared another way); (3) the pinned target game.exe the trial reads its stored data from (RA2_GAME_EXE on the Mac
-  and in the Simulator; the device has no Mac path: the port's per-build reading of the user's installed game.exe, or
-  the target game.exe imported beside it, must be wired for the trial as the played app does); (4) a devicectl install,
-  which is the user's decision and was not done.
-
-Checks after lane P6: 17 (the 14 before, rb-native-campaign-ALL02S.sav, rb-native-campaign-ALL03U.sav and
-rb-native-production). Closure 70 with the parked drafts (Mac and
-iOS). Not re-pinned.
-
-Next (lane P6's view):
-
-0. The intermittent ALL02S voxel fault above (ASan loop).
-1. More campaign coverage: a forced end (RA2_NATIVE_FORCE_END) to reach the score screens and the next mission's
-   briefing, then main's campaign start sweep (24 missions) over the rebuild.
-2. iOS: a ctest-like simulator check (`rb_ios.sh run` in a test script with a booted device), touch input through
-   the touch layer, then the device questions above.
-3. Windows (the other half of item 8) and the frame-identity tests.
-4. Item 3 (link/, drafts/ renamed) after the 11-29 flex decisions.
-
-## Heap fault fixed, forced end, campaign chains, iOS checks (lane P7, 2026-11-24, same PIN b873d2b3c6)
-
-**The intermittent fault (P6's open item) was heap damage, not the voxel drawer.** A loop of plain ALL02S loads (14 s each,
-four at a time) failed 1 in 12 and then 3 in 24; with a diagnostic on VoxelLibrary::Render_Object's inputs (layer, info
-index, every column's span offset inside the library's data) the library was always consistent, and the faults moved:
-SIGBUS in Draw_Voxel_Regular_Normals_Lighting, SIGBUS in AStarClass::Find_Path_Hierarchical (a subzone connection's
-garbage SubzoneID), SIGSEGV in a Metal command buffer's completion handler. The ASan trial (`RB_ASAN=1 tools/rb_trial.sh`,
-`ASAN_OPTIONS=halt_on_error=0:detect_odr_violation=0`; ODR reports for header-static tables like CELL_SLOPE_ANGLE are
-expected) showed the writer: **IsometricTileTypeClass::Draw_Tile stored depth values up to 1.7 KB past the end of the
-856x736 depth BSurface** (WRITE at isotype.cpp's depth store, plus the reads beside it). Its four "does this span reach the
-ring's end" tests compare `(unsigned int)&IsoDrawData.DepthPtr[...]` (and AlphaPtr) with Get_Buffer_End(), which is
-uintptr_t natively: the cut address was always below the end, so the wrapping path never ran and a tile crossing the
-depth or alpha ring's end wrote past it. Fixed by `fixups.json` (the four casts to uintptr_t). After the fix: ASan reports
-nothing in Draw_Tile; **40 of 40** plain ALL02S loads clean (16 s each, past frame 20; before: 3 of 24 failed). The voxel
-drawer and A* were victims. A sweep for other pointers cast to 32 bits in the generated units found one more real one,
-audevent.cpp's container-of for a volume bucket's node (`(unsigned)event - ...`, audio only), also fixed; the rest are
-benign (cdcntrl's DOS registers, unused arguments of SpawnBaseUnits and the empty slot 247 Unknown_Virtual_3DC,
-session.cpp's slot loop comparing two cut addresses of one array, cell.cpp's Random_Pick over a tiberium's overlay
-addresses, unreached). Still reported by ASan, benign: RadarClass::Init_For_House reads TooltipColor (3 bytes) as a
-4-byte TextColor.
-
-**Forced end** (`RA2_NATIVE_FORCE_END=<f1>[,<f2>...][,lose]`, `glue/mainloop_native.inc`, main's harness_save.cpp under
-the rebuild's names: PlayerWins / PlayerLoses at the first loop frame at or past each entry; `force-end: win|loss at frame
-<f> in <scenario>`). Checks `rb-native-forcewin` and `rb-native-forcelose` (rb-quick, 50 s): skirmish start, forced end at
-frame 300, the 50-control score screen, Continue, Back, Back, the main menu again (menu-return at about 31 s).
-
-**Campaign chains** (`rb-native-chain-allied`, `rb-native-chain-soviet`, label rb-chain, about 7 minutes each; main's
-tests/campaign_chain.py as the `chain` route): New Campaign through the menus, each mission won by the forced end (an
-entry every 200 loop frames), its score screen left by Continue; all twelve missions of each side start and end in order
-(ALL01T ALL02S ALL03U ALL04U ALL05S ALL06U ALL07T ALL08U ALL09T ALL10S ALL11T ALL12S; SOV01..SOV12), the ending, the main
-menu again: the 24-mission start sweep, no trap or fault.
-
-**iOS Simulator checks** (label rb-ios, opt in: `cmake -DRB_IOS_UDID=<device>` on build/rb-cmake). The Simulator app
-rebuilt with the production orders and the fixes above (`rb_ios.sh build simulator`; bundle audit passes, closure 70);
-`tools/rb_ios_sim.sh` stands in for the Mac binary, so the same rb_routes.py routes and checks run in RBTrial.app:
-`rb-ios-sim-skirmish` (3,782 frames in 75 s), `rb-ios-sim-production`, `rb-ios-sim-forcewin`,
-`rb-ios-sim-campaign-ALL02S.sav` (the nine triggers, 3,521 frames), between a setup fixture (boot if needed, install) and a
-cleanup (shut down what it booted). No device install and no signing (the user's decisions; P6's list of what the device
-needs stands: the team id and a profile covering io.github.ra2native.RBTrial, the game files in the app's Documents, the
-target game.exe or a per-build reading of the installed one, a devicectl install).
-
-Checks after lane P7: **27, all pass** in one full `ctest --test-dir build/rb-cmake` run (52 minutes): the 17 before,
-rb-native-forcewin, rb-native-forcelose, rb-native-chain-allied, rb-native-chain-soviet, and the six rb-ios tests (setup,
-skirmish, production, forcewin, campaign ALL02S, cleanup; RB_IOS_UDID set to the iPhone 17 Simulator). Not re-pinned.
-
-Next (lane P7's view): touch input through the touch layer in the Simulator; the rest of main's 246 width fixups by
-pattern (the `(unsigned int)&` and `(unsigned)` pointer casts are now swept; `(int)` pointer subtraction and `DWORD`
-parameters remain); a played (not forced) mission past Allied 3 per side, as main's mission soak; Windows; item 3 after
-11-29.
-
-## Width sweep and the host's hooks (lane P7, second round, 2026-11-24, same PIN)
-
-**Pointer-width sweep by pattern.** Every unit compiled once with only clang's cast warnings on (`-Wpointer-to-int-cast
--Wvoid-pointer-to-int-cast -Wmicrosoft-cast -Wint-to-pointer-cast`, the units' flags without `-w`): 709 sites, 386 of them
-the one VectorClass::ID template. Fixed (fixups.json, the rows after the Draw_Tile one): VectorClass::ID; the open-node
-heap's 32-bit pointer bounds (priority.h); **the techno collection helpers' int context (uicmnds.cpp: select-same-type and
-the named selections cut a name list's address and read it back as a pointer)**; **Wstring/WideWstring Replace (a wild
-pointer built from a cut address)**; audtimer's fail-safe high word; queue.cpp's and session.cpp's loops bounded by cut
-addresses compared as signed ints (wrong when the array straddles a 2 GB line, an ASLR slide); **ToolTip::Text, still
-`int` in the header while radar/sidebar/tab store a label's address in it**; **WinData's ItemState, RangeMax and
-HadTabStop, which hold the list view's row colours, selection states and columns (ArrayList pointers)**. Left, with the
-reason: abstype's `%08X` of `this`, radar's and display's hashes, audlists' head marker, house.cpp's type-or-code sign
-test, isotype's BaseDepth arithmetic on an int, lcw's alignment masks, the empty slot 247 and unused SpawnBaseUnits and
-Attack_Move_Action arguments, PlanningBlockedNode (written, never read back as a pointer), the HWND words through
-GetWindowLong (the port's handles fit), cell.cpp's Random_Pick over a tiberium's overlay addresses (unreached; a rebuild
-reading to check), and the subsystems no route reaches: VQA (vqalib_*, vqa.cpp; RA2 plays Bink), the network
-(netshare, ipx*, netdlg2, nulldlg, gdlgsupp, wincomm), cdcntrl, except.cpp, ownrdraw's Control_Table HWND keys.
-Not swept by this method: pointer bytes moved by memcpy/Read with a 4-byte count, unions, and pointers already stored
-in int fields without a cast at the store (main's remaining width rows of that kind were not re-checked one by one).
-rb-quick (12) passes after the sweep, and again with the hooks below.
-
-**The host's game-side hooks** (the feature audit: almost every hook the host calls is a weak symbol in
-platform/sdl/host.cpp, so a missing one never shows in the link closure; the trial silently had the defaults). Attached
-in `glue/mainloop_native.inc`: `ra2port_game_redraw_pending` (**it was a link-closure trap: a focus change while a menu
-dialog was shown aborted the trial**; closure 70 to 69), `ra2_native_network_game`/`leave_network_game`,
-`ra2_native_save_settings` (Cmd+Q), `ra2_native_hide_game_cursor` (touch), `ra2_native_scroll_map` (trackpad/touch pan,
-ignored in locked missions: N31), `ra2_enh_in_play` at the seam (the split layout, touch play mode and pinch need it),
-and checkpoint saves (Scout1248, CHECKPT.SAV when the host asks). Still missing (the audit's list, by size): the shell
-Options dialog (`Main_Options_Dialog_Proc` is `#if 0` in the rebuild's mainopt.cpp, a trap: Options and the
-Enhancements page abort); map zoom and its gestures; interface size; the command bar collapse/reopen and flash (N31);
-in-game dialogs at window size; Queue Five; Modern controls; HD vehicles; Mac widescreen; the NewEdit/chat keyboard
-hooks and the team-button hold (touch); the menu panel centred above 800x600 (Scout1274, iOS sizes); Draw_Char's
-negative row offset (C17); the primary-lock MouseMutex (C23) and Restore_Check's refusal while inactive; LAN pacing;
-mod subtitles. Carried already: N30 (audevent), the original-format save bridge, resume at start, the Exit Game
-delete form, the audio driver. The YR port's `yr/glue/yr_*.cpp` are near drop-in templates for most of them.
-
-## Options, the feature audit closed, main's tests on the trial, frame identity, touch in the Simulator (lane P8, 2026-11-24, same PIN)
-
-**The shell Options dialog and the Enhancements page.** `Main_Options_Dialog_Proc` (`#if 0` in the rebuild's mainopt.cpp, a
-link-closure trap: Options aborted) is carried as that text compiled natively (`glue/mainopt_native.inc`, checked against main's
-behaviour row `link/behaviour_m22_options.cpp`), with the Enhancements button (0x7F80, listed among 0xD5's column buttons so it takes
-its slot) and the page (main's `link/native_enhancements.cpp` under the rebuild's names).
-
-**The feature audit's missing items, attached** (each a `fixups.json` row at main's site, the glue named):
-
-| Item | Where | Check |
+| Mission | Result | Check |
 | --- | --- | --- |
-| Touch keyboard: NewEdit fields, chat line | `glue/ownrdraw_native.inc`, `mainloop_native.inc` | (host hook; no route types into them) |
-| Team-button hold (Y15) | `glue/tab_native.inc` | rb-main-touch-team-hold, rb-ios-sim-touch-team-hold |
-| C17 Draw_Char guard (the rebuild's Pitch is already signed) | bitfont.cpp rows | (report-and-skip only) |
-| C23 primary lock under MouseMutex | dsurface.cpp rows, `glue/wwmouse_native.inc` | (cursor-stress not run) |
-| Restore_Check's refusal while inactive | dsurface.cpp row | |
-| Scout1274 menu panel centred above 800x600 | txtlabel2.cpp rows | |
-| LAN pacing (Sync_Delay, Wait_For_Players) | mainloop.cpp, queue.cpp rows | (no LAN route) |
-| Mod subtitles | already the rebuild's own: `SubtitleTokens`/`SubtitleAlignments` are compiled source, not original data | |
-| Map zoom, zoom gestures (wheel, pinch), render scale 2 | `glue/zoom_native.inc` + display/scenario/saveload/sidebar/radar/tab/wwmouse/cctooltip/tactical/startup/mainopt rows | rb-main-zoom-steps, -pinch, rb-ios-sim-zoom-pinch |
-| Game interface size | the same glue; surfaces at start-up, mode change, load and new game | rb-main-zoom-menu-ui, rb-main-locked-input |
-| Command bar collapse/reopen and flash (N31) | txtlabel2.cpp rows | rb-main-command-bar-thumb |
-| In-game dialogs at window size; score screen and Abort at render scale 2 | conquer.cpp, mainloop.cpp rows | rb-main-zoom-menu, -menu-ui, -score, -abort |
-| Queue five | `glue/controls_native.inc`, sidebar.cpp rows | rb-main-controls-queue-five(-off) |
-| Modern controls (and Classic's tap across houses) | the same glue, scroll/display/radar rows | rb-main-controls-modern/-classic, rb-main-touch-* |
-| HD vehicles 2x/3x | `glue/unit/hd_vehicles.cpp` (the YR port's glue/yr_hd_vehicles.cpp: the same TibSun names), blit/voxdrsys/voxlib/techno/dsurface rows | rb-main-hd-vehicles, -hd-vehicles-3x |
-| Mac widescreen | `glue/ownrdraw_native.inc`, init.cpp and static-movie rows | rb-main-widescreen |
+| Allied 1 (ALL01T): Tanya's C4 on the four Dreadnoughts, the fort taken, a barracks, an engineer into the bridge hut, the three bonus Grizzlies on the V3s and sentry guns, the GIs in support, Tanya's C4 on the Soviet base | won at tick 13,871 (re-recorded by lane P35 with the frame clock after the MissionControl[MISSION_NONE] fix below; lane P21's recording won at tick 11,007 and goes another way under the fix) | ra2-native-campaign-won-all01 (about a minute); under ASan ra2-native-asan-all01 |
+| Soviet 4 (SOV04S): base built and placed through the sidebar, flak, subs against the fleet, Rhinos massed, the Korean base's construction yard first | won at tick 47,420, about 760 inputs (most of them placement attempts) | ra2-native-campaign-won-sov04 |
+| Allied 2 (ALL02S, lane P22): Tanya on the flak cannons, the Academy taken, rocketeers and Grizzlies through the Soviet base | won at tick 30,335 | ra2-native-campaign-won-all02 |
+| Soviet 1 (SOV01T, lane P22): the bridge repaired, conscripts massed by attack move, the Pentagon's four parts | won at tick 49,448 | ra2-native-campaign-won-sov01 |
+| Soviet 3 (SOV03T, lane P22): derricks, Rhinos, an engineer into the battle lab, the beacon held | won at tick 54,669 | ra2-native-campaign-won-sov03 |
+| Allied 3 (ALL03U, lanes P22 and P23): GIs in the bridge houses, Grizzlies massed at home, walked round the Soviet base in short legs, the beacon force-fired by its cell | won at tick 39,041 | ra2-native-campaign-won-all03 |
+| Allied 4 (ALL04U, lane P23): rocketeers on the grand cannons, the MCV landed and guarded, ten destroyers up the river, the amplifier force-fired | won at tick 32,994 | ra2-native-campaign-won-all04 |
+| Allied 5 (ALL05S, lane P23): Tanya and spies, coils by barrels and C4 during spy power outages, the battle lab spied, both silos C4'd | won at tick 22,647 | ra2-native-campaign-won-all05 |
+| Allied 8 (ALL08U, lane P24): Tanya and the GIs along the elevated highway, the compound's barrels, Tanya's C4 on its reactors and the beacon, a base by the arch, prism tanks by short sieges | won at tick 106,268 | ra2-native-campaign-won-all08 |
+| Soviet 6 (SOV06T, lane P24): base with two tesla coils against the Grizzly landings, submarines and scorpions, the Korean fleet sunk off the base, twenty submarines into Pearl Harbor | won at tick 30,200 | ra2-native-campaign-won-sov06 |
+| Allied 10 (ALL10S, lane P25): the MCV by Einstein's lab, refineries, a battle lab and a second war factory on legal origins, prism tanks by short sieges on the three Soviet bases in turn | won at tick 42,660 | ra2-native-campaign-won-all10 |
+| Soviet 9 (SOV09U, lane P25): psi troopers on a GI, the engineers (barracks and battle lab), the sniper and the Grizzly in the Light Blue compound; the sniper on the west gate's seals and dogs, a spy into a power plant, the psi trooper on the President | won at tick 27,285 | ra2-native-campaign-won-sov09 |
+| Soviet 11 (SOV11S, lane P25): the two starting Kirovs round the map's south-west and north-west edges onto the Kremlin | won at tick 35,900 | ra2-native-campaign-won-sov11 |
+| Soviet 12 (SOV12S, lane P26): two refineries and tesla coils against the scripted chrono attacks (Rhinos on the seals' landing craft), a battle lab, eight Kirovs round the south coast to a stage out of the patriots' reach, the Iron Curtain on them eleven cells out, the chronosphere bombed | won at tick 64,411 | ra2-native-campaign-won-sov12 |
+| Soviet 2 (SOV02T, lanes P22 and P27): the German refineries by their barrels, a base with two sentry guns by the ore, both derricks taken (the alligators shot first), the Allied base razed by Rhinos (its fire sale ends it), the land mopped up, a naval yard as bait: the last four destroyers came into the bay and died to submarines and Rhinos on the shore | won at tick 46,156 | ra2-native-campaign-won-sov02 |
+| Soviet 5 (SOV05U, lanes P22 and P27): conscripts and the starting tesla troopers along the west road, the barrel clusters by the Allied posts shot from four cells, the derrick taken, tesla troopers bought (each becomes Other3's, a house the player commands) and walked round the GI nests, Ivans' bombs on the tower's pillbox, a home guard of conscripts, the tesla troopers into the Paris Tower, which then kills every Allied unit | won at tick 51,032 | ra2-native-campaign-won-sov05 |
+| Soviet 7 (SOV07S, lanes P23 and P27): refinery, radar, coils, a war factory and Apocalypse tanks; the six prism tanks met before they reach the construction yard, flak round the lab, sixteen tanks parked round the lab against engineers and spies through the last wave, then a hunt | won at tick 42,844 | ra2-native-campaign-won-sov07 |
+| Allied 7 (ALL07T, lanes P23 and P31): rocketeers queued at the start (a second barracks), a Harrier scouting and striking BadGuy1's first two buildings (a sentry gun and a hut by Niihau), the rocketeers on the Soviet MCV as it lands and on the construction yard as it deploys, then on each building left (BadGuy1's buildings all gone wins) | won at tick 8,436 | ra2-native-campaign-won-all07 |
+| Soviet 10 (SOV10T, lanes P33, P34 and P36): power, two refineries, flak cannons and flak troopers, a naval yard (rebuilt after each dolphin raid; submarines answer dolphins only by attack moves), ten submarines and four dreadnoughts; the subs clear the beach waters, the dreadnoughts the beach's prism towers and pillboxes and the compound's east tower, three Rhinos landed to map the west tower, the refineries sold for the nuke silo, the nuke beside the west tower and an Apocalypse on it before the repairs, the engineer into the battle lab, the second nuke on the weather control device | won at tick 114,676 | ra2-native-campaign-won-sov10 |
+| Soviet 8 (SOV08T, lane P37): the starting army only (two Apocalypses, a Rhino, four desolators, eight conscripts) up the west road, the sentry gun (78,46) on the way, the fence at (82,40-41) shot open, four of Vlad2's power plants shelled from (91,41) until its power (1,050) is below its drain (1,085), so the tesla coils stop; then through the south gate to (99-101,21) and the White House (CAWASH01 at 98,14) shelled | won at tick 5,480 | ra2-native-campaign-won-sov08 |
+| Allied 9 (ALL09T, lanes P24, P27, P36, P37 and P38): the village freed by the seals, the five Hack engineers carried in the Night Hawk past the dogs, the flak tracks and the guards north of the base killed, then dropped at (89,98): one into the north reactor (91,106, the player's by its tag), one into Balabos's prism pyramid (87,107, the player's two seconds later); powered by the reactor, the pyramid (MayanPrism, 1,000 a shot) force-fired at each building in reach; a second reactor (86,114) taken puts BadGuy1 below its drain (coils, flak and sentry guns stop); the second pyramid (106,126) and a reactor (108,115) taken by the Grizzlies' escort, the engineer it brings into the construction yard; a barracks, engineers into the depot, radar and war factory, the barrel chain at (85-91,139-144) set off by Rhinos (both south reactors gone, BadGuy1's power 0), V3s and tesla troopers on the rest | won at tick 35,100 | ra2-native-campaign-won-all09 |
+| Allied 6 (ALL06U, lanes P23, P27, P40, P41 and P43; the plan from a user-supplied video guide): the MCV deployed outside the Pentagon wall (92,157), refineries and prism towers at the bridgehead against the V3s, the construction yard repaired against the west raids; BadGuy2: eight Harriers on the coil by the yard, 23 Grizzlies on the coil, yard, barracks and war factory in that order (the firesale); BadGuy1: the monument coil, barracks and war factory, then 36 Grizzlies on the compound's two south coils and its construction yard (the firesale); the guard shack (CAGARD01, 34,82) force-fired | won at tick 116,548 | ra2-native-campaign-won-all06 |
+| Allied 12 (ALL12S, lanes P26, P34, P36-P40 and P46; the plan from a user-supplied video guide): a SEAL's C4 on the start square's reactor, the MCV deployed on the centre pad, the base inside the walled square, the war factory sold at the nuke's launch, the chronosphere built only after the nuke; chrono legionnaires erase BadGuy3's two reactors, the chronosphere drowns the east Apocalypse pair in the river (142,85) and, at its second charge, the west pair; the legionnaires erase BadGuy3's two sentry guns, two flak cannons and the coil, then the "Kremlin Secured" chain and Tanya | won at tick 36,702 | ra2-native-campaign-won-all12 |
 
-Still not carried: nothing from the audit list. Not checked by a route: the NewEdit/chat keyboard hooks, C23 (main's
-cursor_stress.py not run), LAN pacing (main's lan_pair.py not run), the HD air-base case (the wrapper's Patriot is placed off the
-view), enhancements_newgame.py (the page works and the next game makes its 1.25x sidebar surface, but main's click lands one dropdown
-row higher on the trial).
+Parked by lane P22 for a retry (no crash, hang or assertion in any): Soviet 2, Soviet 5 (Allied 3 won by lane P23, Soviets 2 and 5 by lane P27). Deferred by lane P23, no port fault: Allied 6, Allied 7, Soviet 7 (docs/ra2-port-notes.md, lane P23; Soviet 7 won by lane P27). Deferred by lane P24, no port fault: Allied 9, Soviet 8 (docs/ra2-port-notes.md, lane P24). Deferred by lane P25, no port fault: Allied 11 (docs/ra2-port-notes.md, lane P25). Deferred by lane P26, no port fault: Allied 12, Soviet 10 (docs/ra2-port-notes.md, lane P26). Allied 7 won by lane P31. Soviet 8 won by lane P37. Allied 9 won by lane P38. Allied 12 deferred again by lane P39 (the win also needs BadGuy3's coil, flak cannons and sentry guns gone; docs/ra2-port-notes.md, lane P39). Shelved by lane P31: Allied 11 (a replay of its reveal-time Harrier strike went another way in four of six reruns; docs/ra2-port-notes.md, lane P31). Shelved by lane P40 at its 3 lane-hours: Allied 12 (no chronosphere lived to its first shot on the second pair of Apocalypses; docs/ra2-port-notes.md, lane P40). Allied 6 deferred again by lane P40 (base rebuilt to tick 14,685; docs/ra2-port-notes.md, lane P40). Shelved by lane P41 at 2.15 lane-hours, at a real blocker: Allied 6 (no scripted shortcut; the win needs both enemy houses gone, and a 30-Grizzly strike killed BadGuy2's coil, war factory and barracks but not its construction yard, which rebuilt them; no chrono legionnaires on the sidebar; docs/ra2-port-notes.md, lane P41). Allied 6 won by lane P43. Shelved again by lane P45 (a user-supplied video guide; the east silo destroyed by chronoshifted prism tanks, the base lost its economy before a second strike; docs/ra2-port-notes.md, lane P45). Lane P22's missions, wins and shelved ones, with lane-hours: docs/ra2-port-notes.md, "Campaign missions played to wins".
+Parked by lane P22 for a retry (no crash, hang or assertion in any): Soviet 2, Soviet 5 (Allied 3 won by lane P23, Soviets 2 and 5 by lane P27). Deferred by lane P23, no port fault: Allied 6, Allied 7, Soviet 7 (docs/ra2-port-notes.md, lane P23; Soviet 7 won by lane P27). Deferred by lane P24, no port fault: Allied 9, Soviet 8 (docs/ra2-port-notes.md, lane P24). Deferred by lane P25, no port fault: Allied 11 (docs/ra2-port-notes.md, lane P25). Deferred by lane P26, no port fault: Allied 12, Soviet 10 (docs/ra2-port-notes.md, lane P26). Allied 7 won by lane P31. Soviet 8 won by lane P37. Allied 9 won by lane P38. Allied 12 deferred again by lane P39 (the win also needs BadGuy3's coil, flak cannons and sentry guns gone; docs/ra2-port-notes.md, lane P39). Shelved by lane P31: Allied 11 (a replay of its reveal-time Harrier strike went another way in four of six reruns; docs/ra2-port-notes.md, lane P31). Shelved by lane P40 at its 3 lane-hours: Allied 12 (no chronosphere lived to its first shot on the second pair of Apocalypses; docs/ra2-port-notes.md, lane P40). Allied 6 deferred again by lane P40 (base rebuilt to tick 14,685; docs/ra2-port-notes.md, lane P40). Shelved by lane P41 at 2.15 lane-hours, at a real blocker: Allied 6 (no scripted shortcut; the win needs both enemy houses gone, and a 30-Grizzly strike killed BadGuy2's coil, war factory and barracks but not its construction yard, which rebuilt them; no chrono legionnaires on the sidebar; docs/ra2-port-notes.md, lane P41). Allied 6 won by lane P43. Allied 12 won by lane P46. Lane P22's missions, wins and shelved ones, with lane-hours: docs/ra2-port-notes.md, "Campaign missions played to wins".
 
-**Main's own tests on the trial** (label rb-main, 24 checks: `tools/rb_skirmish_wrap.py` stands in for the binary and starts
-their `--skirmish` game through the menus; `glue/harness_input_native.inc` answers their `@` points and harness-state lines; a
-`--skirmish` run plays one game; RA2_NATIVE_SKIRMISH_SPEED=3, RA2.INI's speed, which main's harness keeps). They found five more
-width faults, fixed: the replacement list box's TextNode item data (the Save/Load lists' FileEntryClass pointers: the in-game Save
-screen faulted), Get_Item_Text's int node and its ListItemData view (every dropdown's open list), the dropdown opening one row tall
-(the port's dropped height, `combo_height`), and the Enhancements button's column slot.
+No crash, hang, trap or assertion in either mission or their replays. What the pilot found, all in the scripted-input
+path rather than the game (fixed for the step server's runs, RA2_NATIVE_SCRIPT_ONLY=1; the older --input-script tests keep
+their behaviour):
 
-**Width sweep leftovers (item 5).** Main's width rows were checked one by one against the rebuild text (about 65 already fixed by
-rows here, about 200 safe in the rebuild's own types, about 22 unreached, 5 not found); the ones that still needed it are rows now:
-the LAN lobby slot combos (NodeNameType pointers in combo data), Random Map's scenario item, Extras > Movies (Dialog_Box's
-result, the movie list's item data), StaticRecord and ScrollBarRecord laid out from WinData's own offsets (with WinData's movie
-fields pointer-sized), a leftover raw 0x1FC offset, the atan table's index wrap, the in-game movie subtitle record. No 4-byte-count
-copy moves a pointer; the only pointer/int union (EventClass) is typed.
-
-**Frame identity** (`tests/rb_identity.py`, main's soak digest in both: RA2_NATIVE_SOAK=50, SOAK_SEED, SOAK_SPEED=0, SOAK_END;
-Allied 1 from New Campaign, orders `+30 deploy *; +600/600 hunt`, the src-based port `build/release-mac-one/ra2-native` against the
-trial). Found and fixed on the trial's side: its seed was set at Start_Scenario's top, after Select_Game's Init_Random (the trial's
-own runs differed from each other); now at Select_Game's top as main's seam. After that the two ports give the same digest (every
-techno's type, house, coordinate, strength, mission, the money and the random generator) at every 50 frames through frame 900. **First
-divergence: game frame 938**, a Soviet conscript (E2, house 1) that appears at frame 937 at 16832,22464: its first step goes straight
-south in the trial (16832,22473) and one pixel west of south in the src-based port (16831,22474); the random generator is still equal
-at frame 950. The cause is in its facing (Direction -> fastmath::atan2/atan2f -> DirType::From_Radian); From_Radian's quotient
-(the rebuild) against main's product was tried and is not it. Not fixed: the next step is a dump of that conscript's HeadToCoord
-and facing in both.
-
-**Checks at the lane's head: 57** (`ctest --test-dir build/rb-cmake`, RB_IOS_UDID set): the full run passed 54; the three failures
-were rb-native-production and rb-ios-sim-production (a harness fault this lane exposed: `train` used EventClass's 4-argument PRODUCE
-form, which leaves the naval flag uninitialised, so with the harness's new stack layout the Grizzly went to the naval queue; the
-5-argument form with FALSE fixes it) and rb-main-hd-vehicles-3x (passed alone; it timed out under load). All three pass on rerun.
-
-**Touch in the Simulator** (label rb-ios): main's touch tests run in RBTrial.app (`RB_TRIAL=tools/rb_ios_sim.sh` behind the wrapper):
-two fingers, A-Move, Modern, the team-button hold, the second-tank taps (Classic and Modern), Allied 2's taps across houses and the
-pinch zoom all pass in the iPhone 17 Simulator.
-
-## Frame identity, the sidebar frame, LAN, the original's field-globals (lane P9, 2026-11-24, same PIN)
-
-**Frame identity** (`tests/rb_identity.py`; `--reuse-src <dir>` reuses an earlier src-port run of the same route). Allied 1 and
-Soviet 1 now give main's soak digest at every 50 frames **through frame 5,000** in both ports (ctest rows rb-identity-allied and
-rb-identity-soviet, label rb-identity). The causes, each found by dumping the step's inputs and outputs beside main's formula:
-
-| Divergence | Cause | Fix |
+| Found | Effect | Status |
 | --- | --- | --- |
-| Allied 1 frame 938, a conscript's first step straight south | atan2f's `x == 0` answer `M_PI/2` converted to float at run time under the game's round-toward-zero mode (-frounding-math): 1.57079625 against VC6's folded 1.5707964f, so the facing came out 0x7FFE, not 0x7FFF | the units are built with `-fno-rounding-math` (`tools/rb_probe.py`): constant expressions fold at compile time to nearest, as VC6 folded them; run-time arithmetic still rounds toward zero (FPCR) |
-| (same path, latent) | the fastmath bodies narrowed their argument to float and divided or multiplied in float, where the original keeps the x87 value unnarrowed (main's rows 378-384) | `fastmath.cpp` rows and `glue/fastmath_native.inc`: sin/cos/asin/acos/atan on the double, atan2f's quotient in double through `_ftol` |
-| Allied 1 frame 1606, a cargo plane's descent | `DirType::From_Radian`: the double-to-short conversion of a value past 32767 (west of south) is undefined in clang and, inlined, the following widening was folded away (As_Radian read 49150, not -16386); and the header divides where the original multiplies by -10430.06 (0x0079B628) | `hdr/face.h` row: the product, through `int`, then the low 16 bits |
-| Soviet 1 frame 215, a paradropped conscript | harness only: the trial's digest hashed `Get_Mission()` (the queued mission while none is current), main's the field | `glue/harness_input_native.inc`: `CurrentMission` |
-
-Also a row for the divisions the original makes products (`/ 100.0`, `/ 10000.0`, `/ 1000000.0`, `/ 11.0`, `/ 50.0`: the image has
-only fmul by their reciprocals). **Skirmish: not identical yet.** The route's start through the menus is not repeatable (about
-half the runs start a different game: 52 technos at frame 50 instead of 60), and in the runs that start the same game the digests
-agree through frame 3,950; at 3,960 the computer player builds a radar where the src port builds a sentry gun: its defence node
-was dropped earlier in the trial (AI_Build_Defense and Where_To_Place_Building are parked drafts in the rebuild, exact in main).
-
-**The sidebar's frame was never drawn** (every game since lane P1: SIDE1/SIDE2/SIDE3/ADDON missing, the strip column black). The
-rebuild's `SidebarClass::IsSidebarRedrawPending` (0x8373C3) is in the original the byte `Map.IsForceCompleteRedraw` (0x8324E0 +
-0x4EE3): Add_Buttons and the rest set it by address, Draw_It reads the member. Natively they were two variables. The same pattern,
-fixed the same way (each global a reference to its member): `Session_Busy` = Session.NetOpen (the LAN host faulted: the lobby's
-dialogs ran Main_Loop), `IsCameoRefreshPending` = Map's SidebarClass::IsToRedraw, `AllowDisableableSupers` =
-Session.Options.SWAllowed (no unit wrote the global), `Game::PlayerColor` = Session.PrefColor, `MuteSWLaunches` =
-Session.MultiplayerObserver, `DiplomacyChatFlags` = Session.PlayerChatEnabled, `Online_Session_State`/`Return` = Session +0x0C/+0x10.
-Still to check by the same test (a bound global's address inside Map 0x8324E0..0x8373C8): MapSizeX/Y (Map +0xF0), CurrentSuperWeaponType
-(+0x11B4), SidebarMovieX/Y (+0x11EC), SidebarClass::DirtyRect (+0x1208); the rebuild's headers name no member at those offsets.
-
-**Main's tests.** cursor_stress.py (C23): passed (3,600 frames, HD 2x, zoom 1.5x, two backgrounds). hd_vehicles.py --case air-base:
-passed; the wrapper's Patriot (the third build-list entry) now goes below the yard on screen. lan_pair.py: passed (18,000 frames
-with both CRCs, none different; the Sound dialog twice; network edge scroll 13 pixels a frame against the skirmish's 26; ctest
-rb-main-lan-pair). It needed Session_Busy, the two Westwood Online channel tests answering false in `glue/rb_behaviour.cpp`, DebugString
-printing under RA2_NATIVE_DEBUG_LOG and the CRC log. enhancements_newgame.py: the trial's dropdown rows are taller because the
-trial follows the original: Combo_Proc's OD_SUBCLASSED sets CB_SETITEMHEIGHT -1 to LineHeight + 2 and 0 to LineHeight + 6
-(0x005F6460-0x005F6496); main's behaviour row (link/behaviour_m14_ownerdraw.cpp) omits both, so main's port keeps user32's 16 and
-the test's click positions are main's. Not changed here; a main-port gap.
-
-**Static controls** (window dumps through the shell in both ports, 500 ms apart): the main menu frames are identical; the campaign
-briefing with its typed objectives is pixel-identical once typed; the side choice's movie and the menu animations differ only by
-frame timing; the skirmish setup differs only by the combo heights above. Two src-port findings from the comparison: its Map
-object overruns its native storage into the globals after it (Draw_It's IsForceCompleteRedraw is main's
-SidebarClass_IsSidebarRedrawPending by accident, which is why main draws the frame), and its CommandNames table loads in another
-order (AttackMove, Guard, Beacon, Deploy at 4-7 against the image's Deploy, AttackMove, Guard, Beacon), so main's command bar shows
-the beacon and attack-move icons where UI.INI puts Deploy and Guard. The trial's bar follows the image.
-
-**Checks at the lane's head: 61, all passed in one full run** (`ctest --test-dir build/rb-cmake`, RB_IOS_UDID set; 91 minutes):
-the 57 of lane P8, rb-identity-allied, rb-identity-soviet, rb-main-lan-pair and rb-main-hd-air-base.
-
-## Lane P10 (2026-11-24, same PIN): paused for usage pacing; resume note
-
-**Item 2, the repeatable skirmish start: done.** The cause: the setup's sides and colours default to Random (-2). Start Game
-resolves them (`SessionClass::Assign_Random_Choices`: `Random_Side`, `Random_Color`) from `Scen->RandomNumber` before
-Select_Game's `Init_Random` applies CustomSeed. That generator still holds `Init_Game`'s own `Init_Random` seed, which is
-`GetTickCount()`, because CustomSeed is still 0 at that point. So each run drew its own human and computer sides (Americans or
-Arabs, ...). Both ports behave this way. The fix is in the test only (`tests/rb_identity.py`, neither port changed): each
-skirmish run's write folder gets the installed RA2.INI plus `[MultiPlayer] Side=Americans, Color=0` and `[Skirmish]
-Slot01=6,8,1` (the computer is Russians), which the original reads (`Read_MultiPlayer_Settings`, `SessionOptionsClass::Read`);
-`--sides human,computer` changes them. Checks: five short starts across both ports gave the same frame-50 digest, and one full
-run gave **every digest the same through frame 5,000** (src and trial). The new ctest row `rb-identity-skirmish` is in
-CMakeLists.txt; it has passed once and not yet in a full ctest run. With these sides P9's divergence at frame 3,960 (radar
-against sentry gun) does not appear. Other side pairs (Arabs,6 / Russians,0 / Africans,7, 8,000 frames) were started but
-stopped by the pause before finishing.
-
-**Item 1, the overlay: partial (classification only, no text carried yet).** `data/overlay_candidates.csv` lists 194
-functions. Each is parked or not exact in the rebuild at the PIN (`rebuild/manifest/tail_buckets.csv`) and exact in main
-(`manifests/original_target/modules`). By bucket: exact_when_open 63 (behaviour-safe), inline_call 40, no_draft 29,
-register_order 18, calls_differ 15, inline_body 15, unbound 9, stack_layout 3, not_emitted 1, text_if0 1. Wonline rows are
-not compiled in the trial, and World Domination Tour is probably unreached. Line-by-line comparison against main's text
-(behaviour, not bucket) so far:
-* map and drawing batch, all A (behaviour-identical): Destroy_Bridge2_Near, Destroy_Low_Bridge_Near, Repair_Bridge,
-  Pick_Random_Tile_Variant, Register_Zone_Connection_Entries, Zone_Span, Create_Region_From_Cell, Init_Voxel_Matrices,
-  Techno_Render_Voxel_Object, LaserDrawClass::Draw_It, Draw_Post_Render.
-* Where_To_Place_Building: probably B, needs a check. The trial's facing comes from `TVelocity2D::Get_Yaw` and `As_Facing`;
-  main's is `(unsigned short)((atan2 - pi/2) * -10430.06)` and `Dir_To_8`. The reverse step is `Facing_Sub(facing, 4)`
-  against main's `Adjacent_Cell(Cell, int)` with `facing - 4`.
-* Not yet compared: the house, team and trigger batch (HouseClass::AI, AI_Build_Defense, TeamClass::AI, Suggested_New_Team,
-  Do_Reinforcements, Discharged, TActionClass::operator(), Do_MISSION_GUARD, Captured, Docking_Coord, Take_Damage,
-  BuildingLightClass::AI, Get_Draw_Rect); the combat and movement batch (Fire_At, Explosion_Damage, Railgun_Beam_Damage,
-  Shrapnel, Coord_Scatter, Nearing_Target, Hover and Rocket Process, While_Moving, FootClass::AI,
-  Search_For_Tiberium_Weighted, Start_Driver, Gas_Behavior_AI, TechnoClass(NoInitClass), WaveClass::Load); the UI and
-  start-up batch (Init_Game, WinMain, Allocate_Surfaces, LoadFile, LBSaveSelections, Set_Slot_Names, Presentation,
-  SidebarClass::AI, Reposition_Sidebar, Select_By_*, Type_Select_Key_Up, planmgr, Dropship_Screen, Shade_Text_Area,
-  WDT_Write_Map_Ini). Each is to be read beside main's text; for each B, carry main's text (a `cut_function` row plus a glue
-  `.inc`, or a local fixup).
-
-**Item 3, the field-alias globals: swept, not yet fixed.** Every name bound in the rebuild catalog (`catalog/populations`
-references) was checked against the i686 extent of every class-typed global. The extents are the `[sizeof=]` values in the
-gen `original_layouts/*.i686.txt` dumps: MouseClass 20,284 (0x4F3C, so Map runs 0x8324E0 to 0x83741C, not 0x8373C8),
-SessionClass 12,420. The hits beyond P9's ten:
-| Global | Address | Member (i686 offset, rebuild name) |
-| --- | --- | --- |
-| MapSizeX / MapSizeY | 0x8325D0 / D4 | Map +0xF0 / +0xF4: MapClass::PlayRect.Width / .Height. Natively never written, so mainloop's force-attack scroll is 0 |
-| CurrentSuperWeaponType | 0x833694 | Map +0x11B4: DisplayClass::IsTargettingMode. super.cpp's chrono-warp second stage writes the global |
-| SidebarMovieX / SidebarMovieY | 0x8336CC / D0 | Map +0x11EC / +0x11F0: RadarClass::RadHeight / RadOffX (the members at those offsets, whatever the names) |
-| SidebarClass::DirtyRect | 0x8336E8 | Map +0x1208: RadarClass::LastDrawRect |
-| IsCameoTextShown | 0x8373C0 | Map +0x4EE0: SidebarClass::IsCameoText (new; not on P9's list) |
-| PacketRouterConnection | 0x00A409C4 | Ipx +0x4C: IPXManagerClass::LobbyChannel (IPXGlobalConnClass *; main: "compatible") |
-Each should become a reference to its member, as P9's rows do. For protected members, take a pointer to member through a
-derived accessor (`struct A : RadarClass { static int RadarClass::* p() { return &A::RadHeight; } }`). Nothing else is
-inside an extent. Scen and Rule are heap pointers, so nothing can alias into them by address. g_PlayerReady and
-g_PlayerChecked are in wonline only.
-
-**Item 4, identity and full ctest at the head: not run.** Only the skirmish identity above was run.
-
-## Lane P11 (2026-11-24, same PIN): field aliases, the overlay compared, identity on six routes, device plan
-
-**Field-alias globals: fixed** (`fixups.json`, the rows marked lane P11). Each name P10's sweep found inside Map or Ipx is now a
-reference to its member, as P9's rows: MapSizeX/Y = Map.PlayRect.Width/Height (+0xF0/+0xF4; Main_Loop's force-attack scroll was
-0), CurrentSuperWeaponType = Map.IsTargettingMode (+0x11B4; super.cpp's Chronosphere second stage wrote a variable the display
-never read), SidebarMovieX/Y = Map.RadHeight/RadOffX (+0x11EC/+0x11F0), SidebarClass::DirtyRect = Map.LastDrawRect (+0x1208),
-IsCameoTextShown = Map.IsCameoText (+0x4EE0), PacketRouterConnection = Ipx.LobbyChannel (+0x4C; a friend struct reads the private
-member; ConnectionClass is the primary base, so the pointer is the same value). The Map references are defined in `_map.cpp`
-beside Map, IsCameoTextShown in `sidebar.cpp`, PacketRouterConnection in `globals.cpp` after Ipx. Lane N33's three in main's port
-(PendingObjectPtr/PendingObject 0x833680/84, RadarScale 0x833968) need nothing here: the rebuild declares them as Map's members
-(display.h, radar.h) and no unit names a global at those addresses.
-
-**The overlay: compared.** `data/overlay_candidates.csv` has a `behaviour` column for all 194 rows. Line-by-line against main's
-exact text (P10's map and drawing batch, then this lane's three batches, two of them read by read-only helpers whose B findings
-were checked here):
-
-| Group | Rows | Result |
-| --- | ---: | --- |
-| map and drawing (lane P10) | 11 | all A |
-| house, team, trigger (Where_To_Place_Building, AI_Build_Defense, HouseClass::AI, TeamClass::AI, Suggested_New_Team, Do_Reinforcements, Discharged, TActionClass::operator(), Do_MISSION_GUARD, Captured, Docking_Coord, Take_Damage, BuildingLightClass::AI, GetItem) | 14 | all A |
-| combat and movement (Fire_At, Explosion_Damage, LaserDrawClass::Draw_It, Shrapnel, Coord_Scatter, Nearing_Target, Hover/Rocket Process, Ship/Drive While_Moving, FootClass::AI, Search_For_Tiberium_Weighted, Start_Driver, Gas_Behavior_AI, TechnoClass(NoInitClass), WaveClass::Load, Railgun_Beam_Damage) | 17 | 15 A, **2 B, main's text carried** |
-| UI and start-up (Init_Game, WinMain, Allocate_Surfaces, LoadFile, LBSaveSelections, SidebarClass::AI, Select_By_Health/Rank, Shade_Text_Area, Dialog_On_WM_PAINT, planmgr's node and filled-techno draws) | 13 | all A |
-| not line-compared | 139 | exact once the unit is open 48; compiler-generated, template or glue 36; wonline (not compiled) 26; World Domination Tour (not reached) 20; codegen-only buckets (register order, stack layout) 6; planning-mode draws 2; Dropship_Screen (only with Scen->StartingDropships) 1 |
-| unsure | 1 | Enable_Animated_Control (the dialog control enable test: main's helpers not expanded; the dialogs matched in P9's window dumps) |
-
-The two B, each now a `fixups.json` row carrying main's exact form under the rebuild's names:
-* **Coord_Scatter** (parked draft): the lock snap divided (`X / 256 * 256 + 128`, toward zero) where the original subtracts the
-  low byte (`X - (X & 255) + 128`, down). A negative X or Y (-255..-1 passes the bounds test) snapped a cell off: a locked scatter
-  at the map's top or left edge.
-* **Fire_At** (judgment-call row): the flak-scatter branch's length summed X*X+Y*Y+Z*Z in float (Vector3::Length) where the
-  original sums each float as double, Z first; past about 4,096 leptons per component (int)length could be one lower.
-
-Where_To_Place_Building and AI_Build_Defense, the two P9 suspected: both A. The draft's `TVelocity2D(-x, -y).Get_Yaw()` and
-`As_Facing` give main's `atan2(y, -x)` product and `Dir_To_8` (the junk upper half of DirType::Raw drops out of every rounding),
-and `Facing_Sub(facing, 4)` equals main's `Adjacent_Cell(cell, facing - 4)` (main's overload masks `& 7`); AI_Build_Defense's five
-bytes are operand order only. Helper notes worth keeping: rebuild/manifest/behaviour_notes.csv's behavior_diff note on
-Do_MISSION_GUARD describes an older draft (the current one compares A); the rebuild's TVelocity3D::Set_Speed tests only X and Y
-for zero where main tests X, Y and Z (Shrapnel cannot reach the difference; other callers could).
-
-**Identity: six routes identical through frame 5,000** (both ports, main's soak digest every 50 frames): Allied 1, Soviet 1, the
-default skirmish (Americans against Russians), and the three side pairs P10 started, now ctest rows `rb-identity-skirmish-Arabs`
-(Arabs against Arabs), `-Russians` (Russians against Americans), `-Africans` (Africans against Confederation). The six were run
-after the alias fix and before the two carried rows, and again in the full ctest after them.
-
-**Full ctest at the lane's head: 65 checks, 64 passed in one full run** (`RB_IOS_UDID` set; 104 minutes): the 62 of lane P10
-and the three new side-pair rows. The one failure, rb-main-hd-vehicles ("2 pictures showed the units at 1x after one at 2x
-(flicker)", with 2 dropped pictures in its third count), passed in both re-runs straight after; it is a timing check of the HD
-units path that none of this lane's rows touch. rb-main-lan-pair passed with PacketRouterConnection now Ipx.LobbyChannel.
-
-**Device: planned, not built at the head, not installed.** The trial app links main's host objects built with `RA2_NATIVE_GAME`,
-so it has the played app's app mode: on the phone it asks for the game folder once (the Files picker), copies the files into
-`Library/Application Support/RA2Native/GameData`, and points the port at the copied game.exe (`main.cpp` sets RA2_GAME_EXE from
-`setup_imported`). The port reads the user's installed game.exe through its per-build table (`ra2port/game_builds.hpp`): the
-install here is the 1.006 signed/no-CD build (4,489,184 bytes, SHA-256 7bb2c7e1...), read at the target's addresses. So the
-phone needs no Mac path and no copy of the target game.exe. Shown in the Simulator by the new `tools/rb_ios.sh run-imported
-<udid>`: a fresh container, no --data-dir and no RA2_GAME_EXE, RA2_NATIVE_IMPORT standing in for the picker: 21 files (1.1 GB)
-imported, "another build with the target's data: read at the target's addresses", 168 globals from game.exe, the main menu
-(`progress: menu`); the copy is removed afterwards. What the device needs (P6's list, updated):
-1. the user's team id (RA2_IOS_TEAM) and a provisioning profile covering io.github.ra2native.RBTrial (the team wildcard
-   profile does; the played app's explicit profile does not), signing through `native/packaging/ios_sign.py`;
-2. the game files once, through the app's own import (RBTrial's container is separate from the played app's, so they are
-   imported again, about 1.1 GB, or copied with `xcrun devicectl device copy to ... --destination Documents/<folder>` and
-   imported with RA2_NATIVE_IMPORT=<folder>);
-3. nothing for game.exe beyond that: the imported game.exe is read per build (target, 1.006 signed/no-CD or Steam);
-4. the install (`devicectl`), which is the user's decision.
-The unsigned device binary was not rebuilt at this head: free space was 28 to 29 GiB, under the lane's 30 GiB floor for starting a
-build. `rb_ios.sh build device` makes it; `build/rb-ios-device/RBTrial.app` is
-lane P7's (2026-11-23), without lanes P8 to P11.
-
-Process note: one stray `rb_ios.sh` call with no arguments rebuilt the Simulator app a second time (same sources) while free space
-was 29 GiB.
-
-**Before the next re-pin** (owner, 2026-11-24): the rebuild becomes the tree of record today and its sources lose the bare
-trailing `// RA2: as above` markers (`private/tools/strip_as_above.py`, pattern `[ \t]*// RA2: as above[ \t]*$` per line). About
-52 rows of `fixups.json` (56 occurrences, in globals.h, conquer, gdlgsupp, init, mainloop, object, ownrdraw, sidebar, txtlabel2 and
-voc) carry the marker in their old/new text. When re-pinning to a commit after the switch, apply the same pattern (per line,
-multiline mode) to those rows' `old` and `new` strings first, or rb_units.py stops with "fixups that match nothing". The pin
-b873d2b3c6 is unaffected; this lane's rows carry no marker.
-
-## Pointer-width and run-time faults so far (plan item 7; lane P6's list, 2026-11-23)
-
-Every fault the rebuild text has shown under arm64 clang, by pattern, each fixed by a `fixups.json` row (index in
-brackets) or a glue file, the why on its row. Main's 246 width fixups were the patterns to look for; these are the
-ones the played routes reached. The rebuild is unchanged by all of them (findings only, no edit there).
-
-| Pattern | Where (fixups.json rows) | Found by |
-| --- | --- | --- |
-| Pointers kept in 32-bit ints inside records | WinData's drawer and backdrop shapes (80-84), the replacement list box's GWL_USERDATA words (85, 86), IsoBlitState's source pixel and depth (106, 107), ToolTip::Text (56) | main menu paint, list boxes, the first terrain frame, radar tooltips |
-| Raw 32-bit offsets into a record whose pointers grew | WinData fields reached at `(char *)data + 0x24...0x1FC` (88-93), TextNode's 0x10 header (95), NodeList's view of WinData::Nodes (96) | dialogs, tooltips, ~WinData |
-| Addresses folded through `unsigned int` arithmetic | the ABuffer and ZBuffer rings (40-55, 58-69), audmpool and audstrm (71-75), RLE_Blit's buffer positions (108), the wave draws (109, 110) | the first skirmish frame, the sound pools |
-| Pointers passed as `int` / `DWORD` arguments | the notice interfaces (97-103), the radio parameter (`intptr_t &` in Receive/Transmit_Message, LParam: 114-120), the VQA timer callback's user value and handle (4, 6), the list box `wparam` overload (27) | the loading screen, transports and docking, movies |
-| Varargs of a class through `%s` | Wstring in debug prints (22, 23) | compile |
-| Saves: VC6's 4-byte pointer as the stream's width | LayerClass::Save's `sizeof(int)` against Load's pointer (130), LZO1X-1's pointer dictionary (129), the swizzle ids and Process_Tables (131-146), the object's own id written as `this` (147-152), ObjectClass::Load's swizzle of the int at AbstractClass +0x18 (157) | save and original-save routes |
-| Raw images read through `void *` | LocomotionClass::Load (153), Static_Sounds_Load's unnamed record (154) | the user's original saves |
-| Two declarations of one record or global, distinct natively | message 0x4E9's TextRequest/ToolTipTextRequest (87), ScorePalette (94), SaveVersionInfo/SavegameInformation (`glue/savever_native.inc`), Is_Weapon_Valid/Is_Weapon_Present and slot 247 (`glue/techno_native.inc`) | dialogs, score screen, saves, selection |
-| Pointers cut to 32 bits for a comparison or container-of | Draw_Tile's four ring-end tests against Get_Buffer_End (lane P7: tiles wrote past the depth surface; the intermittent heap faults), audevent's node-to-event step (lane P7) | ASan over ALL02S loads |
-| Allocation mismatches VC6 tolerated | Free_Dialog_Palettes' `delete []` of a scalar `new` (124) | the score screen |
-| Declared but defined by no unit, so bound to zero storage and never constructed | VoxelAnims (`glue/vanim_native.inc`, lane P6): the vector had no vtable; the first VoxelAnimClass destroyed faulted at address 0x30 (Process_Deferred_Deletion) | the ALL03U campaign route |
-| Arithmetic that traps on VC6 and not on arm64 | the swizzle walk's deliberate 1 / 0 (146: the walk bounded, the failure reported) | original saves |
-| Platform macros | base64's `BIG_ENDIAN` test (Darwin defines it) | the MIX header keys |
-
-Still to sweep (not reached by any route yet): the rest of main's 246 width fixups by pattern against the rebuild's
-text, the multiplayer and Westwood Online paths (wonline left out), and the campaign missions past Allied 3.
-
-## The Enhancements page, list boxes, device parity (lane P12, 2026-11-24, same PIN, in redalert2-modern)
-
-From the user's iPhone Duo report and a code comparison with the played port (redalert2-decomp native/). The host and
-port layers (`platform/`, `port/`) are byte-identical to the played port's apart from SPDX lines, so every difference is
-in the game-side layer (`ra2/fixups.json`, `ra2/glue`) or a parked draft of the rebuild. Fixed (each a `fixups.json` row
-naming main's row):
-
-| Item | Cause | Fix |
-| --- | --- | --- |
-| Enhancements page: Cancel a grey push button in the page body | 0x005E72C0's bottom-slot list lacked 0x7F03 (main's C7 row) | Is_Default_Button lists 0x7F03 |
-| Dropdown lists: no frame, rows left on screen after closing, arrow never pressed | parked Combo_Proc: no parent repaint, Win32 dropped state not set | open/close repaint the parent and set the state (main's case 0x14F) |
-| Dropdown click sound | the draft played GenericClick | GUIComboOpenSound (Rules +0x19C, 0x005F5DF2) |
-| Fullscreen "Automatic" dark red on touch hosts | the draft (and the original) use Disabled_Text_Color | Light_Grey as main's port (owner ruling: the played look; not the original's) |
-| Internet button live | main's C20 row not carried | disabled at the main menu's creation |
-| Every list box empty (Load/Save/Delete, Keyboard commands, ...) | the parked List_Proc stops when GetUpdateRect reports no region; the port reports none | the client rectangle when none is reported |
-| Column lists (Load/Save/Delete) drew no text | the draft drew each cell in a 0x0 rectangle, which clips the font | the column's width by the row's height |
-| Game interface size could write outside a surface | main's C6 Prep_For_Blit window clip not carried | carried (xsurface.cpp row) |
-| LAN UniqueID could collide between devices | main's C20 install id not carried | carried (session.cpp row) |
-| Load error left nothing to click | main's R684 row not carried | the list is shown again |
-| 16 ms frame floor at every game speed | main applies it at speed 0 only | Options.GameSpeed > 0 skips it |
-| Pinch zoom off on iOS (so no 0.5x map zoom) | every setting defaults off on every platform, in both ports; the played app's On is the user's saved choice | iOS starts with Pinch zoom on (`platform/sdl/enhancements.cpp` default_value; the user's word via the owner) |
-| iOS home-screen name | "RA2 Rebuild Trial" | "RA2" (bundle id stays io.github.ra2native.RBTrial until parity) |
-
-Kept, following the original (each evidenced): dropdown and list row heights (Combo_Proc 0x005F6460, List_Proc
-0x005F6B4D), the list's filled selection bar (0x005F6DA6) and the Load list's date/time columns (Fill_List's OD_SETCELL).
-Not reproduced: the played app's 976x720 on the Duo; the same code gives 1024x720 for 944x634 usable points at interface
-1.25x (`main.cpp` game_resolution and the interface-size narrowing are identical in both ports); the played app's
-"app: usable ..." log line on the device would settle it.
-
-**Shell frames check** (`ra2/tests/rb_shell_frames.py`, ctest rb-shell-frames-mac and -iphone, with RB_IDENTITY_SRC): both
-ports through main menu, Options, Enhancements, Keyboard, Network, Single Player, Load and the skirmish setup, compared in
-8x8 tiles outside the listed allowed areas. It found the two list box faults above.
-
-## Yuri's Revenge, the combined app, Windows (lane P13, 2026-11-24, same PIN, in redalert2-modern)
-
-**Vendored**: `vendor/ra2-decomp` (gibbo101/ra2-decomp 8719494727, whole) and `vendor/tibsun` (TibSun dbfbfbfaac, the headers
-ra2-decomp falls back on), copied unchanged from redalert2-decomp's `yr/` at 887b1a2e11 by `tools/update_yr_vendor.sh`, each
-with a PIN of digests; `check_tree.py` now checks every vendor folder's PIN. **Imported**: native/yr (yr.cmake, combined.cmake,
-combined/, fixups.json, glue, data, tools, tests) and native/cmake (the Windows toolchain file and windows.cmake), re-pathed.
-Yuri's Revenge uses none of Red Alert 2's game code; its build is the old port's.
-
-**The combined app's Red Alert 2 engine is the rebuild-based game**: `ra2-engine` (Mac bundle, Windows DLL) and the iOS
-one-executable engine object link rb_units_objs, rb_data_objs, rb_glue_objs and the rebuild's closure, after rb-native-trial's
-PRE_LINK has weakened the duplicates and moved the units' initialisers to `__DATA,__rb_init_func` (Windows: `.rbini$m`, run
-between `rb_host_glue.cpp`'s `.rbini$a`/`.rbini$z` markers). On iOS the engine object's remaining initialisers move to
-`__ra2e_init` and the thin host resets the engine's `__data`/`__bss`/`__common` span before each later start, as for YR; the
-rebuild's `__rb_init_func` list then runs again after the game.exe load. SDL and the Apple host are linked once.
-
-Fixups (ra2/fixups.json):
-* the 0x7F5E toggle as a main-menu sidebar button in Assign_Button_Kind (main's port row 499, lanes C23/Y11);
-* Owner_Button_Proc's pressed state also from BST_PUSHED (main's Paint_Button): the port sends no WM_DRAWITEM, so no push
-  button of the rebuild port ever drew its pressed frame (found by one-game-toggle, "the toggle shows no press");
-* crc.h: a `long` overload on Windows (RA2_LONG is long there; every `crc((RA2_LONG)x)` was ambiguous).
-
-**Windows**: `rb_probe.py --target windows` gives the units the YR units' Windows form (yr_win_first.h and dialect_win.hpp
-first, the rewritten headers by -isystem); the generated data sources are compiled from COFF copies of their `__asm__`
-names; rb_data.py and rb_aliases.py read COFF objects in the Mach-O spelling, as link_closure.py does; the original-layout
-dumps' i686 side reads a second, Mac-style header tree (`gen/mingw-i686`: the Windows rewrite leaves out the C library's
-headers). Link closure: 63 undefined (the Mac's 65). `tools/rb_wine.sh` runs ra2-native.exe under Wine as a drop-in
-`--binary` for rb_routes.py (ctest label rb-wine on the Windows build folder).
-
-**Simulator tests**: iOS now starts with Zoom gestures on (lane P12), which makes Red Alert 2's whole screen render scale 2
-times larger, menus too; the YR Simulator tests' taps assume the unscaled screen, so they pass `zoomgestures=off`.
-
-**build.sh**: mac, mac-one, ios [simulator|device] (RA2YR.app by default; `--ra2` for RBTrial.app), windows, yr-windows,
-windows-one, all: the old native/build.sh list. The iOS combined app has the played app's bundle id (io.github.ra2native.RA2,
-as the old combined app had) unless `-DRA2_ONE_BUNDLE_ID` names another.
-
-## The differential gate (lane P14, 2026-11-24, same PIN, in redalert2-modern)
-
-`ra2/tests/rb_gate.py` runs this port and the src-based played port (redalert2-decomp `build/native-play/ra2-native`,
-built after lane N33; the older `build/release-mac-one` lacks N28-N33 and parts from both on a sidebar placement
-click) on one route with one seed, the same harness orders and the same frame-timed input script, and compares main's
-soak digest every 50 game frames (every techno's type, house, coordinate, strength, mission; the money; the random
-generator) and every trigger, timer and defeat line. Modes: `missions` (mission_soak.py's route to each mission),
-`skirmish` (RA2.INI's [Skirmish] ScenIndex and slots), `load` (a save loaded by both), `cross` (a harness save by one
-port loaded by both), `recheck`. The rebuild's trigger watch counts loop frames and lists a new scenario's triggers at
-its first frame; the gate moves them to game frames and drops the reset lines. Diagnosis: `GATE_WRAP_SRC/RB` run a
-side under lldb; `build/p14/lldb/rngtrace.py` (every Random2Class call of a frame with its caller) and `rettrace.py`
-(a function's calls and results) found the causes below on both release binaries (symbols, no debug info).
-
-| Set | Result |
-| --- | --- |
-| Campaign, every mission, 6,000 frames | 18 of 24 identical (Allied 1-6, 9, 10; Soviet 1, 3-8, 10-12) |
-| Skirmish, six set-ups (maps 0, 3, 7, 10, 14, 20; 1 to 4 computer players, nine houses) | 5 identical for 6,000 frames; map 14 (four computers) parts at frame 4,521: an AI engineer's walking step on a slope, `WalkLocomotionClass::Movement_AI`, a draft in both ports (open) |
-| Orders | Allied 1 and Soviet 1 played by clicks (select, band box, move, Ctrl, D key) plus harness hunt, deploy and train: identical for 4,000 frames. A skirmish with harness orders only (MCV deploy, two GIs trained, hunts, two nuclear missiles at the player's base through `super 0 home`): identical for 5,000 frames. Skirmish click scripts (sidebar build and place): **not repeatable in either port** (the input script counts loop frames; a port's second run differs from its first in the frame the placement lands), so they prove nothing either way and are not a ctest row |
-| The user's five saves (ALL01T, ALL02S, ALL03U, SAVE397A, SAVE4FBD) | all identical in both ports for about 11,000 frames after the load |
-| Save crossings (src save loaded by both, rebuild save loaded by both; skirmish, Allied 2, Soviet 3) | 5 of 6 identical for 8,000 to 9,900 frames after the load; the src-made skirmish save: identical through 9,650, then the src port declares the player defeated at 9,664 and this port does not (the rebuild-made save: both at 9,664). Open: a field of the src port's save read differently, outside the digest |
-
-The six missions that part, and why (`docs/differences.md`): the played port's `TechnoClass::Evaluate_Object` is a
-non-exact draft (0x006C5570, 91.7%) and turns down targets the original accepts; this port runs the rebuild's exact
-text (provenance class a). Seen frame by frame in Allied 8 (299), Allied 12 (262), Soviet 9 (350), the same pattern
-in Allied 7 (1,818) and Allied 11 (3,148). Soviet 2 (2,264): a tank's path differs, the path from
-`AStarClass::Find_Path_Regular`, exact here and a draft (0x00427370) in the played port. No fix toward the played
-port: there it is the played port that is wrong against the original.
-
-Fixed on the way (rows, each with its why): the Movies menu's list was empty and Play Movie did nothing (the movie
-tables `IntroMovieEntry`, `AlliedMovieList`, `SovietMovieList` were zero storage: records with pointers were not
-loaded; now pointer words, `rb_original_data.py`), found by main's `menu_movie.py`, now ctest `rb-main-menu-movie`;
-`PixelFXTypes` loaded (zero before); the harness's `super <i> home` picks main's cell (the first building) and
-`super <i> <x> <y>` is main's; the soak's defeat line prints the house's name as main's. New ctest rows:
-`rb-native-tankdamage` (the user's C22), `rb-main-menu-movie`, and with RB_IDENTITY_SRC the `rb-gate-*` rows
-(label rb-gate: the identical missions, four skirmish set-ups, two order scripts, the user's saves, two crossings).
-
-The user's own bugs against this port: `docs/regressions.md`. What is not the same code, by game area:
-`docs/differences.md`.
-
-**Checks at the lane's head** (worktree build, `ctest -E '^(rb-gate|rb-identity)'`, RB_IOS_UDID set): 64 rows. Mac 53: all
-pass (rb-main-hd-vehicles-3x, the known timing check, on its rerun). iOS Simulator 11: the first run failed 5 at the main
-menu: since lane P12 iOS starts with Zoom gestures on, the menus run at render scale 2 and the routes' and main tests'
-menu clicks missed; `rb_routes.py` and `rb_skirmish_wrap.py` now set `zoomgestures=off` unless a test asks for it. Then
-all 11 pass (3 of them on a rerun after the app ended at start-up once). The rb-gate rows run so far pass (skirmish m10,
-m20, orders-allied1, load-user-saves). Windows (Wine): pending lane P13's targets.
-
-Later in lane P13 (after the full ctest): `ra2_native_new_edit_focused` also takes the rebuild's name fields (a ListBox
-whose GWL_USERDATA is `{"NewEdit", style}`), so the iOS keyboard comes up in Red Alert 2's skirmish name field; without
-`--skirmish-frames`/`--frames` the harness frame count is 1 only in a test run (`--run-to`), so normal play writes no
-harness lines; one_game_saves.py accepts the rebuild's 16-byte voc.cpp record written as is; tools/original_save_compare.py
-imported; yr_member_aliases.py finds llvm-mingw by RA2_LLVM_MINGW. Merged: the icon branch, lanes P14, P15 and P16.
-Full ctest (109 rows, label soak left out) at efc9665: 102 passed; the 7 failures were rb-main-hd-vehicles-3x (the known
-flicker timing check; passed on the rerun), rb-ios-sim-skirmish and -production (Zoom gestures, fixed), yr-native-
-member-aliases and yr-native-save (test setup, fixed), one-game-saves (the voc.cpp record, fixed), one-game-ios-sim-menus
-(the Red Alert 2 name field's keyboard, fixed; the YR Skip check passed on the rerun).
-
-## Windows faults from codex1's PC check of 3182afe (lane P19, 2026-11-25)
-
-codex1's report: `build/win-playtest/codex1-ports-windows-check.md` in redalert2-native. Both failures reproduced under Wine.
-
-**Yuri's Revenge saves** (a save made by the save menu, loaded in a fresh process: "3,333 unmatched fields", signal 8):
-the Windows build had field maps for 7 of YR's 85 saved types. Every i686 layout dump of the YR units stopped at
-`<sys/types.h>`, because the Windows rewrite of the mingw-w64 headers (`gen-yr/mingw`) leaves out the C library's;
-lane P13 had given the rebuild a second, Mac-style tree (`gen/mingw-i686`), not YR. `yr/yr.cmake` now writes
-`gen-yr/mingw-i686` on Windows and `tools/original_layouts.py` reads it for the i686 side (85 types, 0 problems, as the
-Mac). The dumps' cache kept a dump that had stopped at an error, so it now keeps only one that compiled, named by its
-command, and a dump that does not compile is a problem (`--check` fails). Saves written by 3182afe's Windows YR were
-written without maps and cannot be loaded. New ctests on the Windows build: yr-native-save-wine
-(`yr_save_roundtrip.py --wine-prefix`; on 3182afe's yr-native.exe it fails as the PC did) and yr-native-original-layouts.
-
-**Yuri's Revenge stopped after the MCV was selected**: `one_game_yr_play.py` (Red Alert 2, the toggle, a YR skirmish at
-interface 1.25x, map zoom 1.5x, speed 2) found two faults. The click on the selected MCV stopped at once in
-`TechnoClass::VoiceDeploy` (0x00708E00), which the tree has falling off its end with no return (VC6 left eax): the
-Mac's clang returns there (Darwin defaults to -fno-strict-return), mingw's clang puts int3 there. The Windows units
-(the YR dialect in CMakeLists.txt, `rb_probe.py --target windows`) now take `-fno-strict-return`. After 8,190 frames,
-`fastmath::atan2f` (0x004CB3D0) read 8 GB before `atan_tab`: a ratio past `_ftol`'s range is INT_MIN from x86_64's
-cvttss2si, which abs keeps negative; yr/fixups.json converts with `ra2port::x87_ftol` and wraps the index, as the
-rebuild's row (and `asinf` the same way). Values in range convert as before. The crash dialog of an engine started by
-a swap said "printed to the terminal": that engine never opened the log, so its own `log_path` was empty; it now
-names the log the first engine opened (`app::adopt_log`). Input scripts take `@unit=<ID>` (the player's first techno
-of that type on the view) for the click.
-
-## Campaign missions played to wins (lane P22, 2026-11-25, same PIN)
-
-Lane P21's step server (ra2/glue/stepserver_native.inc) driven by commander helpers (ra2/tools/ra2_commander.py: clicks
-as raw pointer events, selection by clicks with Shift, Ctrl+<n> teams, attack, attack move through the command bar,
-production and placement), each phase a short script; plans from each mission's own map file read at run time
-(ra2/tools/ra2_mapinfo.py) and text walkthroughs. Each win is a replay (ra2/tests/campaign/<mission>.replay, inputs and
-ticks only), rerun to the same winning tick before its ctest row (ra2-native-campaign-won-<mission>, label
-ra2-campaign-won) was added. A mission is shelved at 3 lane-hours of wall time from its first step.
-
-| Mission | Result | Lane-hours | Notes |
-| --- | --- | --- | --- |
-| Allied 2 (ALL02S, Eagle Dawn) | won at tick 30,335 | 0.5 | Tanya through the pond onto both flak cannons, engineers' drop takes the Academy, rocketeers on the reactors |
-| Allied 3 (ALL03U, Hail to the Chief) | deferred (to be resumed) | 0.15 | the base built; Rhino raids and armed civilians took the power, refinery and barracks while the tanks idled; best point A3BASE1.SAV (tick 7,940, the base before the war factory) |
-| Soviet 2 (SOV02T, Hostile Shore) | parked at tick 36,422, to be retried | 0.2 | land phase won (the Allied base, Grizzlies, pillboxes and German refineries destroyed; best point S2MID.SAV at tick 24,561 in the first try), but raids killed the harvesters and, with the army away, a lone Grizzly razed the base; six destroyers remain and need a navy (no money left for a naval yard and submarines). Hard to script, no port fault. Resume from S2WEAP.SAV (tick 13,613) with a defence team at home (ra2_commander.war) and a naval yard before the push |
-| Soviet 3 (SOV03T, Big Apple) | won at tick 54,669 | 0.4 | base with two sentry guns, the derricks taken, Rhinos behind a home defence, an engineer into the battle lab, the beacon held (the lab must be skipped as a target: destroying it loses) |
-| Soviet 5 (SOV05T, City of Lights) | parked at tick 4,500, to be retried | 0.05 | 36 conscripts by attack move lost at the soccer field and the GIs around (56,52); the walkthrough's way is building by building in garrisons, then the tesla troopers into the tower (CAPARS01 at 48,34). First try only; run folder build/p22/sov05 (S5MID.SAV is after the loss, not a resume point) |
-| Soviet 1 (SOV01T, Red Dawn) | won at tick 49,448 | 0.2 | engineer repairs the bridge, about 70 conscripts by attack move through both Allied positions, the Pentagon's four parts |
-
-Helper findings (the scripted-input path, not the game): a click's selection shows two or three frames after the button
-is released (the game's mouse is read once a frame), so a click is followed by ten frames before the next one; a look
-must be followed by a drawn frame before a click on an object (objects register where they were last drawn); with an
-infantry selected, a left click on another controlled (allied house) infantry is a move, so a selection starts with a
-right click; Escape opens the in-game options menu, whose modal loop runs no Main_Loop frame, so the step server stops
-answering (the run had to be restarted from its recording). The step server now refuses "input key Escape" with an error (not queued, not recorded), so a script cannot wedge the session. The command bar's AttackMove
-button is not on the bar in every state (input-script: no command bar button), so a scripted attack move through it fell
-back to a plain move; the game's own attack move is Ctrl+Shift with a left click (Can_Force_Order), which the helper now
-uses. Units standing at a barracks' door block its exit: the finished infantry is refunded, not built (the original's
-behaviour), so the helpers walk new units away. The Game object reads the current tick at its start (timeouts counted
-from 0 ended at once).
-
-## Campaign missions played to wins (lane P23, 2026-11-25, same PIN)
-
-Lane P22's sweep continued with the same tools (ra2/tools/ra2_step.py, ra2/tools/ra2_commander.py) and rules: one replay
-per win (ra2/tests/campaign/<mission>.replay), rerun to the same winning tick before its ctest row; a mission is shelved at
-3 lane-hours of wall time from its first step.
-
-| Mission | Result | Lane-hours | Notes |
-| --- | --- | --- | --- |
-| Allied 3 (ALL03U, Hail to the Chief) | won at tick 39,041 | 0.1 | resumed from P22's A3BASE1 (tick 7,940): GIs into two houses by the bridges, barracks, war factory, a pillbox; 22 Grizzlies massed behind ra2_commander.hold (radius 10: a wider one chased across the western bridge into the second Soviet base); a plain push up the eastern road lost them all at the Soviet base's east side; walked instead in short legs with focus fire (fight_along) up the eastern road and round the north of the base, and the beacon force-fired through its cell |
-| Allied 4 (ALL04U, Last Chance) | won at tick 32,994 | 0.2 | the starting rocketeers and transports belong to PlayerAlt2, a house with PlayerControl=yes (the player clicks them; the step server's "own" flag shows only the player's house) until the construction yard is built; rocketeers on both grand cannons, destroyers through the subs, the shore defences and the naval yard, transports unloaded on the beach (82,128), the MCV deployed at (79,126). First try: the Soviet yard sells itself 180 s after ours is built and an engineer from it captured our yard; second: attacking the Soviet yard first woke the shore forces (V3, tesla troopers) and they razed it; third: the infantry kept on the yard (base_defended) and no Soviet building touched. Then a naval yard, ten destroyers up the river (fight_along, sentry guns and subs on the way) and the amplifier force-fired from the water |
-| Allied 5 (ALL05S, Dark Night) | won at tick 22,647 | 0.4 | Tanya and the spies belong to houses with PlayerControl=yes (fight_along takes houses=); about seven restarts from the recording: a coil kills Tanya in two hits and dogs in one bite while she walks (she shoots only when stopped, so legs of three cells with focus fire); a click on a building outside her sight is taken as a move (she walked into a coil), so targets are clicked only once seen, and barrels are force-fired by cell; the base exit north was reached only through the Soviet base, so its three reactors were C4'd first (the coils go dead); a silo's fence keeps Tanya out until its barrels are shot, and the Orange silo is reached only past three coils, so the last spy walked the whole way into a reactor and the silo was C4'd during the outage |
-| Allied 6 (ALL06U, Liberty) | deferred (to be resumed) | 0.65 | win needs every BadGuy1 and BadGuy2 unit and building gone. The MCV deploys only on a legal 4x4 spot: at the Pentagon's south edge (111,177) the yard falls outside the local map area, among infantry it is blocked; it deployed at (88,170) (tick 4,834, best point build/p23/all06/try3.replay). From there in three tries a raid from the north-west (98,160) and Soviet engineers razed or took the yard at about tick 17,000-18,000; the base needs pillboxes and prism towers on the north ramp before anything else, and a war factory early. Not a port fault (the deploy refusal traced with lldb: Try_To_Deploy refused by Legal_Placement) |
-| Allied 7 (ALL07T, Deep Sea) | deferred (to be resumed) | 0.45 | win: every BadGuy1 building destroyed. The Allied island falls by tick 3,600 and the Soviet MCV deploys at (73,193) at about tick 4,700, then a full base with four flak cannons and a silo. The fleet reaches the island's north water (75,180) by tick 3,200 from the start, but out-of-range force fire there sends it round into the southern inlet, where it guards without firing; a 25-ship siege from the north (ra2_commander.siege) killed the northern half but the yard kept rebuilding. Next: the inlet via the south (86,206), destroyers within 6 cells of the yard; or rocketeers early (barracks gives ten by tick 4,900, too late for the walkthrough's trick unless queued at once) |
-| Soviet 7 (SOV07S, Chrono Defense) | deferred (to be resumed) | 0.25 | lost at about tick 8,100-8,700 three times (the lab spied or entered: groups of four "E1" walk straight to the lab at tick 7,700; dogs must meet them). The scripted builder was too slow (placement retries, a click-heavy loop of several hundred ticks per pass): the next try should place the sentry guns and coils by hand first, then a dog team kept on the lab |
-
-New helpers (ra2/tools/ra2_commander.py): `fight_along` (a team walked along waypoints in short legs, focus-firing the
-enemy unit or ground defence nearest its centre); `Game.force_cell` (Ctrl with a left click on a cell); `defend_step` (one home-defence order, engineers first) and
-`base_defended` (base() with a home defence while each building is bought); `siege` (a fleet at a waypoint shells the
-houses' buildings in reach by force fire, units first, prefer= types first). Finding: a left
-click on an enemy building the player cannot see (outside every unit's sight, though mapped) is taken as a move, as in
-the original (Allied 3's Psychic Beacon, Allied 5's coils: the units walk up to it); the force fire on one of its cells
-attacks it, and once a unit sees it the click attacks (Tanya's C4).
-
-## Campaign missions played to wins (lane P24, 2026-11-25, same PIN)
-
-Lane P23's sweep continued with the same tools and rules (one replay per win in ra2/tests/campaign/, rerun to the same
-winning tick before its ctest row; a mission is shelved at 3 lane-hours of wall time from its first step), the
-not-started missions first.
-
-| Mission | Result | Lane-hours | Notes |
-| --- | --- | --- | --- |
-| Allied 8 (ALL08U, Free Gateway) | won at tick 106,268 | 1.2 | win: every BadGuy1 and BadGuy2 building and unit gone, the beacon within 20 minutes (timer 18,000 frames). Tanya, the GIs and the engineers move to houses with PlayerControl=yes (TanyaLand, GILand, EngineerLand) a few frames after the input opens, and back to the player once the beacon falls (then "player KIA" loses the mission if Tanya dies: P, select all combatants, sent her into the base once). The road south runs past BadGuy1's base; the way is the eastern ramp (86-88,38) onto the elevated highway (x=83), south to its ramp at (83,100) and west along row 104. Dogs kill Tanya in one bite and she shoots only when not walking, so every check shoots dogs within six cells first (vip_kill). The eastern barrel (55,91) chain takes the barracks, a coil, the gate and two reactors; C4 on the two northern reactors puts the compound on low power and the coils go dead, but killing a coil restores the power (Tanya died to the next coil), so the southern reactors came first. Grouping a unit into a second Ctrl group takes it out of the first. The MCV deploys only on a spot with no occupant (the park by the arch is full of trees and lamps: free_spots). A builder stuck on an unplaceable refinery waited 48,000 ticks; power plants were lost to a raid while the army was out; 18 prism tanks then took the base in eight short sieges without a loss of more than six |
-| Allied 9 (ALL09T, Sun Temple) | deferred (to be resumed) | 0.4 | win: every building of BadGuy1 (59, barrels included) and of the airport's house gone. Seals freed the village prisoners (ten GIs, two Grizzlies, five Hack engineers, a Night Hawk); the north barrels and the sentry gun, then engineers took the first pyramid and a tesla reactor; the eastern barrels killed a flak track and a reactor, and the second pyramid was taken (best point build/p24/all09/best.replay, tick 26,436: second pyramid ours and powered, the Soviet reactors and lab gone, three seals, one engineer). Captured pyramids draw 100 power each against the one captured reactor's 150: with both, neither fires (one was C4'd by our own seal to power the other). Blockers: the war factory keeps sending Rhinos (four of them razed the pyramid) and three flak tracks guard the yard (engineers die on the way). The airport must be captured first (an escorted engineer, not alone: one died to a lone conscript): its trigger sends engineers again and again, which the rest needs (the yard and the war factory captured) |
-| Soviet 6 (SOV06T, Sub-Divide) | won at tick 30,200 | 0.15 | win: the Korean fleet and the Allied navy's warships sunk (transports and yards not needed). First try lost the base at about tick 15,000 to Grizzlies and GIs landed by the Allies (no defences: the walkthrough's coils matter); second, two tesla coils by the yard (one lost, a third bought) and the dreadnoughts' missiles on the next landing. The Korean fleet came to the base when the 15-minute timer ran out; submarines could not hit carriers in the shallows by the beach, the dreadnoughts could. Dreadnoughts sent at the harbour's prism towers all died; twenty submarines went straight in, destroyers and cruisers first, and the win followed |
-| Soviet 8 (SOV08T, Desecration) | deferred (to be resumed) | 0.25 | win: a unit of the player enters the White House (CAWASH07 at 89,21, inside Vlad2's base behind four coils and two sentry guns). Three tries lost the construction yard by tick 3,300-4,400 to the first paradrop (about 30 conscripts at 58-63,109-116, beside the first power plant): a base guard (ra2_commander-style guard on the yard) kept the units alive but not the yard; most of the dropped conscripts are not "seen" in the step server's listing though beside the base, so the guard did not click them. Next: deploy the MCV further north-east, or desolators deployed (D) on the drop zones before the planes come (walkthrough: north, then south-west, then east). Run folder build/p24/sov08 (try4.replay) |
-
-## Campaign missions played to wins (lane P25, 2026-11-26, same PIN)
-
-Lane P24's sweep continued with the same tools and rules (one replay per win in ra2/tests/campaign/, rerun to the same
-winning tick before its ctest row; a mission is shelved at 3 lane-hours of wall time, cumulative across lanes), the
-not-started missions first.
-
-| Mission | Result | Lane-hours | Notes |
-| --- | --- | --- | --- |
-| Allied 10 (ALL10S, Mirage) | won at tick 42,660 | 0.25 | win: every BadGuy1, BadGuy2 and BadGuy3 object gone (the Soviet houses that overrun the three German bases and build there); Einstein's lab must stand. The MCV deployed by the lab (112,162), a refinery and the battle lab by it, a second refinery at the main base's only legal spot (102,124), two power plants and a second war factory by the lab; the main base's own pillboxes, prism towers and GIs held its raids (hold-style focus fire, no losses after the first raid). Prism tanks by short sieges (ra2_commander.siege, prefer coils and sentry guns): 11 on BadGuy3 (8 lost in its centre once its yard fell), 14 on BadGuy1 (5 lost), 16 on BadGuy2 (2 lost) |
-| Allied 11 (ALL11T, Fallout) | deferred (to be resumed) | 0.1 | win: the three BadGuy1 nuclear silos (NAMISL at 185,203, 187,197, 193,195) destroyed, inside BadGuy2's base on Cuba (four Apocalypses, about fifteen flak cannons, ten tesla coils, a nuclear reactor at 174,205 beside barrels at 172-175,207-208, a second reactor of BadGuy3's at 164,228 that feeds it). A first try built a war factory and battle lab (13,000 credits, tick 3,745: best point build/p25/all11/try1.replay up to that tick) and lost the war factory, the naval yard, the airfield and two refineries by tick 7,000 to two dreadnoughts' missiles from the south channel (112,136), sea scorpions, V3s and conscripts over the northern bridge (110,85) and terror drones at the north-west refinery; a refinery was taken by an engineer. Next: the walkthrough's opening at once (destroyers and dolphins hunting the dreadnoughts, GIs at the northern bridge, prism tanks against the V3s), then prism tanks landed on the west beach (158,207) to force-fire the barrels from (165,207) once BadGuy3's reactor is down |
-| Soviet 9 (SOV09U, The Fox and the Hound) | won at tick 27,285 | 0.2 | win: the President (French house, 63,60) mind-controlled; losing: any damage to him, or every unit lost. The psi troopers and the IFV belong to the Africans house (PlayerControl=yes). One psi trooper turned a deployed GI (the other GI killed it); both engineers controlled into the barracks and battle lab (they become the player's); ten GIs and two spies trained (4,000 credits). The damaged psi trooper died to the patrolling IFV, so one psi trooper did the rest. The sniper in the Light Blue compound (83,31) is walled in: controlled, it shot the compound's five GIs, but walking out it passed the compound's Grizzly and died; on a rerun the psi trooper switched to the Grizzly (it broke one pillbox before dying), GIs finished the pillboxes, and the sniper, controlled again, walked out of the gate and round by the north road to (48,58) at the Dark Blue base's west gate, where it shot the eight seals and two dogs (range about 8 cells, outside the prism towers'). A spy disguised on a civilian walked through the gate into the power plant at (65,53); the sniper then stood at the gate (54,59) and shot the guards, and the psi trooper took the President from (56,59) |
-| Soviet 11 (SOV11S, Red Revolution) | won at tick 35,900 | 0.2 | win: the Kremlin (CARUS03 at 47,45, BadGuy3's, strength only 800) destroyed. A first try built a base (radar, battle lab, nuclear reactor) but Yuri's psi troopers turned the conscripts and tanks and the base fell by tick 12,000 before a silo was affordable. The two starting Kirovs sent straight at the Kremlin died over BadGuy1's flak belt (77-89,105-117) by tick 3,300; flown instead round the map's edges (waypoints 60,138, 38,112, 22,82, 13,62, 25,46, 36,37, 42,40, inside the local map area: a waypoint outside it is no move order), one Kirov reached the Kremlin and bombed it down under its two flak cannons |
-
-Placement (lane P25): a building's footprint is legal only within its Adjacent range of the player's own IsBase buildings
-(DisplayClass::Passes_Proximity_Check), and walls do not count, so a walled base such as Allied 10's has almost no legal
-spot beside it; the clicks that "failed" in earlier lanes' builders were on illegal origins, not a port fault. The step
-server now answers `buildable <TYPE> <x> <y> [<r>]` (ra2/glue/stepserver_native.inc): the origins near x,y where the
-building would place as the placement cursor judges it (proximity, shroud, every footprint cell clear to build), and with
-r 0 the reason for each blocked cell. A click puts the footprint's origin at the clicked cell less ((w-1)/2, (h-1)/2). The
-first map click after the sidebar icon places the building; the footprint is drawn only after that first click.
-
-Sidebar names (lane P25): the step server's sidebar listing and the input script's `@cameo=` point now name super weapon
-entries too (their SuperWeaponTypes names), so an armed super weapon's cameo can be clicked as a player clicks it
-(ra2/glue/harness_input_native.inc RB_Buildable_Name).
-
-
-## Campaign missions played to wins (lane P26, 2026-11-26, same PIN)
-
-Lane P25's sweep continued with the same tools and rules (one replay per win in ra2/tests/campaign/, rerun to the same
-winning tick before its ctest row; a mission is shelved at 3 lane-hours of wall time, cumulative across lanes), the
-not-started missions first.
-
-| Mission | Result | Lane-hours | Notes |
-| --- | --- | --- | --- |
-| Soviet 12 (SOV12S, Polar Storm) | won at tick 64,411 | 1.05 | win: the chronosphere (GACSPH at 68,129, 750 strength, BadGuy3's) destroyed. The scripted chrono attacks come at fixed ticks: six IFVs at (170,100) about tick 4,600, rocketeers, four to six Grizzlies at (168,112) about 6,700, four seals from a landing craft at (178,129) about 8,400, a carrier's Hornets about 9,900, Grizzlies at (176,120) about 11,000. A lone coil loses to the six IFVs (one shot per 120-150 ticks); two coils north, one west and tesla troopers held them; the seals C4'd every power plant and the yard past two coils on low power (drain above output) and past infantry, so three Rhinos waited at the beach and killed the craft and seals. Two refineries by the ore (the first one far from it starved the build). The nuke (silo at tick 13,553, ten minutes) took the chronosphere only to 271 and BadGuy3 repaired it in 850 ticks; the patriots (NASAM: range 12, Powered, 23 of BadGuy3's 44 power plants' worth) ring it nine deep. Eight Kirovs flew round the south coast (waypoints inside the local map: x+y up to about 308, x-y down to about -72; the AEGIS at 136,149 hurts on the inner line) to a stage at (95,162) out of every patriot's reach, where they heal; from (76,142) the Iron Curtain on them (750 frames, about 14 cells of Kirov flight) and an attack on the building once seen: down in about 600 ticks |
-| Allied 12 (ALL12S, Chrono Storm) | deferred (to be resumed) | 0.4 | win: Romanov's four Apocalypse tanks (BadGuy3's APOC at 118,121, 118,123, 122,117, 124,117, by the Kremlin CARUS03 at 125,122, which must stand) destroyed ("Kremlin Secured 1" then the victory chain). The seals' C4 on the reactor at (65,65) brings the MCV; it deploys only inside the reactor's fence ring, at (65,64) (the yard at 66,65, tick 1,320). A base with four derricks reaches the chronosphere at tick 10,305 (ready 16,605): the Chronosphere moved two Apocalypses (3x3 round 118,122) into the lake at (130,84) and they drowned (both runs; it targets into shroud). But two super weapon blasts hit the base centre at about ticks 18,500 and 18,970 every run (after Rhino and V3 raids from the east and north), so the chronosphere or its power never lasts the seven minutes to the second shot (23,000). Chrono legionnaires (range 5) teleport only to mapped cells (the spy satellite maps the area); one at (127,113) did not take the attack click on the second pair (the Apocalypses stand among BadGuy1's buildings) and died to BadGuy1's Apocalypses at (123,110) and (127,108). Best points: build/p26/all12/s4.replay (tick 17,368: first pair drowned) and l4.replay (legionnaires, spy satellite). Next: chronosphere and power plants away from the centre (south-west corner), the war factory sold before 18,500, or the second pair by force-fired legionnaires from (127,113) |
-| Soviet 10 (SOV10T, Weathered Alliance) | deferred (first look) | 0.1 | win: the weather control device (GAWEAT at 17,95, Other3's, strength only 200, outside the local map until the map expands) destroyed or entered by a player's unit ("WCD Destroyed" / "WCD Captured"); the expansion comes with BadGuy1's battle lab (GATECH at 163,97, tag "Battle Lab") captured. The start: two amphibious transports land the MCV, two Rhinos, four conscripts and an engineer at (145,175); the lab is on the north shore behind BadGuy1's base (patriots at 160,96 and 166,96, a prism tower at 169,99), and by sea it is reached only the long way round the west (the north sea joins the west sea through 124-130,98-104, and the west sea the southern one west of x 80). A first try: three of five units loaded, the transport stopped at (120,172) on the way to (90,170) and was sunk; the MCV was not deployed. Run folder build/p26/sov10 (try1.replay). Next: deploy the MCV first, submarines with the transport, a waypoint chain checked cell by cell (cell command), land at (157,96) beside the lab with two engineers; then a nuke or Kirovs on the 200-strength device |
-
-Step server (lane P26): `state` lists the defense queue (`factory defense`, BuildCat=Combat: tesla coils, flak cannons, the
-silo and the Iron Curtain build apart from other buildings, and a finished defense waits there for placement) and the naval
-yard's (`factory ship`). `mapfile <out> <name>` copies another of the game's data files read through the mix files (RULES.INI:
-weapon ranges, speeds, super weapon timers), for planning; never into the repository.
-
-
-## Campaign missions played to wins (lane P27, 2026-11-26, same PIN)
-
-Lane P26's sweep continued with the same tools and rules (one replay per win in ra2/tests/campaign/, rerun to the same
-winning tick before its ctest row; a mission is shelved at 3 lane-hours of wall time, cumulative across lanes); every
-mission left is a retry. Lane-hours are cumulative (earlier lanes' time included).
-
-| Mission | Result | Lane-hours | Notes |
-| --- | --- | --- | --- |
-| Soviet 2 (SOV02T, Hostile Shore) | won at tick 46,156 | 0.2 + 0.15 | win: every Americans object gone (the Germans' two refineries too; "Player Wins" on destroyed-all of houses 0 and 3, then a 5-second delay). The pillbox at (72,53) brings the MCV, deployed where it lands (76,59). Rhinos force-fired the four barrels by the German refineries (five conscripts lost to the blast); the Germans' harvesters fell to the home defence. Power, a refinery at (69,62), barracks, naval yard, two sentry guns south-west by the ore; engineers to the two derricks (34,61, 37,61) died to the alligators (Nod house, ALL) the first time: four Rhinos shot them, then the capture. The naval yard drew the destroyer attacks ("2 Destroyer Attack") and fell twice. 18 Rhinos down the road at x 78 killed the fifteen Grizzlies; a second push of eleven razed the whole Allied base (a building's destruction fires "End Mission": fire sale, every unit hunting) and died to the GIs and pillboxes at (86,130). An Allied engineer took a derrick: retaken. With two refineries, two harvesters and both derricks (about 1,240 credits a minute), the last four destroyers, guarding at (107-119,87-96), came into the bay when the third naval yard was placed (93,52) and died to three submarines and the Rhinos at the shore |
-| Soviet 5 (SOV05U, City of Lights) | won at tick 51,032 | 0.05 + 0.35 | win: the Paris Tower (CAPARS01 at 48,34, Other2's) entered by a tesla trooper of Other3 ("Player Near Tower": the tower turns Other3's and kills with one shot), then every BadGuy1 unit dead ("Win Timer", destroyed-units-all; buildings not needed). Other3 has PlayerControl=yes: its four starting tesla troopers by the coil at (80,78), the six landed by the transport at (33,53) when it is discovered, and every SHK the player trains ("Tesla To Other3" hands each over two seconds after) are the player's to command. Barrel clusters stand by every Allied post and chain: a party walking past (42-48,70-74) lost 14 conscripts and three tesla troopers in one blast; shot from four cells instead they took a Grizzly's GIs (party_legs, then a force fire on the cluster). Parties chasing a target ran into the next nest (the soccer field at 52,56, the tower's west posts at 41,31 and 41,36): zone= keeps a party's targets on its side of the street. The pathfinder walked new tesla troopers through the GI nest at (70,64): walked by waypoints along y=76 and x=39-40 instead. The derrick (65,90) taken once its post was cleared pays for a tesla trooper about every 1,500 ticks. Two Ivans' bombs took the pillbox at (41,36) (the blast killed both); four tesla troopers walked to (44,39) and a click on the tower took them in. A first energized run lost: the Final Rush (all-to-hunt) razed the undefended barracks, the engineer and the coil and the mission was lost at tick 42,953 (the losing trigger not traced further); a rerun from the recording kept 18 conscripts at home (six in a garrison) and the tower's last targets died at our barracks (tick 50,863) |
-| Allied 9 (ALL09T, Sun Temple) | deferred again | 0.4 + 0.5 | win ("_Win"): destroyed-buildings-all of houses 14 and 21, which by the map's numbering (the Player House is 13, then [Houses] in order) are BadGuy1 (every building, its 34 barrels included) and House Balabos (the two pyramids MAYAN at 87,107 and 106,126 and six CAMEX temples), not the airport's house as lane P24 read it. Capturing the airport (CAAIRP at 19,91; an engineer walked there with the freed GIs by (52,84), (41,84), (40,95), (30,97), (24,94)) gives a paradrop of six to eight GIs every 3,600 ticks but also starts "BG3 Airport Engineers", BadGuy3 engineers that retake it; 49 GIs were massed there by tick 47,764 and then died to the war factory's stream of flak tracks round the village (47-55,73-85), as did the Hack engineers on every walk through it (selecting forty GIs by clicks toggled units on the same cell: band_select). A fast opening instead (the village freed at 14,780, the two Grizzlies, three seals and two engineers straight north to 78,96): the seals' C4 took the north reactor (91,106) and the north pyramid by tick 16,954 (best point build/p27/all09/try6.replay to 16,954), but flak tracks and Rhinos then hunt the seals (they cannot C4 tanks) and engineers die to the first flak track. A Hack engineer into the war factory (82,126) makes it the player's ("Captured War Factory", entered-by house 22, Hack), which is the plan's key. Next: the fast opening, then the seals' C4 on the power plants (86,114 first) only with the Grizzlies and paradropped GIs answering the flak tracks, engineers kept back until the war factory is reachable |
-| Soviet 7 (SOV07S, Chrono Defense) | won at tick 42,844 | 0.25 + 1.9 | lost when the lab (NATECH at 77,66, footprint 76-78,65-67) is destroyed, spied or entered; the win ("PlayerWin1", enabled by the last wave at 2,550 s, tick 38,250: the triggers' seconds are 15 ticks) is every BadGuy1 unit dead. Coils need the radar, which needs a refinery (refinery, radar, power, then coils). What breaks the base: groups of eight to ten GIs from the south, east and west about ticks 7,800-9,600 (they kill reactors and flak, and the coils go dead on low power), rocketeers (only flak and Apocalypse missiles reach them), Grizzlies from the west about 10,900, six prism tanks (SREF) from the south-west about 24,300 that beam the construction yard from twelve cells (it fell in every run until the tanks met them at 53,76 by tick 23,900), prism tanks, engineers and spies at the lab about 33,000-39,600, and Harrier strikes (ORCA) on the lab about 38,800. The winning run: refinery, sentry guns south and east, a war factory at 68,64, coils west, reactors north and east, eight Rhinos then Apocalypse tanks (build/p27/sov07/try10.replay to 23,700), the prism-tank intercept, seven flak cannons round the lab, then from 32,464 sixteen tanks parked on the ring of cells round the lab (ra2_commander.park_ring: engineers and spies cannot reach it) with the rest answering prism tanks, engineers, spies (force fire) and rocketeers (Apocalypse missiles), the lab kept repaired to full, and after tick 41,500 the hunters sent at every BadGuy1 unit left |
-| Allied 6 (ALL06U, Liberty) | deferred again | 0.65 + 0.15 | the MCV (AMCV, landed at 92,162 about tick 2,100) deployed inside the Pentagon's west defences: moved to (94,173) and D gave the yard at (95,174) (tick 3,340; at 98,169, 96,170 and 95,172 it was refused). With a refinery by the south ore (98,179), barracks, war factory, an air force command and a battle lab the base outlived lane P23's raids (tick 95,000 reached; Mgr kept the defence queue apart for Allied types, ATESLA, GAPILL and NASAM, now in DEFENSE_TYPES). Prism tanks are not on this mission's sidebar. Terror drones (DRON) get into the base and kill tanks; the war factory at the south-west corner (90,177) was destroyed three times (cause not traced); Mgr's home defence drags every tank into fights (the count stayed at 16-25 for 30,000 ticks). Two Grizzly pushes on the Brown base (BadGuy2, 110-121,112-132: a tesla coil at 117,125, five sentry guns, two V3s) lost 21 and then 23 Grizzlies, the second losing 15 of them before (112,148), so the base was untouched. Best point build/p27/all06/try2.replay (yard and battle lab, 25 Grizzlies about tick 81,000). Next: find what kills the Grizzlies on the road north (V3 range, drones), rocketeers or spies, and the walkthrough's west route (a dozen GIs to the hospital at 32,115 across the west bridge) |
-
-
-## Campaign missions played to wins (lane P29, 2026-11-26, same PIN)
-
-Lane P27's sweep continued with the same tools and rules (one replay per win in ra2/tests/campaign/, rerun to the same
-winning tick before its ctest row; a mission is shelved at 3 lane-hours, cumulative across lanes). No new win; three
-missions deferred again with what they need. Lane-hours are cumulative.
-
-| Mission | Result | Lane-hours | Notes |
-| --- | --- | --- | --- |
-| Allied 9 (ALL09T, Sun Temple) | deferred again | 1.15 + 0.45 | The map's own rules (in the scenario file) make the pyramids MAYAN Capturable=true, Powered=yes (Power=-100), range 18; House Balabos is BadGuy1's ally, the player's enemy. The five engineers belong to Hack House (PlayerControl=yes, allied to the player; ra2_commander's mine() does not list them: select them as `o.house=='Hack House'`); every capture trigger (war factory, construction yard, barracks, radar, battle lab, refineries) needs house 22, Hack. Capturing the war factory or destroying it ("Destroyed War Factory") disables the flak-track patrol (a team of HTKs every 60 seconds once the vehicles are freed, Medium/Hard), which is what kills everything near the village and the north entrance; the construction yard (89,130) captured gives the player a yard. From try6 at 15,996 (two engineers at 78,96): engineers sent at the north pyramid died at its west edge (83-86,105-106) in four runs, to two dogs from (89,106) and an unseen tesla trooper at (89,105); a cleared village (14,720 on, the HTKs killed by the Grizzlies, nine GIs kept) lost the seals that stay at (52,71) to the conscript nest at (48,72), and the sentry gun at (81,102) with a tesla trooper kills what stands at (72-75,93-96). Next: kill the dogs and the tesla trooper east of the pyramid first (seals at 86,103), the sentry gun by the Grizzlies before anything walks past (75,95), then engineers into the pyramid; or seals' C4 on the war factory (80,125) first to stop the HTK stream |
-| Allied 6 (ALL06U, Liberty) | deferred again | 0.95 + 0.2 | try2's base (25 Grizzlies, 14,000 credits at 80,866) is gone by 94,434 in the replay: raids from the west ramp (conscripts, tesla troopers, a V3 reaching 92,164) and tesla troopers at the north rally (117,157) took two war factories, the barracks, power and the air force command between 83,500 and 88,400 even with every Grizzly answering threats within 26 cells. The way north to the Brown base is one three-cell bridge (x 127-129, y 133-153). Rebuilding the air force command puts ATESLA, rocketeers (JUMPJET) and Harriers (ORCA) on the sidebar. Next: from earlier (try2 at 51,769 or 60,771) prism towers and pillboxes on the west ramp (95-100,160-165) before the Grizzlies leave, then a 40-Grizzly push over the bridge, or rocketeers over the water |
-| Soviet 8 (SOV08T, Desecration) | deferred again | 0.25 + 0.25 | The three paradrops come at waypoints 14 (45,94, 60 s), 17 (60,112, 120 s) and 16 (64,90, 210 s); the MCV deploys where it lands (yard at 62,104) and the base holds through all three with two desolators deployed on each zone (the third drop razed it when they stood at the first two). Then three V3s at (80-84,90-99) east of the bridge (79,94) shell the base from about tick 14,500 and keep coming; flak cannons and a tank squad sent at them hold only with the Apocalypses at home, and the harvesters die on the open ore, so the money runs out at about tick 32,000 with four Apocalypses (APOC needs the battle lab). Desolators' radiation where they stood kills each new engineer at a barracks built on that spot (60,112). Best points build/p29/sov08/p29c.replay (base through the drops, tick 7,315) and p29d.replay (tick 14,380, 17,000 credits). Next: the crates (the Lincoln Memorial north, the Washington Monument) and the enemy refinery east of the bridge captured, as the walkthrough says, before massing Apocalypses |
-
-Walls (lane P29, the Soviet 7 finding): `buildable NAWALL ...` answered "no building type" because ObjectTypeClass::From_Name
-finds the wall's overlay type of the same name first; the step server now looks the name up among the building types when
-the first match is not one (ra2/glue/stepserver_native.inc). A wall clicked onto a legal cell (Soviet 7 at 77,61, tick
-31,000, the cameo clicked then the cell) leaves the defense factory as placed, yet no wall overlay appears on the cell or
-anywhere near; instrumented once, OverlayClass::Mark's wall branch printed only at scenario load and HouseClass::Place_Object
-printed nothing in a replayed run, so the placement path for a wall was not found within the 20-minute box. Open: a likely
-port fault in wall placement (BuildingClass::Unlimbo's IsWall branch, OverlayClass::Mark), to be traced with lldb on a
-placement click rather than through a replay.
-
-## Lane P30 (2026-11-26, same PIN): walls; campaign sweep
-
-Walls are placed (lane P29's open fault was a reading of the step server's output, not a port fault). A live click
-(Soviet 7, the wall cameo then cell 77,61, tick 31,078) traced with lldb runs EventClass::Execute (PLACE) ->
-HouseClass::Place_Object (RTTI_BUILDING, building type 16) -> BuildingClass::Unlimbo's IsWall branch ->
-OverlayTypeClass::Create_One_Of -> ObjectClass::Unlimbo -> OverlayClass::Mark (the wall branch) -> MapClass::Place_Wall;
-the cell holds overlay 26 (NAWALL, the 27th of [OverlayTypes]) and the wall post is drawn. From Soviet 7's start, walls
-clicked at 75,64 and 78,64 fill the line between them (76,64 and 77,64), as the original's Place_Wall does. The cell's
-land type stays clear: OverlayTypeClass::Read_INI (exact, 0x5DCAA0) takes the land from a Land= key, which none of
-RULES.INI's walls has, and Recalc_Attributes takes the NoUseTileLandType path for them; so `terrain` (which drew the land
-type) never showed a wall and lane P29 took the wall for lost (its other try, at 74,59, was a rock cell). `terrain` now
-draws a wall overlay as W and `cell` names each cell's overlay after a '+'; ra2-native-walls (ra2/tests/ra2_walls.py,
-the clicks in ra2/tests/regress/walls-sov07.replay) checks the four cells through the step server. Lane P29's debug
-prints that never fired were not reproduced: in the same replayed run lldb stopped in Place_Object for every placement.
-Also: a debugger attaching made the step server's accept() or read() fail with EINTR, which ended serving (the game ran
-on freely); both now retry (platform/sdl/host.cpp).
-
-Campaign sweep (lane P30): Allied 11 (ALL11T, Fallout) looked at again, 0.1 + 0.1 lane-hours, no try played (the lane's
-context went to the walls). With the wall overlays now drawn by `terrain`, BadGuy2's base on Cuba reads as a walled
-compound (x 171-199, y 180-209; the wall's west side at x 171, the south side at y 209, gates by the roads at about
-(176-178,195-197) and (199,196)), the three silos inside it 30 cells from the west coast (156,195). No battle lab or
-prism tank is on this mission's sidebar (power, refinery, barracks, war factory, air force command, naval yard; walls,
-pillbox, Patriot missile (NASAM), prism tower (ATESLA); GI, engineer, dog, rocketeer, SEAL; Harrier, landing craft, destroyer, Aegis). The
-loss is "_Loss (Game Over)" five seconds after it is enabled; the nukes (BadGuy2's, from the silos) aim by "NUKE
-Targeting 1/2/3+" (710 s, then 720 s each). The plan stays lane P25's.
-
-## Campaign missions played to wins (lane P31, 2026-11-26, same PIN)
-
-Lane P30's sweep continued with the same tools and rules (one replay per win in ra2/tests/campaign/, rerun to the same
-winning tick twice before its ctest row; a mission is shelved at 3 lane-hours, cumulative across lanes, or at a real
-blocker). Lane-hours are cumulative. The step server's `state` now gives every house's power, drain and credits on its
-`house` line (Allied 11: whether the Soviet base is on low power, and how much it has to repair with).
-
-| Mission | Result | Lane-hours | Notes |
-| --- | --- | --- | --- |
-| Allied 11 (ALL11T, Fallout) | shelved | 0.2 + 1.5 | Blocker: a replay of the reveal-time Harrier strike did not repeat. The same recording preloaded to tick 22,140 (build/p31/all11/try6.replay) left BadGuy2 at power 900 (both reactors gone) in two reruns and at 3,050 with its reactor, power plant and battle lab standing (the barrel strike never landed) in four; the Harrier orders were given the moment the input unlocked after the reveal's camera movie. Plan that worked live (try6): five air force commands and 20-24 Harriers by the reveal (no navy, no south-island pillboxes; Harriers answer Rhinos, V3s, transports and dreadnoughts near home); the reveal comes at tick about 19,000 on Medium ("Heeeere's Cuuuba", 1,260 s); three Harriers force-fire the barrel at (172,207), whose chain kills the reactor (174,205), a power plant and the battle lab; four Harriers force-fire (164,228) only to map BadGuy3's reactor (a force fire on its unmapped cells did no damage); then one synchronized wave (launches staggered by distance so all arrive together) attacking the reactor object kills it (14 Harriers, tick 22,127): BadGuy2 drops to power 900 against a drain of 2,345, every flak cannon and coil goes dark. A damaged reactor already lowers its output (608 of 1,000 hit points gave 2,387 power), so the first sorties switch the flak off for the rest. Silo 1 (185,203) died to waves of 17 and 13 Harriers (tick 25,215). Why it did not finish: BadGuy2 holds 63,000-90,000 credits and repairs every building at about 0.56 hit points a tick, faster than the Harriers' 1,700-tick round trip lets waves of 10-12 do damage (each sortie does about 100, not the 225 the rules give); every wave loses two to four Harriers to the Apocalypses and flak troopers, the patrolling sea scorpions (HYD, anti-air) between waypoints 17 and 18 and the four near the player's west shore; and the raids (Rhinos, desolators, Apocalypses landed by transports) reach the air force commands while the Harriers are away, after which nothing is left (tries 6 to 11). A move order makes a Harrier fly there and return, so a waypoint route only works if it is re-ordered on arrival, which caught 7 of 17. Best point: build/p31/all11/try6.replay to tick 22,140 (both reactors gone, about 16 Harriers), but see the blocker. Next: find why the strike does not replay (likely the camera's own movement after the reveal, or the click on a barrel among overlapping building pictures); then prism towers round the air force commands before the reveal, and the walkthrough's aircraft carriers (battle lab) on the west coast, whose hornets need no round trip |
-| Allied 7 (ALL07T, Deep Sea) | won at tick 8,436 | 0.45 + 0.25 | win: every BadGuy1 building destroyed ("_Win Occurred"). BadGuy1 starts with two buildings, a sentry gun (92,206) and a hut (CAMSC08, 90,206) east of Niihau; the Soviet MCV lands at (72,205) about tick 4,100 and deploys at (73,193) about 4,540. Rocketeers queued at the input unlock (tick 720) with a second barracks, two Harriers (the first one scouts the sentry gun by a move to 93,203, the map being shrouded there); from tick 3,280 every rocketeer is sent at BadGuy1's weakest seen building, the MCV when it is on the map: the hut fell, the MCV landed and deployed under fire and the yard fell at about tick 5,900 with 15 rocketeers on it, then the sentry gun, the power plants and the barracks; with no yard nothing was rebuilt |
-
-## Lane P33 (2026-11-26, same PIN): the frame clock; campaign sweep
-
-Replay determinism (lane P31's open finding): the game's clock ran on the wall clock while the step server counts loop
-frames, uncapped, so whatever the game paces by its clock (EVA speech and its gaps, stream fades, the radar's Bink movies,
-a trigger's Pause for N seconds) spanned a machine-dependent number of ticks. Allied 11's reveal held the scenario from game
-frame 19,338 in one preload of try6 and 19,259 in another; every later input landed at another game frame. The step
-server's runs now use a frame clock (RA2_NATIVE_FRAME_CLOCK=1, port/src/port_core.cpp game_clock_ns: 16 ms of the game's
-clock a loop frame from the served scenario's first frame to its end, still between frames and while the server waits for
-a command); recordings made with it say `# frame clock` and replay with it (ra2_step.py start --clock auto|frame|wall,
-ra2_campaign.py); the earlier recordings replay on the wall clock as before. `state` gives the clock on its scenario line;
-RA2_NATIVE_STEP_SLOW=<ms> slows each served frame (ctest ra2-native-frame-clock). docs/regressions.md has the record.
-
-| Mission | Result | Lane-hours | Notes |
-| --- | --- | --- | --- |
-| Soviet 10 (SOV10T, Weathered Alliance) | deferred again (context) | 0.1 + 0.4 | The MCV deploys only on flat ground: the home island slopes everywhere except its west end (yard origins x 129-137, y 159-178; the yard at 137,171 from a deploy at 136,170); `buildable NACNST` lists nothing without a base (its proximity test), so flat spots were found with `buildable ... 0` per origin. The player's tech level is 8 and the map lowers NAMISL to 8, so the nuke silo is on the sidebar once a Soviet battle lab stands; building it sends BadGuy3's "Nuke Buster Team" (four Harriers). The early raids (rocketeers, Harriers, landing craft, ships) took the radar, the depot, both starting SAPCs, the sentry guns, a first war factory and naval yard before four flak cannons and eight flak troopers stood. The battle lab (GATECH 164,98) is on a height-4 strip north of a walled compound (walls x 158-169, y 100; a gap at 165-166,100); the shore pocket north of it (157-162,95-98) is height 0 behind cliffs and does not reach it, so no transport lands next to it; prism towers at 163,101 and 159,105 cover the strip. A water route to the north sea exists (west round BadGuy2's coast at x 60-75, the channel 120-130,98-104; only its last cells are in tower range). The nuke (600, CellSpread 10, PercentAtMax 0.02) at the compound does not kill a 600-strength tower beside its centre. Best point: build/p33/saves/sov10/p33d.replay (frame clock), tick 42,898: yard, three refineries, war factory, naval yard, battle lab, nuke silo, eight power plants, six flak cannons, two tesla coils; six submarines, three dreadnoughts (one the bonus ship), four engineers, eight flak troopers. Next: the dreadnoughts (range 25) with the submarines round the west to the north sea, shelling the two towers and the compound's pillboxes from 150-165,85-90 out of the towers' range; then engineers through the compound's gate; the nuke kept for the weather device (strength 200) after the expansion |
-
-## Lane P34 (2026-11-26, same PIN): the Windows build, a heap fault, the frame clock's wait; campaign sweep
-
-The Windows cross build (`./build.sh windows`, llvm-mingw 20261020, SDL 3.4.2) of main at 1c1e0ce, with P33's frame
-clock, builds with no change: no warning in port_core.cpp or the step server (the link's seven duplicate-symbol warnings,
-SetCapture, MulDiv and the like, are the port's own Win32 functions over the import libraries, as before). Unset,
-RA2_NATIVE_FRAME_CLOCK leaves the clock as it was (frame_clock_on stays false, so game_clock_ns returns the same
-expression and frame_clock(0/2/3) do nothing). The six `ra2-wine` rows pass under Wine 11.18 (configure build/windows
-with RB_DATA_DIR and RA2_NATIVE_WINE, the Wine bundle's Contents/Resources/wine/bin/wine).
-
-A heap fault (found on Soviet 10): the game stopped three times with EXC_BREAKPOINT in macOS malloc (xzone free list) at
-the next allocation (SDL_SaveBMP in a screenshot, AStarClass::Ban_Neighborhood_Subzone_Edges, a Metal command buffer), at
-ticks 68,248 to 71,651, each run after amphibious transports had been loaded. Guard Malloc was too slow through the
-campaign chain; an AddressSanitizer build (`-fsanitize=address -fsanitize-recover=address
--fno-sanitize-address-use-after-scope`, ASAN_OPTIONS halt_on_error=0:detect_odr_violation=0) on the crashing recording
-found it: TechnoClass::Draw_Pips (exact, 0x006D4920) colours one int per pip in `new int[Max_Pips()]`, from slot
-GetTotalSize()-1 (clamped to Max_Pips(), one past the end) down by each passenger's size. A transport holding more size
-than it has pips (SAPC, Passengers=12, two Apocalypses of Size=6 and an engineer: 13) writes past the end and below the
-start; the original's heap took the stray ints, macOS malloc's free lists did not. A fixups.json row (src/techno.cpp) puts
-the array inside a block with room for every write the loop can make; the pips drawn are the original's. Rerun under
-ASan, the recording has no heap error left. ASan's other reports, all reads of a global table one past its end, are
-left open: CCINIClass::Get_PipEnum (`_pips[defvalue]`), FootClass::Do_MISSION_ENTER, RadarClass::Init_For_House, two RLE
-blitters (RLEBlitTransDarkenZRead/ReadWrite); MixFileClass's Straw chain is a use-after-scope in ASan's eyes (the
-original's destructor order). docs/regressions.md has the record.
-
-The frame clock's wait: a command run after a wait of more than five seconds (a person or an agent thinking between two
-commands) read the game's clock before the server marked the wait's end, so the clock slipped by the rest of the wait
-("port: frame clock: a frame ran over 5 s"); the replay, which never waits, did not, and the two parted. The step server
-now marks the wait's end before each command as well as after. Recordings made before it replay as they always did (a
-replay never waits); a live session made before it may not match its own replay where it slipped.
-
-| Mission | Result | Lane-hours | Notes |
-| --- | --- | --- | --- |
-| Soviet 10 (SOV10T, Weathered Alliance) | deferred again | 0.5 + 1.2 | (the lane's hours include the heap fault above, which this mission found.) Ten submarines and four dreadnoughts (the bonus ship found at 150,205 by a submarine) hold home waters once the naval yard is rebuilt (a dolphin raid took the first, tick 45,908). From the water at 150,139 the dreadnoughts' missiles (DMisl 300, CellSpread 1.5) cleared the south beach: the patriot (140,124), both prism towers (142,120, 156,122), three pillboxes, four Grizzlies, a refinery. Shelling BadGuy1's miners sends Grizzlies, as the walkthrough warns. Two amphibious transports took two Apocalypses each and a third one an Apocalypse and an engineer (an Apocalypse is Size=6, the SAPC Passengers=12); they landed on the beach (146-150,124-128) at tick 69,612 (build/p34/saves/sov10/p34d.replay, frame clock: the best point). The four Apocalypses sent north by fight_legs reached (155,112), the compound's south-west corner, and died there within 300 ticks to the chained prism towers (159,105 with 163,101 and 177,110 supporting). Dreadnoughts in the cove at (155-159,125-126) have both compound towers in range (20 and 24 cells; the lab, 27, is out of range, so it cannot be hit by mistake), but the towers are not mapped from there, and the siege only fires on mapped targets. Credits were down to a few hundred by then. Next: map the compound (a scout, or a short landing at 152,116 with the transports kept offshore), shell 159,105 and 163,101 from the cove, then the Apocalypses through the south gate (165-166,113) and the engineer through the north gap (165-166,100) to the lab (164,98); BL Destroyed loses the mission |
-| Allied 12 (ALL12S, Chrono Storm) | deferred again (restarted) | 0.4 + 0.35 | Restarted with the frame clock: one SEAL's C4 on the reactor (65,65) at tick 650, the MCV deployed at (65,64) once the SEAL beside it moved (yard 66,65, tick 3,135), the prisoners freed by an IFV on the pen's tagged cells (the tag 0ABAACBC, "Prisoners 1c": six GIs and two engineers turn the player's at tick 3,835), four derricks (53,67, 68,52, 76,72, 73,75). V3s at (82,73-75) east of the base and (67-68,47) north of it shelled the derricks, a power plant, the war factory and the air force command from tick 13,600 (the tanks killed them at 18,276 and 19,997); the battle lab's first spot (56,63) was refused and dropped. At about tick 18,500 the base was wiped again (yard, power, barracks, refinery: P26's blasts at the same time); this run had no chronosphere by then. Best point: build/p34/saves/all12/p34a.replay (tick 11,210: yard, refinery, barracks, war factory, air force command, two power plants, four derricks, 4 prism tanks, 5 Grizzlies, 9 IFVs, 10 GIs). Next: find what the blast at 18,500 is and where it aims (BadGuy1's nuke is the likely one: the walkthrough says it targets the war factory and selling it at the launch saves the rest); tanks out at the east and north edges from tick 12,000 to stop the V3s; the battle lab and the chronosphere away from the war factory |
-
-## Campaign missions played to wins (lane P36, 2026-11-26, same PIN)
-
-Lane P34's sweep continued with the same tools and rules (one replay per win in ra2/tests/campaign/, rerun to the same
-winning tick before its ctest row; a mission is shelved at 3 lane-hours, cumulative across lanes). Lane P34's saves were
-gone, so Soviet 10 was played again from its start with the frame clock. The step server's `state` now gives every
-house's super weapons, "super [h<n> ]<name> ready <0/1> charging <0/1> left <frames>" (the player's without the h<n>):
-when the nuke is charged, and when an enemy's will be.
-
-| Mission | Result | Lane-hours | Notes |
-| --- | --- | --- | --- |
-| Soviet 10 (SOV10T, Weathered Alliance) | won at tick 114,676 | 1.7 + 0.75 | win: the weather control device (GAWEAT at 18,96, Other3's, strength 200) destroyed after the battle lab (GATECH 164,98) is captured; destroying the lab loses. The MCV deployed at (136,170) at tick 1,258; power, two refineries on the west ore, barracks, war factory, flak cannons and twelve flak troopers, a naval yard (156,179), the radar rebuilt, the battle lab at (130,174). The home island's ore runs out at about tick 27,000. The base manager's defence (select all combatants, P) took the harvesters too and left them idle: the war miner is armed; a defence that picks its units by type keeps them harvesting. Submarines ignore an attack click on a dolphin and kill it on an attack move to its cell; the dolphins sank the naval yard three times and three dreadnoughts at (150,139). With the subs alongside (attack moves on every ship within ten cells), the dreadnoughts from (151,139) shelled the beach's prism towers (142,120, 156,122), pillboxes, patriot and refinery (tick 58,323), then from the cove (156,125) the compound's east tower (163,101, tick 60,120). The west tower (159,105) was unmapped; force fire on shroud does nothing; three Rhinos landed by transport (it unloads only on open beach, 149,121, not at 152,125) drove to (154,111) and mapped it, but the dreadnought missiles at it from the cove were all shot down on the way (the patriots at 151,101 and 167,129). The refineries, depot, coils and four flak cannons sold paid the nuke silo (132,169; ten minutes, 9,000 frames); the nuke at (159,108), beside the tower and ten cells from the lab, killed the west entrance's pillboxes, GIs and air force command and left the tower at 209 (repaired at about 0.56 a tick); an Apocalypse landed earlier killed it at tick 106,697, then the rocketeers and the GI by the lab; the engineer walked in from the beach through the west entrance (157,108) and took the lab at tick 109,685. The second nuke (ready 114,046) on the weather device won. A transport parked at sea (150,135) was sunk with its cargo; one left on the cleared beach lasted |
-| Allied 12 (ALL12S, Chrono Storm) | deferred again | 0.75 + 0.5 | Played from the start with the frame clock (one SEAL's C4 on the reactor at tick 440, the MCV deployed at 65,64, yard at tick 1,279; the pen's fence (52,54) force-fired by the IFVs, then an IFV inside freed the prisoners; two derricks taken by tick 5,520). What breaks the base, seen in four runs: BadGuy1's Kirov team ("Kirov Script": attack quarry 6, factories) reaches the construction yard at about tick 7,440 from the east (98,57 at 5,720); an air force command and two patriots (70,63; 64,60) placed by 7,400 save it. BadGuy1's nuke is ready at tick 18,000 (the new `state` super line) and launches about 18,100 at the war factory; the war factory sold at the launch (detected by its timer jumping) is all it takes. From about 17,000 a wave of about 16 conscripts, Rhinos, a tesla tank, Ivans and drones with Iron Curtain strikes razes the base by 19,000-21,000; V3 pairs (38,65 west; 74,35 north; 72,81 south-east) shell from outside the base, and chasing them scatters the defence. The chronosphere at (63,72) held with the army round it, but low power froze its charge at 3,632 frames. Chrono legionnaires (the spy satellite maps the Kremlin) teleported to (113,121) died at once: that is BadGuy1's Kremlin base (two Apocalypses, a Rhino, garrisoned buildings, BadGuy1's nuke silo at 107,122); Romanov's four Apocalypses stand in a walled compound (x 116-131, y 115-130) with a coil (119,118), sentry guns (123,127, 128,122) and flak. Checkpoints (frame clock) build/p36/saves/all12/b.replay (tick 10,029: yard, air force command, three patriots, war factory, lab building, four derricks), e.replay (11,152: lab placed), d.replay (16,480: from b, three prism towers, the chronosphere at 65,73 ready about 22,200). Next: hold the base through 17,000-21,000 (power kept above drain), then either the chronosphere twice 6,300 ticks apart or about six legionnaires on a cell outside the coil, sentry and garrison ranges |
-| Allied 9 (ALL09T, Sun Temple) | deferred again | 1.6 + 0.2 | win: every building of BadGuy1 (59, its 34 barrels included) and of House Balabos (two pyramids, six temples) destroyed. The five seals by party legs freed the village at tick 8,502 (lane P27: 14,780): ten GIs, two Grizzlies, five Hack engineers, a Night Hawk. Balabos has no power (drain 200), so its pyramids do not fire. The sentry gun at (81,102) and the north power plant (91,106) fell to the seals, BadGuy1's power to 750 against 705 (one more plant puts the coils on low power), but the second plant (86,114) cost the last three seals: the base's west side holds about fifteen conscripts, tesla troopers, a flak trooper, a flak track and two Rhinos. Four Hack engineers boarded the Night Hawk (one stayed out); flown round the west to the war factory it was shot down at (68,132) (flak at 70,120 and 89,124 reach past eight cells). Checkpoints build/p36/saves/all09-a.replay (tick 8,452, village freed) and all09-c.replay (13,790, the sentry gun down, three seals at 81,99) |
-| Soviet 8 (SOV08T, Desecration) | not played (0.5) | 0.5 + 0 | From the map file: the White House triggers "WHDestroyed" (destroyed-by-anything) and "WHCaptured" (entered-by the player) share one tag, and either enables "WhiteHouseTaken2" (winner-is the player nine seconds later): destroying the White House (CAWASH07 at 89,21, 1,000 strength, Civilian1's) wins, no spy needed. Round it: Vlad2's coils (94,23, 97,28), a sentry gun (98,20), flak (94,28), tesla troopers, a flak track and a drone; Apocalypses or V3s from outside the coils' range are the likely way |
-
-`ra2_commander.place_legal` (the owner's question: why a spot `buildable` calls legal failed to place): the click cell was
-wrong, not the legality list. The game places a building's origin at the clicked cell plus its ZoneOffset, which
-DisplayClass::Set_Cursor_Shape sets to -dim/2 (display.cpp; Mouse_Left_Release adds it to the click cell);
-place_legal clicked origin + (w-1)//2, one cell short for an even width or height (2x2 power plants and barracks, the
-2x3 battle lab, the 4x3 refinery), so the footprint landed one cell up-left of the legal origin and failed wherever that
-cell was blocked or out of proximity (Soviet 10's reactor at 130,172: the cursor drew the footprint red). It now clicks
-origin + w//2, h//2; in a Soviet 10 test a power plant, a refinery and a barracks each placed on the first try.
-
-## Campaign missions played to wins (lane P37, 2026-11-26, same PIN)
-
-Lane P36's sweep continued with the same tools and rules (one replay per win in ra2/tests/campaign/, rerun to the same
-winning tick before its ctest row; a mission is shelved at 3 lane-hours, cumulative across lanes).
-
-| Mission | Result | Lane-hours | Notes |
-| --- | --- | --- | --- |
-| Soviet 8 (SOV08T, Desecration) | won at tick 5,480 | 0.5 + 1.0 | The White House is CAWASH01 (origin 98,14, 4x4, centre 100,16, Civilian1's, 1,000 strength, concrete): the structure carrying the tag of "WHDestroyed"/"WHCaptured" (P36's note named CAWASH07 at 89,21, which is a garrisoned office west of it). It stands in a sandbag ring (97-102,13-18, open at 99-100,18) inside a fenced compound (x 94-106, y 4-28; the only gap is the south gate, 99-101,29) whose south half holds four tesla coils (94,23, 97,28, 103,28, 106,23; range 7, 8 overcharged), two sentry guns (98,20, 102,20) and two flak cannons (94,28, 106,28; range 12, anti-air, so V3 rockets are shot down). The land west of the compound (x 83-90) is a dead end behind two garrisons of eight conscripts each (CAWASH07 at 89,21 and CANEWY12 at 89,27, Vlad2's from the start; SovietOccupyW range 7): four tries there (garrisons first, or past them) lost every tank, the trees at 83-90,20-22 and the corridor at x=83 keeping the tanks in both garrisons' range. What works: the coils and flak need power (Powered=yes) and Vlad2 has 1,650 for a drain of 1,085. The whole starting army (two Apocalypses, the Rhino, four desolators, eight conscripts; the base left to the paradrops) goes up the west road (72,92, 78,85, 80,70, 80,56; the road at 80,90 is the river), kills the sentry gun at (78,46), shoots the fence open at (82,40) and (82,41) and parks the Apocalypses at (91,41), the Rhino outside at (80,43) and the infantry at (89,39) against terror drones from the war factory (88,35). From (91,41), out of every coil's and garrison's range, the four power plants at (89,43), (94,43), (94,40) and (94,37) fall in about 850 ticks (output scales with each plant's strength; 1,050 against 1,085 at tick 3,839; the AI did not rebuild them in the next 1,600 ticks). Then all go by (96,38), (97,33), (100,30) through the gate to (99,21), (100,21) and (101,21) and force-fire the White House; it fell at tick 5,256 and the win came 224 ticks later. Lost tries: going to the gate after killing tesla troopers and sentries first kept the tanks at (100,26) between the coils at 97,28 and 103,28, which still fired (tesla troopers beside them charge them); a drone that gets into an Apocalypse eats it at about 50 strength every 60 ticks. Run folder build/p37/saves/sov08 (try1-11, won.replay) |
-| Allied 9 (ALL09T, Sun Temple) | deferred again (lane context) | 1.8 + 0.1 | P36's all09-c.replay (13,790) has no Hack engineer left (the Night Hawk was shot down with four aboard), and BadGuy1's power is 900 for a drain of 705 there (both reactors 91,106 and 86,114 stand), so it cannot reach the war factory capture; resume from all09-a.replay (8,452, five engineers). Round the war factory (82,126) at 13,790: four Rhinos (71-85,121-128), a flak track, five conscripts (72,127), sentry guns at (68,127) and (72,131), flak at (70,120) and (89,124) (range 12: no air route). Killing two reactors (900 to 600, under 705) stops the coils; Soviet 8's way (shell the plants from a spot out of every defence's range) is the likely next step, with the seals' C4 on (86,114) |
-| Allied 12 (ALL12S, Chrono Storm) | deferred again (lane context) | 1.25 + 0.05 | The win (from the map's triggers): "Mission Victory" is enabled by "Tanya enters Kremlin" or by the "Kremlin Secured" chain, whose first trigger needs four local flags and three tech types to exist: the Kremlin compound (113,121; x 116-131, y 115-130) cleared and held, not only the Apocalypses killed. Not played further |
-
-
-## Campaign missions played to wins (lane P38, 2026-11-26, same PIN)
-
-Lane P37's sweep continued with the same tools and rules (one replay per win in ra2/tests/campaign/, rerun to the same
-winning tick before its ctest row; a mission is shelved at 3 lane-hours, cumulative across lanes).
-
-| Mission | Result | Lane-hours | Notes |
-| --- | --- | --- | --- |
-| Allied 9 (ALL09T, Sun Temple) | won at tick 35,100 | 1.9 + 0.55 | From P37's all09-a.replay (tick 8,452). The map's capture tags are the way in: a building of BadGuy1 tagged "Reactor 1-6", "Con Yard", "War Factory", "Refinery", "Radar" and the like, entered by a Hack engineer (house 22), becomes the player's two seconds later; Balabos's two prism pyramids the same ("1 Captured (Hack)", "Change Pyramid 1"), and each pyramid taken sends a seal (and, for the second, a Hack engineer) by paradrop. The map makes the pyramid Powered=yes, Power=-100 and Capturable; a player's pyramid fed by a captured reactor kills a building with one force-fired shot (MayanPrism, 1,000 damage). In play it reached about 11 cells, the rules' Range=12 and not the map's 18: the map's own `[Mayanprism]` section (Range=18) is spelled with a different case from the rules' `[MayanPrism]`, and the weapon reads its section by its own ID. INIClass::Find_Section (0x0050C9B0, src/ini.cpp, an exact row of the catalog's rebuild-ini population, no fixups.json row or glue over it) looks a section up by the CRC of the name as written, with no case folding, so the original misses the map's section the same way: the 12-cell pyramid is the original's behaviour, not a port fault. The engineers left at the village died to dogs once the army moved off (first try); carried in the Night Hawk they were safe. Order that won: the flak tracks (85,90-92) and the guards round the north reactor killed from (88,97); the Night Hawk landed at (89,98); one engineer into the north reactor (91,106), one into the pyramid (87,107), which then killed the sentry gun, the engineers and flak tracks round it; force-fire from it on every BadGuy1 building in reach (barrels beside the player's own buildings left for last: one barrel chain at 91,104/93,106 killed the captured reactor, the Night Hawk with the last engineers and a seal in one tick in a lost try); the second reactor (86,114) taken (BadGuy1 600 against 645-695: coils, flak and sentry guns are Powered=yes and stop); the Grizzlies and seals escorted the last two engineers to the second pyramid (106,126) and the reactor at (108,115); the Hack engineer it brought into the construction yard (91,132), lost about 1,400 ticks later to the "Attack ConYard" team (two Rhinos) both times, but a barracks placed by then (92,126) trains engineers and tesla troopers: engineers into the service depot (88,121), radar (84,134) and war factory (82,126) give Rhinos and V3s; Rhinos force-firing the barrel at (85,139) set off the chain to (91,144), which took both south reactors (BadGuy1's power 0); the V3s, a Rhino and tesla troopers on the sentry guns, flak, coils and Balabos's temples in turn; the win came with eleven barrels still standing. Saves build/p38/saves (p38-a9-1 to -24, lost1-5, won) |
-| Allied 12 (ALL12S, Chrono Storm) | deferred again (lane context) | 1.3 + 0.15 | From the map's triggers: the win needs the "Kremlin Secured" chain or "Tanya enters Kremlin". "Kremlin Secured 1" (BadGuy3's) waits for local flags 1-4, set by "MammothDead1-4", tags on BadGuy3's four Apocalypses (1027016-1027019 at 118,121, 118,123, 122,117 and 124,117, inside the compound), and for three tech types to exist (indices 20, 67 and 53, not resolved). The chain then plays its movies, and "Kremlin Secured 3" sends Other2's "IFV-Tanya" team (Tanya and an IFV; Other2 is PlayerControl=yes). Tanya entering the Kremlin (CARUS03 at 125,122, tag "Tanya Enters Kremlin", entered-by house 19, Other2) enables "Mission Victory". So killing those four Apocalypses is the player's whole task. At P37's g-end.replay (tick 20,070) the player has no buildings left (9 IFVs, 6 prism tanks, 6,060 credits); BadGuy1 has 96 buildings and power 8,600 against 1,920, so there is no power cut, and ten more Apocalypses. Not played further. Next: from build/p38/saves/all12/b.replay (10,029) or d.replay (16,480), hold the base through 17,000-21,000 (P36's notes), then the chronosphere or a lightning storm on the four compound Apocalypses |
-
-## Campaign missions played to wins (lane P39, 2026-11-26, same PIN)
-
-Lane P38's sweep continued with the same tools and rules (one replay per win in ra2/tests/campaign/, rerun to the same
-winning tick before its ctest row; a mission is shelved at 3 lane-hours, cumulative across lanes). No win this lane; no
-crash, hang or assertion.
-
-| Mission | Result | Lane-hours | Notes |
-| --- | --- | --- | --- |
-| Allied 12 (ALL12S, Chrono Storm) | deferred again (lane context) | 1.45 + 0.95 | The win needs more than the four Apocalypses. "Kremlin Secured 1" (BadGuy3's) also has three events 57 on tech types 20, 67 and 53 of the rules' BuildingTypes, NALASR, NAFLAK and TESLA. TEventClass (src/tevent.cpp, the case for event 57) attaches 57 to the trigger's house and trips it when that house's ABQuantity of the type is 0, the same event that trips "Kremlin is Destroyed" when Civilian1 has no CARUS03 left. So BadGuy3 must also lose its tesla coil (119,118), both flak cannons (127,119; 120,126) and both sentry guns (123,127; 128,122), besides the Apocalypses 1027016-1027019. BadGuy3's power is two nuclear reactors (136,117; 113,139, 2,000 each against a drain of 110); with both gone its coil and sentry guns are unpowered. Chrono legionnaires (a CLEG on tab 2 once the lab stands) do the job without fighting through BadGuy1's base. They teleport only onto mapped cells that the view can show: the playable bottom edge is about x+y = 254, and (140,119) or (134,119) take no click. The warp-out takes about 5.3 frames a cell (ChronoDistanceFactor 48), about 370 ticks from the base. A move click on a cell where one of the player's own units stands selects that unit instead (the batch stays home), and a cell of the Kremlin's footprint (CARUS03, origin 125,122, Foundation 2x5: x 125-126, y 122-126) is an attack order: the legionnaires erased the Kremlin and the mission was lost (tick 45,172). Clicking each unit with Shift drops units in a tight stack (a second click on a selected one deselects it), so the attack orders use one band box. Erasing does not change the target's strength figure. Five legionnaires erase a reactor in about 250-300 ticks from (132,121) (east) and from (116,135) (south; the reactor's centre must be mapped first, by a hop to 119,131). The "MammothDead" tags trip on an erased Apocalypse: thirteen to sixteen legionnaires staged south of the compound (119-123,130-135), hopping to (121,127), erased 1027017 and 1027016 in about 130-480 ticks, losing six to twelve of them, and MammothDead3 and 4 tripped. What kills them: the Apocalypse next to the one being erased; two BadGuy1 Yuris (YURI, about tick 30,000 at 114,118 and 110,113), whose mind control turns legionnaires on their own group; BadGuy1's Apocalypses and Rhinos drifting into the compound (1027023 at 115,122, 1027026 at 132,116, later 1027025/26 at 123-124,116); and the Kirov parked at (111,132) beside the south stage. Every try at the second pair (122,117; 124,117) from (123,121), (122,120) or (126,121) lost the whole group within about 350 ticks to the garrisoned Kremlin wall towers (CARUS02A at 121,116, 125,116, 130,116) and BadGuy1's Apocalypses, and chasing a Yuri took a group west into BadGuy1's base. The base itself (three barracks from tick 11,500, power plants, the war factory sold at the nuke's launch, tick about 18,100) falls in every branch between ticks 25,000 and 40,000. Checkpoints (frame clock, build/p39/saves): p39-f2.replay (23,133, from P38's e.replay: both reactors erased, 13 legionnaires, base standing), p39-f3.replay (23,866: also Apocalypses 1027016 and 1027017 erased, flags 3 and 4 set, one legionnaire, 6,560 credits), p39-9.replay (30,561, another branch: the same two flags, ten legionnaires in the compound, 22,920 credits, base standing until about 37,000). Next: the chronosphere for the second pair (one 3x3 shot round 123,117 into the lake at 130,84 drowns both, as lane P26 saw), placed from e.replay at once so that it charges before the base falls; or a legionnaire group large enough for the north half after the garrison towers are erased; then the five unpowered BadGuy3 buildings from cells clear of the Kremlin (the coil at 119,118 is drawn behind the Kremlin's image, so it is clicked from the west) |
-| Allied 6 (ALL06U, Liberty) | not played | 1.15 + 0 | lane context spent on Allied 12 |
-
-## Campaign missions played to wins (lane P40, 2026-11-26, same PIN)
-
-Lane P39's sweep continued with the same tools and rules (one replay per win in ra2/tests/campaign/, rerun to the same
-winning tick before its ctest row; a mission is shelved at 3 lane-hours, cumulative across lanes). No win this lane; no
-crash, hang or assertion.
-
-| Mission | Result | Lane-hours | Notes |
-| --- | --- | --- | --- |
-| Allied 12 (ALL12S, Chrono Storm) | shelved | 2.4 + 0.6 | Blocker: no chronosphere lives long enough for its first shot, so the second pair of BadGuy3's compound Apocalypses (1027018 at 122,117, 1027019 at 124,117) is never moved. P39's p39-f3 branch (tick 23,844) has no war factory, and a chronosphere queued there lost its construction yard at 25,171. Two restarts from lane P38's e.replay (11,152) placed the chronosphere first (GACSPH at 60,71, ticks 13,083 and 12,816). In the first, the power plants' spots near (52,69) were refused for 4,000 ticks and power fell below drain (299/360 at 21,022, 865 frames of charge left), and the base was gone by 24,000. In the second, two power plants (65,55; 69,64) kept 1,000/605: at 18,009 the chronosphere had 1,103 frames left (ready about 19,110), but it was destroyed before 21,028, in the window of the nuke's launch (18,039, the war factory sold) and the raids of 18,000-21,000. Credits ran to nothing on legionnaires (21 at 18,009). In both restarts the legionnaires again erased the east reactor (1027226, about 810 ticks from 132,121), timed out on the south one, and erased 1027017 or nothing of the first pair; the mission was lost at 27,307 and 27,505 (the Kremlin is not touched: every building lost). Best points as before: build/p39/saves/p39-f2, p39-f3 and p39-9 (lane P39). This lane's runs: build/p40/saves/p40-lost1.replay, p40-lost2.replay. What is left untried: the chronosphere and two power plants at the map's south-west corner before tick 11,500, with every credit kept for it and the home defence (no legionnaires until it has fired), so that it survives 18,000-19,200 |
-| Allied 6 (ALL06U, Liberty) | deferred again | 1.15 + 0.3 | Restarted with the frame clock: the AMCV (93,162 at tick 1,800) moved to (94,173) and deployed (the yard at 95,174, tick 2,325, a thousand ticks earlier than lane P27's). The base is boxed in by the Pentagon (103-110,166-173) and its walls: free cells are inside the north wall (98-106,158-165), east of the Pentagon (111-116) and over the road at x 119-125 and 131-137 (y 158-168). The south edge (y 176-178) takes no placement click, so a refinery near (98,179) wasted 3,000 ticks. Two bridges lead north, at x 127-129 and x 138-140 (y 140-153). Built by 14,685: two refineries (95,170; 95,167), barracks (91,170), war factory (107,163), air force command (114,163), seven power plants, two more prism towers on the west ramp (97,160; 102,159), three harvesters, five Grizzlies. The three Liberty crates (LCRF at 94,160-168) and two pillboxes were lost to raids from the west ramp by tick 14,345. The enemy count grew from 107 to 134 objects (BadGuy1 80, BadGuy2 54), each house holding 50,000 credits, and the player had 1,208 credits. Checkpoint build/p40/saves/a6-3.replay (tick 14,685, frame clock). Next: the battle lab (GATECH near 121,164) for chrono legionnaires, which erase buildings without fighting through, and the second bridge (138-140) as another way north; the win needs every BadGuy1 and BadGuy2 object gone, harvesters included |
-## Lane P35 (2026-11-26, same PIN): an AddressSanitizer sweep
-
-An ASan build of the Mac target (`-DRA2_NATIVE_ASAN=ON` in its own folder, build/asan: `-fsanitize=address
--fsanitize-recover=address -fno-sanitize-address-use-after-scope`) ran every won replay and the ra2-quick, ra2-main,
-ra2-campaign and ra2-resaves groups. Reports: CCINIClass::Get_PipEnum (`_pips[PIP_BLUE]`, one past the table),
-RadarClass::Init_For_House (TooltipColor read as four bytes), RLE_Blit's `_temp_buf` (a 256-byte flat z-shape read for
-every pixel of wider lines), Tactical::Draw_Rally_Points' 8-entry dash pattern stepped through 16 (the original's
-next 8 bytes repeat it), _voxel_draw_shadow sampling the 256x256 compositing surface past its buffer (read as 0 outside
-it). Each has a fixups.json row giving what the original read (docs/regressions.md).
-
-The larger find did not come as a report. Under ASan Allied 1 went another way at frame 2,548. A per-frame digest put
-the first difference there, an lldb watchpoint on the scenario generator showed a GI's shot missing in that frame, and
-the GI had never taken the falling paratrooper as a target. TechnoClass::Evaluate_Object asks
-`object->Current_Mission_Control().IsNoThreat`, and for an object with CurrentMission MISSION_NONE that is
-MissionControl[-1], the 32 bytes before the table. Those bytes were the TibSunFactory pointer's high bytes under ASan
-and an empty vector in the release build, so the answer depended on the linker. In the original they are COORD_NONE's
-Z, zero padding and the Aircraft vector (read from the executable's initialisers at 0x004D2D50 and 0x004D3490). A
-fixups.json row returns that record. Before it, the release build and the build with `-ftrivial-auto-var-init=pattern`
-agreed with each other and MallocPreScribble changed nothing: neither uninitialised stack nor uninitialised heap was
-involved. After it, the ASan and release digests agree at every frame checked (to frame 217,000).
-
-The owner ruled for the original's values (IsRetaliate and IsScatter true; the release build had read false). Under
-them lane P21's all01.replay goes another way at about tick 2,650 (the landed paratroopers), so Allied 1 was
-re-recorded with the frame clock. P21's commands carry over to tick 6,383 (one object id remapped: the engineer). Then
-the three Grizzlies take the four V3s and the two sentry guns, the six GIs come up in support, and Tanya C4s the
-construction yard, both war factories, the radar, the barracks and the power plants. It won at tick 13,871, the same
-on a rerun (the old recording won at 11,007). The other 20 wins (sov08, sov10 and all09, recorded meanwhile, among them) hold at their ticks in the release build and under
-ASan.
-
-ctests: `ra2-native-asan-all01` and `-sov06` (label ra2-asan, only in an RA2_NATIVE_ASAN build;
-`ra2_campaign.py --asan` fails on any report).
-
-## Campaign missions played to wins (lane P41, 2026-11-26, same PIN)
-
-Lane P40's sweep continued with the same tools and rules (one replay per win in ra2/tests/campaign/, rerun to the same
-winning tick before its ctest row; a mission is shelved at 3 lane-hours, cumulative across lanes, or sooner at a real
-blocker). No win this lane; no crash, hang or assertion. Allied 11 and Allied 12 stay shelved.
-
-| Mission | Result | Lane-hours | Notes |
-| --- | --- | --- | --- |
-| Allied 6 (ALL06U, Liberty) | shelved | 1.45 + 0.7 | Blocker: the scale. From the map's triggers there is no scripted shortcut: "_Win Occurs" is destroyed-all of BadGuy1 (14) and BadGuy2 (15) (TEventClass, src/tevent.cpp: CurBuildings, CurUnits and CurInfantry all 0), and "_Loss (Pentagon)" loses the mission when the tagged Pentagon is destroyed. The only lever is "BG1 Firesale"/"BG2 Firesale": no-factories-left (no building of the house with a ToBuild, so its construction yard, barracks and war factory: BadGuy2's NACNST 115,125, NAHAND 120,125, NAWEAP 115,130; BadGuy1's NACNST 99,28, NAHAND 99,48, NAWEAP 95,51) sells every building (HouseClass::Fire_Sale) and sends all to hunt, and "Eviction Notice" empties BadGuy1's garrisons. What was tried from lane P40's a6-3.replay (tick 14,685): the base holds and earns about 2 credits a tick (24,000 by tick 65,000) only while every combatant answers threats near home and the V3 pairs parked at (124-125,159-161), just outside a 20-cell home radius, are hunted first; the war factory, barracks and air force command still fell twice to V3 shelling. The battle lab (built at 95,163, tick 34,385) puts only SPY on the infantry tab: no chrono legionnaires (nor prism tanks) on this mission's sidebar. A Night Hawk with an engineer was shot down at (119,130) by BadGuy2's flak before landing. Thirty Grizzlies (tick 65,475) cross bridge N1 (x 127-129) safely with a move to (128,152) and an attack move to (128,138); a plain attack move on the base then loses them all for almost no damage (they stall at 125-127,127 under the coil and the Rhinos BadGuy2 keeps building), but focused fire in order (the coil 117,125, then NAWEAP, NAHAND, NACNST, force-fired by cell while unseen) killed the coil, the war factory and the barracks by tick 69,000 before the last three tanks died at the construction yard (1,000 strength). With 16,000-32,000 credits BadGuy2 rebuilt all three and the coil by tick 81,000; follow-up waves of 12 died at the coil; with the army away the base fell and the mission was lost (ticks 88,044 and 96,700). BadGuy1 is twice BadGuy2 (100 objects, 190,000 credits, its construction yard inside four coils and three flak cannons at y 20-35). Saves outside the repository: build/p41/saves/p41-try3-push.replay (tick 65,475, 30 Grizzlies, 23,950 credits), p41-try5-36.replay (79,485, 36 Grizzlies); scripts build/p41/s (a6d.py base loop, strike2.py the focused strike). If ever resumed: 40+ Grizzlies with a home guard left behind, and the construction yard killed in the same strike as the coil and both factories |
-Yuri's Revenge under ASan (lane P35, a first look only): an RA2_NATIVE_ASAN=ON build with RA2_NATIVE_YR=ON builds.
-Its one source-level `__yr_init_func` entry (yr/glue/yr_lan.cpp) is now excluded from instrumentation, because ASan's
-redzone put zero pointers in the section that ra2_native_original_records walks, and every run stopped there. After
-that, seven yr-native tests (skirmish-smoke and -long, save, combat, war-factory, garrison, mirage) still fail under
-ASan. ASan stops the game at its first report, so the yr tests' runs probably do not pass ASAN_OPTIONS through. The
-reports name about 20 sites, all global-buffer-overflow: Unit_Blit_Voxel and Unit_Draw_Voxel, TechnoClass::Draw_Voxel,
-Read_Scenario_INI, Select_Game, SpecialClass::Init, TRect::Is_Valid and Union, _makepath, ra2_strncpy,
-WideToCharString, the combo box handler, Bit_Blit_Core_Native, WinMain. They are left for a YR lane. The logs are in
-build/p35/yr-asan (outside the repository).
-
-## Campaign missions played to wins (lane P43, 2026-11-26, same PIN)
-
-Lane P41's sweep continued with the same tools and rules (one replay per win in ra2/tests/campaign/, rerun to the same
-winning tick before its ctest row). The plan came from a video guide the user supplied (a human's Hard-difficulty win):
-deploy outside the Pentagon wall, prism towers at the bridgehead, mass Grizzlies and Harriers, BadGuy2's construction yard
-killed first, then BadGuy1's production. No crash, hang or assertion.
-
-| Mission | Result | Lane-hours | Notes |
-| --- | --- | --- | --- |
-| Allied 6 (ALL06U, Liberty) | won at tick 116,548 | 2.15 + 0.7 | Played from the start with the frame clock. The firesale triggers ("BG1 Firesale", "BG2 Firesale", event no-factories-left) trip only when the house has no building with a ToBuild left (src/tevent.cpp), so BadGuy1's construction yard (NACNST 99,28, in the White House compound) has to die too; the video's reading that the compound's yard was sold while standing does not hold here: the sale came the tick the yard died. The AMCV (93,162 at tick 1,800) deployed outside the wall at (92,157): the yard spans 91-94,156-159 on the riverside road. Two refineries (100,159; 117,161), later four, prism towers at the bridgehead (116-121,155-161) and the west ramp (88-90,155-160). What broke the base before the fix: V3s parked at (124-125,155) reach the war factory at (106,156) (V3Launcher range 18); a tank home defence that chases across the bridges loses the tanks on the island (a recall of every tank north of y 152 every 120 ticks); an infantry raid from the west road (79,158) took the construction yard at tick 20,003 because it had been left at 195 of 1,000 since tick 8,123: repairing it (rc.repair_all, the wrench) saved it. BadGuy2 (tick 43,444): eight Harriers force-fired the coil by its yard (117,125) and 23 Grizzlies attacked, in order, the coil, the yard (115,125), the barracks (120,125) and the war factory (115,130); the firesale fired at 44,568 with 21 tanks left; an earlier try that let the tanks shoot infantry and sentry guns first lost every tank while the yard rebuilt the defences. BadGuy1: the column went by the island's north bridge (128,104 to 128,88; a waypoint off the road at 116,92 stalls it) to a rally at (110,80); the monument cluster's coil (99,55), barracks (99,48) and war factory (95,51) fell to Harriers and 31 tanks at 59,877 (with no factory left BadGuy1 built no more units). Harriers on the compound coils were shot down by its three flak cannons; cutting its power is a race it wins (ten reactors at 150 against a drain of 625: four killed from outside the fence, east at 108-109,22-32, and two at 94,44 and 103,44; it rebuilt two at once with 230,000 credits). What worked: 36 Grizzlies massed at (110,80), then the coil at (102,33), the coil at (95,33) and the yard (99,28) in turn: the yard fell at 106,320 and the firesale fired (30 tanks left). Mop-up: the hunt sends every unit out; the last BadGuy1 objects were the guard shack CAGARD01 at (34,82), which takes no attack click (force fire), and three conscripts on the island. Replay ra2/tests/campaign/all06.replay (frame clock, 7,072 lines); checkpoints outside the repository in the decompilation repository's private/campaign_saves/all06/ |
-
-## Campaign missions played to wins (lane P45, 2026-11-26, same PIN)
-
-Allied 11 resumed from its start with the frame clock, from a video guide the user supplied (a human's win: refinery on
-the south-west islet, war factory, three air force commands, battle lab, chronosphere; one Harrier wave on the west
-silo, then about ten tanks chronoshifted beside the silo compound). No crash, hang or assertion.
-
-| Mission | Result | Lane-hours | Notes |
-| --- | --- | --- | --- |
-| Allied 11 (ALL11T, Fallout) | shelved again | 1.7 + 0.75 | Blocker: the base's economy and defence. One silo of three was destroyed (the east one, by prism tanks the chronosphere put outside the compound's east wall); every run lost its miners, refineries and then the battle lab by about tick 15,000, so no second strike force was built before the next charge. What the map says (`mapfile`, ra2_mapinfo.py): placing the chronosphere reveals the Soviet base at once ("Heeeere's Cuuuba (CSphere Up)", building type 27; on Medium the timer reveal is 1,260 s), and BadGuy2 produces nothing until 6 s after the reveal; the reveal's camera movie locks input for about 800 ticks, during which the super weapon timers stand still. The map sets the chronosphere's RechargeTime to 5 (4,500 ticks) and the nuke's to 20 (18,000; it fired at none of these runs' ticks). The battle lab (GATECH) needs GAWEAP, RADAR (the air force command) and GACNST and is on the sidebar once the war factory stands; the prism tank (SREF, Comet: 100 damage, range 10, CometWH 200% against concrete, so 200 a shot on a silo) and the SEAL (GHOST, from the start) are buildable. Building the war factory sends "BG2 Seaborn Attack" (two dreadnoughts, two sea scorpions; Medium and Hard) to waypoint 100 (136,113), whose script attacks the war factory first, then power plants (DredLauncher range 25, minimum 8); Harriers sent at each dreadnought as soon as it was seen (one Harrier moved onto an unseen one to map it) sank both by tick 6,800, and the fleet parked at waypoint 100 was lost to the escorts. The silos' footprints: east 192-194,194-196, centre 186-188,196-198, west 184-186,202-204; walls at x 171/174 (west), 199 (east), y 179 (north), 209 (south). Tried at the silos: 11 Harriers straight at the west silo were all shot down without a hit; 9 Grizzlies chronoshifted inside at (197,194) died within 200 ticks for 140 damage; an amphibious transport with three SEALs chronoshifted to (196,194) (passengers survive: super.cpp kills only organic objects on the 3x3 cells) unloaded them 80 ticks after arrival with `d`, and they died before planting. What worked: five prism tanks parked at (96-98,102-104) and chronoshifted to (201,194), outside the east wall: the east silo went from 1,000 to 8 in one volley and died at the second (tick 13,085). They then died on the way round to the south wall. Placement: the 4x4 chronosphere placed by a click at its legal origin plus (1,1) (origin 97,99 from cell 98,100), not plus (2,2) as place_legal clicks. Best points (frame clock, in the decompilation repository's private/campaign_saves/all11/, with the scripts): w1-12748.replay (tick 12,748: chronosphere charged, five prism tanks and three Grizzlies parked, seven Harriers, 3,500 credits) and w2-esilo-13343.replay (tick 13,343: east silo dead, chronosphere recharging until about 17,400, nuke 12,720 ticks away). Next: prism towers at the north bridge end (110,86) and guards for the refineries before the battle lab (the desolators and V3 at 110-114,77-89 and the south-islet landings were what broke every run); then nine prism tanks per shot: one drop inside at about (191,189), within range of the east and centre silos, and one outside the south wall at (185,211) for the west silo, 4,500 ticks apart and before the nuke (about tick 26,000) |
-## Campaign missions played to wins (lane P46, 2026-11-26, same PIN)
-
-Lane P43's sweep continued with the same tools and rules (one replay per win in ra2/tests/campaign/, rerun to the same
-winning tick before its ctest row). The plan came from a video guide the user supplied (a human's Hard-difficulty win):
-the base inside the walled start square, a tank block at its south gate, the chronosphere built only after the nuke, chrono
-legionnaires on the reactors, the chronosphere dropping Apocalypses into the river, legionnaires on what is left inside
-the Kremlin compound. Allied 12 had been shelved at 3.0 lane-hours (lanes P26-P40); the guide earned it 1.5 more. No crash,
-hang or assertion.
-
-| Mission | Result | Lane-hours | Notes |
-| --- | --- | --- | --- |
-| Allied 12 (ALL12S, Chrono Storm) | won at tick 36,702 | 3.0 + 0.65 | Played from the start with the frame clock. The three SEALs' C4 on BadGuy2's reactor (NAPOWR 65,65, tick 457: "Generators Destroyed") brings the chrono reinforcements (eight IFVs at tick 959, eight Grizzlies, later four prism tanks) and the MCV, deployed at (65,64) (yard 66,65, tick 1,184); the IFVs force-fired the pen's fence (52,54) and one drove in (52,52) for the prisoners. Base: power, refinery (60,66), barracks, patriots, air force command, war factory (73,66), second refinery (71,59), battle lab (67,60) at 9,572, five more power plants, the spy satellite (63,58; the legionnaires need mapped cells). BadGuy1's nuke launched at 18,082 and the war factory was sold at the launch (the blast at about 18,500 still took the air force command, a refinery and most of the tank block by the south gate). The chronosphere was queued at 18,755 and placed at (67,57) at 20,532, ready at 26,877. Five legionnaires erased BadGuy3's reactors from (132,121) (1027226, tick 22,995) and (116,135) (1027235, 23,486), which leaves its coil and sentry guns unpowered. The chronosphere's first shot (centre 123,117) put the east pair (1027018/19) into open water at (142,85), the river east of the Kremlin district; both drowned at 27,080 (the lake at 130,84 has a low bridge in its 3x3). What broke the base after that: V3s north (75-82,44-50) and west (39-45,61-65) and terror drones; a hold that hunts V3s, drones and flak tracks within 26 cells and answers anything within 13 with the tanks only (team 5; the legionnaires parked apart, since "select all combatants" took them into fights) kept it standing to about 33,000 with the chronosphere charging. The second shot (centre 118,122, tick 33,329) drowned the west pair (1027016/17). The legionnaires, staged south of the compound (120,132) and given plain attack clicks, hop next to each target: the sentry gun (123,127) and flak cannon (120,126) by 35,065, then from there the east sentry (128,122), the east flak (127,119) and the coil (119,118, clicked at its foundation's middle, clear of the Kremlin's picture) by 36,114, when "Kremlin Secured 1" tripped; Tanya's chain won at 36,702. Staging east at (132,121) lost the group to BadGuy1's Apocalypse 1027026 at (132,116), and an attack from home on the east sentry hopped them into the compound's north-east corner (garrisoned wall towers 125,116 and 130,116), where they died. A run whose last building fell at about 37,800 was lost at 38,558 with legionnaires still alive (most likely the loss on every building gone, which P40 saw; it could also have been an attack click resolving to the Kremlin), so the base only has to outlast the chain. Replay ra2/tests/campaign/all12.replay (frame clock, 3,926 lines); checkpoints outside the repository in the decompilation repository's private/campaign_saves/all12/ |
+| The host's event pump runs at most once a millisecond (port/src/user32.cpp PeekMessageA) | at the uncapped loop's speed a scripted event reached the game a frame or more later than written, depending on the machine: a recorded run did not replay the same (likely also why "clicks timed by loop frame are not repeatable" for the gate's skirmish rows, ra2/ra2.cmake) | fixed for script-only runs: the frame's events pumped as they play (platform/sdl/host.cpp frame()) |
+| The game's mouse (WWMouseClass) follows the pointer on the mouse thread every 16 ms of wall time | the cursor action a click used could lag the pointer by frames; live (paused) and replayed runs differed | fixed for the step server: the mouse processed once a frame on the game thread (glue/wwmouse_native.inc RB_Process_Mouse_Now) |
+| A one-frame click (the input script's `click`) was read one click late | the selection or order happened at the next click | the step server's click holds the button four frames, as a real click does |
+| The game's pointer starts at 0,0 until the first mouse message (port/src/user32.cpp `cursor`) | a scripted run that had not moved the mouse edge-scrolled the map to the top left | the step server parks the pointer in the view's middle at the start and after each click |
+| `#` starts a comment in input-script lines | an object point written `@#id` became the screen's corner | the object point is `@^id` |
+| A building's listed click point is a corner of its picture; a left click on a cell the selection cannot use deselects (the original's behaviour) | clicks on buildings missed and dropped the selection | `@^id` for a building is its foundation's middle |
+| A wall's name is also its overlay type's (lane P29) | the step server's `buildable NAWALL` said "no building type" | the name is looked up among the building types when the generic lookup finds the overlay |
+| A wall overlay keeps the cell's land type clear (lane P30; the original's behaviour: OverlayTypeClass::Read_INI, exact, reads Land= and RULES.INI's walls have none) | the step server's `terrain` and `cell` never showed a placed wall, so lane P29 read a wall placed by a legal click as lost | not a port fault: a live click traced with lldb (EventClass::Execute PLACE, HouseClass::Place_Object, BuildingClass::Unlimbo's wall branch, OverlayClass::Mark, MapClass::Place_Wall) puts the NAWALL overlay on the cell, and the line between two walls fills as in the original. `terrain` now draws a wall overlay as W and `cell` names a cell's overlay (+NAME); **scripted, passing**: ra2-native-walls (two walls by clicks in Soviet 7 and the two cells between them, checked through the step server; it fails on the old output) |
+| The step server's socket wait ended on EINTR (lane P30) | a debugger attaching interrupted accept() or read() and the server released the game, which ran on freely (and lost the mission) | retried on EINTR (platform/sdl/host.cpp) |
+| Allied 11's recording (lane P31, build/p31/all11/try6.replay, kept outside the repository) preloaded to tick 22,140 left BadGuy2 at power 900 in two reruns and 3,050 in four (the Harrier strike on the barrels never landed) | a recorded win that depends on that strike would not replay | **fixed, scripted, passing** (lane P33): not the click or the camera. The game's clock (timeGetTime, QueryPerformanceCounter: SystemTimerClass, the audio clock, the Bink movies) ran on the wall clock while the step server counts loop frames, uncapped. The reveal's EVA speech, the stream fade and the radar's Bink movie (RadarClass::Update_Transmission, Play_Movie, which holds the scenario while the movie plays) are paced by that clock, so on a busier machine they span fewer loop frames: in two preloads of try6 the hold began at game frame 19,338 and at 19,259 (tick about 19,340 and 19,260) and ended 358 ticks later, and every input after it landed at another game frame (lane P31's two "identical" dumps were taken at tick 19,456, where its preloads ended, before the hold). The same holds for a trigger's Pause for N seconds (ScenarioClass::PauseTimer). Now the step server's runs use a frame clock (RA2_NATIVE_FRAME_CLOCK=1, port/src/port_core.cpp game_clock_ns): from the served scenario's first frame to its end the game's clock advances 16 ms (one SystemTimerClass tick) a loop frame and stands still between frames and while the server waits for a command. New recordings say `# frame clock` and replay with it (ra2_step.py start, ra2_campaign.py); the earlier recordings, made on the wall clock, replay as before. With it, try6 preloaded twice, once with every frame slowed by 3 ms (RA2_NATIVE_STEP_SLOW), gave the same game frame at every 20th tick to 21,256. ra2-native-frame-clock: the clock advances 600 over 600 ticks in a normal and a 5 ms-slowed run (the wall clock gave 55) |
+| A transport holding more size than it has pips (Soviet 10, lane P34: an amphibious transport, Passengers=12, with two Apocalypses of Size=6 and an engineer) | the game stopped with EXC_BREAKPOINT in macOS malloc at the next allocation after the transport was drawn (SDL_SaveBMP, AStarClass::Ban_Neighborhood_Subzone_Edges, a Metal command buffer; three runs, ticks 68,248 to 71,651) | **fixed** (lane P34): TechnoClass::Draw_Pips (exact, 0x006D4920) colours the pips in new int[Max_Pips()] from slot GetTotalSize()-1, clamped one past the end, down by each passenger's size, so it writes past the end and below the start; the original's heap took the stray ints, macOS malloc's free lists did not. A fixups.json row puts the array inside a block with room for every write (the pips drawn are the original's). AddressSanitizer on the crashing recording (build/p34/saves/sov10/crash2.replay, outside the repository) found the overflow and the write below the block, and none of them with the row; the six global-buffer-overflow reads ASan also lists (CCINIClass::Get_PipEnum, FootClass::Do_MISSION_ENTER, RadarClass::Init_For_House, two RLE blitters) are left open (lane P35 fixed them: the rows below; FootClass::Do_MISSION_ENTER's was most likely the MissionControl[MISSION_NONE] read: its Normal_Delay reads Rate 16 bytes before the table, in ASan's redzone there) |
+| The frame clock slipped after a long wait for a command (lane P34) | a live session whose client paused more than five seconds before a command that reads the game's clock (state's clock line) put the wall time of the wait into the frame clock ("port: frame clock: a frame ran over 5 s"); its replay, which never waits, kept the clock: the two parted | **fixed** (lane P34): the step server marks the wait's end (ra2port_frame_clock(3)) before it runs each command as well as after |
+| AddressSanitizer sweep (lane P35): every won replay (21, with sov08, sov10 and all09 recorded after the sweep began) and the ra2-quick, ra2-main, ra2-campaign and ra2-resaves groups (49 tests, all passing, no report; the LAN pair not run) on an ASan build of the Mac target (RA2_NATIVE_ASAN=ON) | what ASan reports are original behaviour that the original's Windows layout absorbed: reads or writes outside an object that land on the port's neighbours | the six rows below; with them no replay reports anything and every replay wins at its recorded tick under ASan as in the release build. **Scripted**: ra2-native-asan-all01, ra2-native-asan-sov06 (label ra2-asan, only in an RA2_NATIVE_ASAN build) |
+| Falling and just-landed paratroopers, and any object whose mission is MISSION_NONE, behaved by whatever the linker put before the mission table (lane P35) | Allied 1 under ASan: the GIs never shot the Soviet paratroopers in the air (frame 2,548) and the replay went another way. MissionClass::Current_Mission_Control (exact) reads MissionControl[-1] for MISSION_NONE, the 32 bytes before the table: IsNoThreat, IsScatter, IsRetaliate and the mission delays of those objects came from another global (the Mac release build: an empty vector, so IsNoThreat false by luck and IsScatter/IsRetaliate false; ASan's layout: a pointer's high bytes, IsNoThreat true). ASan cannot report it (the bytes belong to another global). The iPhone and Windows builds lay out their globals differently, so this is a plausible cause of the user's unexplained "random failure" in Allied 1 around the paratroopers (Tanya alive, the Soviet paratroopers just dropped), never reproduced on the Mac | **fixed** (lane P35): a fixups.json row (src/mission.cpp) returns the original's record for MISSION_NONE, the bytes before 0x00A403B0 in the original: IsNoThreat, IsZombie, IsRecruitable, IsParalyzed false (COORD_NONE's Z and zero padding), IsRetaliate and IsScatter true (the Aircraft vector's vtable bytes), Normal_Delay and AA_Delay 0 (subnormal doubles); the same on every platform. Owner's ruling: the original's values, so all01.replay was re-recorded (won at tick 13,871; the old recording won at 11,007); the other 20 recorded wins (sov08, sov10 and all09 among them) hold at their ticks |
+| CCINIClass::Get_PipEnum read its default name one entry past the pip table (lane P35, ASan, every mission start) | an infantry type made blue by the rules reads _pips[5]: in the original the next table's first name, "Ammo" (0x007D1998), which matches no pip, so it turns green; in the port, whatever followed | **fixed**: a fixups.json row names "Ammo" for that index (src/ccini.cpp) |
+| RadarClass::Init_For_House read the 3-byte TooltipColor as 4 bytes (lane P35, ASan) | one byte read past the colour; the fourth byte was never used | **fixed**: a fixups.json row copies the three bytes (src/radar.cpp) |
+| RLE_Blit's flat z-shape buffer (_temp_buf, 256 bytes) read past its end (lane P35, ASan: RLEBlitTransDarkenZRead/ReadWrite, building shadows) | a shadow line wider than 256 pixels took its depths from the next .bss bytes (in the original the Bombs vector and constants, never meant as depths) | **fixed**: a fixups.json row makes the buffer 64 KB of zeros (src/blit.cpp); lines up to 256 pixels read what they always read |
+| Rally point lines read their dash pattern past its end (lane P35, ASan, Soviet 4) | Tactical::Draw_Rally_Points' _pattern[8] (0x007F6954) is stepped through 16 entries by DSurface::Draw_Masked_Dashed_Line; in the original the next 8 bytes are the same pattern again, in the port whatever followed | **fixed**: a fixups.json row makes the array the original's 16 bytes (src/tactical.cpp) |
+| A unit's voxel shadow sampled its compositing surface past the buffer (lane P35, ASan, Soviet 12: heap-buffer-overflow read in _voxel_draw_shadow, row 263 of the 256x256 eight-bit surface) | the original read the Windows heap after the block: values that cannot be recovered and only mask shadow pixels | **fixed**: a fixups.json row reads 0 (the surface's empty fill) outside the surface (src/voxlib.cpp); visual only |
+
+Other platforms (lane P21): the replays are Mac rows only for now. One try of all01.replay on the Windows build under Wine
+11.18 (ra2/tools/ra2_wine.sh as the binary) did not get past start-up in 1,200 s: the fresh prefix's `wineboot -i`
+hung for seven minutes and, once ended, the game wrote nothing past MoltenVK's start lines, so whether the replay is
+deterministic there is not known yet. The iOS Simulator was not tried (the replay needs no socket, so both rows are a
+matter of running `ra2/tests/ra2_campaign.py` with ra2_wine.sh or ra2_ios_sim.sh as the binary once those start).
