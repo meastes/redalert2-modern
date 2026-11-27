@@ -2464,3 +2464,10 @@ Mission notes whose win or lose reading changes under the fixed table:
   NALASR, NAFLAK and TESLA; P39 already corrected this from the code.
 - No change on the win or lose chains of YR Soviet 7 (the CATRAN03 "Yuri's Castle" tag), Allied 4, Allied 2, Allied 3,
   Allied 5 and Soviet 3: only action names changed there.
+
+The missions (cap 3 lane-hours each, cumulative). Recordings in private/campaign_saves/yr/<mission>/p73, scripts in
+scripts/p73 (q.py <work> <script> <until> <save>; start.sh).
+
+| Mission | Result | Lane-hours | Notes |
+| --- | --- | --- | --- |
+| Soviet 6 (SOV06UMD, the moon) | won at tick 222,711; a rerun (ra2_campaign.py --game yr) wins at the same tick | 0.5 (P72 0.75) | The dossier's plan (s6a.py): the MCV moved to 134,126 and deployed; three Tesla Reactors, barracks, war factory, radar, battle lab, industrial plant; cosmonauts to 41, then Apocalypses. 26 cosmonauts razed the Americans' base by 22,278 (its one Gattling Cannon first). The Apocalypses were lost three times at the Alliance base, sent one by one or through its middle (try 1-3: a 24-tank group walking from the south-west into the tower's and four cannons' fire lost 13 in 1,000 ticks; the psychic tower takes three). What worked (try 4, s6e.py, from try 3 at 48,700): the whole group staged at 70,72, then a fixed order from the south edge: cannons 81,64 and 84,66, the psychic tower 83,57 and the reactors; 12 of 16 left. Try 5 (s6f.py, from try 4 at 57,420): the two tech centres and the Alliance's last cosmonauts for the bonus crates (3,839 credits), two more reactors at home, then 15 Apocalypses and 17 cosmonauts staged at 70,40 and sent at Yuri from the north-east, Masterminds within 10 and psychic towers within 8 first: the Lunar Command fell at about 68,100; Yuri's power went low after two reactors (1,800 for a drain of 1,635); his construction yard kept rebuilding reactors (135,000 credits) until it was attacked again at 220,400 (the script had skipped it after 3,000 ticks), then the last two reactors; the fire sale and the win followed. yr/tests/campaign/sov06.replay; sov06 in yr_won_all. No crash, trap or assertion |
