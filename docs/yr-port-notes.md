@@ -1864,3 +1864,23 @@ gave the same digest at every 50th frame.
 | --- | --- | --- | --- |
 | Allied 1 (ALL01UMD, Time Shift) | won at tick 24,522 | 1.5 (with the step server's port) | win: Yuri's new Psychic Dominator (YAPPPT, 47,70 on Alcatraz) gone (PsychicDead / Check_New_Dom). The tanks clear the initiates at the power plants (131,130); the IFV's engineer takes CAPOWR01, four built engineers CAPOWR02-04 after the tanks (six more MTNK bought) cleared the gattling tower at 125,148; full power (800/736) is Power_Online: the time shift. The Apocalypses and the Kirov die to the Grand Cannons and the Guardian GIs (Apocs_Gone), Tanya swims to Alcatraz (74,96 - 68,86 - 63,76 - 62,68) and dies to the hydrofoils on landing; her death sends six carriers (Tanya_Death), which, ordered at the Dominator, sink it. Saves in private/campaign_saves/yr/all01 |
 | Allied 2 (ALL02UMD) | deferred (to be resumed) | 1.3 | win (Win_Check): every building of YuriCountry (h9: the main base, 55-134,55-182, 31 gattling towers, 9 tank bunkers, a psychic tower) and of Yuri2 (h14: the west base 19-48,109-147 and power plants at 105,134, 165,79, 197,101) destroyed, and the four grinders (Yuri3 YAGRND 105,128, 129,79, 152,70, 194,103). Two tries. The base (MCV deployed at 167,128) is taken building by building by Yuri4's engineers (YENGINEER, from Yuri4's barracks YABRCK at 158,78, sent while it stands: YuriBarrack_Gone) whenever the army is away; try 1 took the east grinder and Yuri4's base with 24 MTNK/SREF but lost every building. Try 2's early strike (9 MTNK, tick 11,600) on Yuri4's barracks died at 160,95-112. GATECH needs AMRADR first (then SREF, BFRT). Next: radar, tech centre, 12+ SREF and a home guard (dogs, GGI, pillboxes north at 158-165,116-121) before any push; Yuri4's barracks first. Recordings and saves in private/campaign_saves/yr/all02 (a2-try1.replay: A2ARMY.SAV at tick 26,815, 24 tanks) |
+
+## Lane P53 (2026-11-26): Robot Tanks that never left the War Factory
+
+Found by lane P52 in Allied 4: a Robot Tank (ROBO) stayed in the War Factory (mission 2, not moving) and blocked every
+later vehicle; taken there for the tank being deactivated. It was not: with GAROBO powered, HouseClass::PoweredUnitCenters
+is 1 (BuildingClass::FUN_004549B0 registers the centre through HouseClass::FUN_0050E010 as gamemd.exe does) and
+UnitClass::IsDeactivated is false. The cause is the exit. BuildingClass::Do_MISSION_UNLOAD (glue/building_native.inc)
+force-tracks a drive-locomotor vehicle out, but sends any other locomotor (the Robot Tank hovers) with Assign_Destination to
+the factory's cell + 4,1. UnitClass::Assign_Destination (glue/unit_native.inc, a TibSun-shaped draft) keeps a unit in
+radio contact with a weapons factory on its way to the exit cell, and queues any other order behind it; the draft's exit cell
+was + 3,1, so the factory's own order was queued as "another" and the tank never got a destination. gamemd.exe
+(0x00742D46-0x00742E41 in UnitClass::Assign_Destination, 0x00741970, vtable slot 0x480) uses + 4,1 from the factory's
+Position, skips the check for MISSION_ENTER, and for a unit held by a locomotor weapon (LocomotorSource) sends
+RADIO_OVER_OUT instead; the draft now does the same. Other hover vehicles built in a war factory had the same fault.
+
+Check: ctest `yr-native-robot-tank` (yr/tests/yr_robot_tank.py): power plant, Robot Control Center and War Factory spawned,
+a ROBO produced; the harness's new `robots` order logs the powered centres, the tank's deactivated flag and each centre's
+registration. Before the fix the tank sat at its factory cell with the factory unloading at frame 420; after it the tank is at
+67,22 when the factory returns to guard and drives 6 cells when ordered.
+

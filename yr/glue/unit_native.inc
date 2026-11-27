@@ -281,17 +281,26 @@ void UnitClass::Assign_Destination(AbstractClass * target, bool immediate)
 	/*
 	 * A weapons factory that this unit is exiting wants the unit driven to its
 	 * exit cell before anything else; queue the real destination behind it.
+	 * NATIVE (lane P53): as gamemd.exe 0x00742D46-0x00742E41: the exit cell is the factory's cell + 4,1 (the cell
+	 * BuildingClass::Do_MISSION_UNLOAD sends a unit whose locomotor is not the drive one to; the draft had 3,1, so a
+	 * hover Robot Tank's exit order was queued instead of taken and the tank never left the factory), not while the
+	 * unit is entering something (MISSION_ENTER), and a unit a locomotor weapon holds (LocomotorSource) breaks radio
+	 * contact instead.
 	 */
 	BuildingClass * wf = (BuildingClass *)Contact_With_Whom();
-	if (wf != NULL && wf->Fetch_RTTI() == RTTI_BUILDING && wf->Class->IsWeaponsFactory) {
-		Cell exitcell = wf->Get_Coord().As_Cell() + Cell(3, 1);
-		if (target != &Map[exitcell]) {
-			NavQueue.Clear();
-			RouteQueue.Clear();
-			if (target != NULL) {
-				Queue_Navigation_List(target);
+	if (wf != NULL && wf->Fetch_RTTI() == RTTI_BUILDING && wf->Class->IsWeaponsFactory && Mission != MISSION_ENTER) {
+		if (LocomotorSource == NULL) {
+			Cell exitcell = wf->Get_Coord().As_Cell() + Cell(4, 1);
+			if (target != &Map[exitcell]) {
+				NavQueue.Clear();
+				RouteQueue.Clear();
+				if (target != NULL) {
+					Queue_Navigation_List(target);
+				}
+				return;
 			}
-			return;
+		} else {
+			Transmit_Message(RADIO_OVER_OUT);
 		}
 	}
 

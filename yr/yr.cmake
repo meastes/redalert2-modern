@@ -424,6 +424,13 @@ add_test(NAME yr-native-war-factory COMMAND "${Python3_EXECUTABLE}" -B "${CMAKE_
          --work "${CMAKE_CURRENT_BINARY_DIR}/yr-war-factory")
 set_tests_properties(yr-native-war-factory PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 360)
 
+# ctest yr-native-robot-tank (lane P53): a Robot Tank built with a powered Robot Control Center is active, leaves the War
+# Factory and moves (HouseClass::PoweredUnitCenters; yr/tests/yr_robot_tank.py)
+add_test(NAME yr-native-robot-tank COMMAND "${Python3_EXECUTABLE}" -B "${CMAKE_CURRENT_SOURCE_DIR}/yr/tests/yr_robot_tank.py"
+         --binary $<TARGET_FILE:yr-native> --data-dir "${RA2_NATIVE_YR_DATA_DIR}"
+         --work "${CMAKE_CURRENT_BINARY_DIR}/yr-robot-tank")
+set_tests_properties(yr-native-robot-tank PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 360)
+
 # ctest yr-native-garrison (lane N4): a GI garrisons a civilian house and unloads from it (InfantryClass::Per_Cell_Process's
 # occupier branch; yr/tests/yr_garrison.py)
 add_test(NAME yr-native-garrison COMMAND "${Python3_EXECUTABLE}" -B "${CMAKE_CURRENT_SOURCE_DIR}/yr/tests/yr_garrison.py"
