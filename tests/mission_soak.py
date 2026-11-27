@@ -24,11 +24,18 @@ stand-in path), the first digest that differs between the two runs, and the run'
 
   mission_soak.py --game ra2|yr --side allied|soviet --binary <ra2-native|yr-native> --data-dir <game folder>
                   [--game-exe <game.exe>] --work <dir> [--frames 4000] [--missions 1-12] [--jobs 3] [--twice]
+                  [--asan] [--reference <binary>]
 
-Fails on a fault, a mission that did not start, or (--twice) a desync. A mission lost early is recorded, not a
+With --asan (lane P44; the binary built with RA2_NATIVE_ASAN=ON) AddressSanitizer's reports go to
+<work>/<run>/asan.<pid> (halt_on_error=0: the run goes on) and any report is a fault. With --reference <binary>
+(lane P44) the second run of each mission is that binary's (a release build beside an ASan one): the two builds'
+digests and trigger lines must be the same, so a read that depends on the build's memory layout shows as a desync.
+
+Fails on a fault, a mission that did not start, or (--twice, --reference) a desync. A mission lost early is recorded, not a
 failure (scripted orders are not tactics). Skipped (77) without the installed game, and for a Windows build.
 """
 import argparse
+import glob
 import concurrent.futures
 import json
 import os
@@ -87,12 +94,17 @@ def run_one(a, n, attempt):
                RA2_NATIVE_SOAK_END='%d@%d' % (a.frames, n), RA2_NATIVE_ORDERS=a.orders or GAMES[a.game]['orders'])
     if a.game == 'ra2':
         env['RA2_GAME_EXE'] = a.game_exe
+    binary = a.binary
+    if attempt == 'b' and a.reference:
+        binary = a.reference
+    elif a.asan:
+        env['ASAN_OPTIONS'] = 'halt_on_error=0:detect_leaks=0:detect_odr_violation=0:log_path=' + os.path.join(work, 'asan')
     for k in ('RA2_NATIVE_TRAP_CONTINUE', 'RA2_NATIVE_FORCE_END', 'RA2_NATIVE_SOAK_DUMP'):
         env.pop(k, None)
     if n > 1:
         env['RA2_NATIVE_FORCE_END'] = ','.join(str(100 + 200 * k) for k in range(n - 1))
     seconds = 120 + 15 * n + a.frames // 40
-    cmd = [a.binary, '--data-dir', a.data_dir, '--run-to=soak-end', '--run-seconds=%d' % seconds,
+    cmd = [binary, '--data-dir', a.data_dir, '--run-to=soak-end', '--run-seconds=%d' % seconds,
            '--write-dir=' + os.path.join(work, 'w'), '--input-script=' + path, '--game-args=-noaudio -CD.']
     start = time.time()
     with open(os.path.join(work, 'run.log'), 'w') as log:
@@ -102,7 +114,12 @@ def run_one(a, n, attempt):
             code = -1
     wall = time.time() - start
     text = open(os.path.join(work, 'run.log'), errors='replace').read()
-    return parse(a, n, text, code, wall, work)
+    r = parse(a, n, text, code, wall, work)
+    for rep in sorted(glob.glob(os.path.join(work, 'asan.*'))):
+        with open(rep, errors='replace') as f:
+            summary = [l for l in f.read().splitlines() if l.startswith('SUMMARY: AddressSanitizer')]
+        r['faults'].append('AddressSanitizer: %s (%s)' % (summary[0][27:160] if summary else 'a report', rep))
+    return r
 
 
 def parse(a, n, text, code, wall, work):
@@ -179,6 +196,8 @@ def main():
     ap.add_argument('--missions', default='')
     ap.add_argument('--jobs', type=int, default=3)
     ap.add_argument('--twice', action='store_true', help='play each mission twice and compare (desync)')
+    ap.add_argument('--asan', action='store_true', help='an AddressSanitizer build: any report is a fault (lane P44)')
+    ap.add_argument('--reference', default='', help='a second binary (a release build) whose runs must match (lane P44)')
     ap.add_argument('--orders', default='', help='RA2_NATIVE_ORDERS instead of the default soak orders')
     a = ap.parse_args()
     name = 'mission-soak-%s-%s' % (a.game, a.side)
@@ -195,7 +214,8 @@ def main():
     shutil.rmtree(a.work, ignore_errors=True)
     os.makedirs(a.work)
     wanted = missions(a.missions, GAMES[a.game]['missions'])
-    jobs = [(n, t) for n in wanted for t in (('a', 'b') if a.twice else ('a',))]
+    twice = a.twice or bool(a.reference)
+    jobs = [(n, t) for n in wanted for t in (('a', 'b') if twice else ('a',))]
     results = {}
     with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, a.jobs)) as pool:
         futures = {pool.submit(run_one, a, n, t): (n, t) for n, t in jobs}
@@ -203,7 +223,8 @@ def main():
             results[futures[f]] = f.result()
     failures = []
     rows = []
-    print('%s: %d frames a mission, seed %d%s' % (name, a.frames, SEED, ', each twice' if a.twice else ''))
+    print('%s: %d frames a mission, seed %d%s' % (name, a.frames, SEED, ', against %s' % a.reference if a.reference else
+                                                  ', each twice' if a.twice else ''))
     print('%-3s %-14s %-8s %6s %5s %5s %5s  %-28s %s' % ('#', 'scenario', 'end', 'frames', 'gone', 'trip', 'new',
                                                        'defeated', 'timer / faults / desync'))
     for n in wanted:
@@ -219,7 +240,7 @@ def main():
         if r['faults']:
             failures.append('mission %d (%s): faults: %s' % (n, r['scenario'], '; '.join(r['faults'][:3])))
             notes.append('FAULT ' + r['faults'][0][:80])
-        if a.twice:
+        if twice:
             other = results[(n, 'b')]
             if other['faults']:
                 failures.append('mission %d (%s), second run: faults: %s' % (n, r['scenario'], '; '.join(other['faults'][:3])))
@@ -229,7 +250,7 @@ def main():
                 failures.append('mission %d (%s): the two runs differ: %s' % (n, r['scenario'], why))
                 notes.append('DESYNC ' + why[:90])
             else:
-                notes.append('same twice')
+                notes.append('same as the reference' if a.reference else 'same twice')
         print('%-3d %-14s %-8s %6d %5d %5d %5d  %-28s %s' % (n, r['scenario'] or '-', (r['end'] or '?')[:8], r['frames'],
                                                            r['gone'], r['tripped'], r['new'],
                                                            ','.join(r['defeated'])[:28], '; '.join(notes)))

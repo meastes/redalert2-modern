@@ -1479,7 +1479,12 @@ void Soak_Digest(int frame, bool dump)
 	}
 	unsigned rng = 2166136261u;
 	unsigned char const * bytes = (unsigned char const *)&Scen->RandomNumber;
-	for (unsigned i = 0; i < sizeof(Scen->RandomNumber); ++i) rng = Soak_Mix(rng, bytes[i]);
+	// Random2Class is a bool (unknown_00), three bytes of padding, then Index1, Index2 and the table: the padding is
+	// never written, so it is left out (lane P44: it held whatever the scenario's storage had, and digests of builds
+	// whose generators were in step differed).
+	for (unsigned i = 0; i < sizeof(Scen->RandomNumber); ++i) {
+		if (i == 0 || i >= sizeof(int)) rng = Soak_Mix(rng, bytes[i]);
+	}
 	fprintf(stderr, "soak-digest %d %08x technos %d player %d credits %d rng %08x\n", frame, hash, Technos.Count(), player,
 		PlayerPtr != NULL ? PlayerPtr->Credits : -1, rng);
 }

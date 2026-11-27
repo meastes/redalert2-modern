@@ -254,3 +254,27 @@ yr/tests/campaign/, checked by `yr-native-campaign-won-*` (label yr-campaign-won
 | Mission | Result | Check |
 | --- | --- | --- |
 | YR Allied 1 (ALL01UMD) | won at tick 24,522 | yr-native-campaign-won-all01 (about 45 s) |
+## Yuri's Revenge under AddressSanitizer (lane P44, 2026-11-26)
+
+Lane P35's RA2 sweep on Yuri's Revenge: an RA2_NATIVE_ASAN=ON, RA2_NATIVE_YR=ON build (build/asan-yr), whose yr-native
+tests now run with ASAN_OPTIONS halt_on_error=0 and one log folder per test (yr/yr.cmake), so a run writes every report
+instead of stopping at its first; then the mission soak of all 14 campaign missions (4,000 frames each, fixed seed) in
+the ASan and the release build, compared digest for digest. With the rows below the 35 yr-native tests write no report
+under ASan (yr-native-planning and -controls each failed once under ASan, where their wall-clock input scripts run slower, and passed on a
+rerun), and the two builds' soaks are the same in every mission. **Scripted**: yr-native-asan-soak-allied, -soviet
+(label yr-asan, only in an RA2_NATIVE_ASAN build; with RA2_NATIVE_YR_REFERENCE_BINARY, a release yr-native, each mission
+is played by both and must match).
+
+| Found | Effect | Status |
+| --- | --- | --- |
+| A walking unit facing west of south took its steps by whatever the optimiser kept (lane P44; found as a release/ASan difference, not a report) | DirType::From_Radian converts the angle straight to short, out of short's range there (undefined): the release build kept the 32-bit value (34833), the ASan build the short (-30703), so the walk step's sin/cos differed: a Guardian GI one lepton off at frame 2 of Soviet 1, and every soak mission parted by frame 250. The iPhone and Windows builds may each take either value | **fixed**: a fixups.json row (hdr/face.h) converts as gamemd.exe does, by its product with -10430.06 (0x007E2818) through _ftol's int, keeping the low 16 bits (Red Alert 2's lane P9 row); release and ASan now agree in all 14 missions |
+| Special (SpecialClass, the game's special flags) and UnitCompositeDirtyRect each had a second name at the same address with too little storage | Special was one byte (DAT_00A8E960, unsigned char): its four-byte bit-field writes and reads (Parse_Command_Line, Select_Game, Read_Scenario_INI, WinMain) ran into the next global. UnitCompositeDirtyRect was four bytes (DAT_00B1CFC0, int), and the tree's names for its other members (DAT_00B1CFC4..CC) had storage of their own, so the voxel units' dirty rectangle written as a Rect was never the one read through those names | **fixed**: yr/tools/yr_data.py lets a structure name make the storage at an address it shares, and the names inside it become offsets (Special 4 bytes, the Rect 16) |
+| Globals declared int in one unit and a pointer in another had four bytes | the eight-byte pointer stores (txtlabel2.cpp's shapes DAT_00B0FB48/10/30, read by the control-shape glue; DAT_00A8EA0C, the LAN connection) wrote into the next global | **fixed**: yr_data.py gives such a name room for the native pointer |
+| MissionControl[MISSION_NONE] (lane P35's Red Alert 2 row, here in Yuri's Revenge) | TechnoClass::CanRetaliateToAttacker read IsRetaliate from the 32 bytes before the table for an object with no mission (ASan: yr-native-standins); IsNoThreat and the mission delays are read the same way | **fixed**: a fixups.json row (src/mission.cpp) returns gamemd.exe's record: the bytes before 0x00A8E3A8 are a zeroed coordinate's last word, padding, then the Aircraft vector, so IsRetaliate and IsScatter true, the rest false or 0 |
+| CCINIClass::Get_PipEnum read one and two entries past the pip table (lane P35's row; YR's table has no rows for the two empty pips) | an infantry type with OccupyPip PIP_PERSON_BLUE or _PURPLE took its default name from the next global | **fixed**: a fixups.json row names gamemd.exe's neighbours, "Ammo" and "Tiberium" (neither a pip: green, as on Windows) |
+| The colour and start-position combo rows' wide strings were three and two bytes (message 0x4C2 reads wide characters) | each row's read took a byte of the next string | **fixed**: fixups.json rows give the strings gamemd.exe's four bytes |
+| VendorID (the CPU vendor string) was one char | FUN_004E6190's copy of it read the next global | **fixed**: declared as gamemd.exe's 14-byte string ("Not available") |
+| ObjectTypeClass::Fetch_Normal_Image read Theaters[THEATER_NONE].Suffix while the rules load before a scenario | the bytes before the theater table | **fixed**: gamemd.exe's bytes there, the extension "@" |
+| RLE_Blit's flat z-shape _temp_buf (256 bytes) read past its end (lane P35's row; yr-native-skirmish-long, an animation) | lines wider than 256 pixels took depths from the next .bss bytes | **fixed**: 64 KB of zeros, as Red Alert 2 |
+| Decoding the host's scenario name in a LAN game's options read a byte past the text (heap-buffer-overflow, Bit_Unstuff_String) | the Windows heap's next byte in the original, unrecoverable | **fixed**: decoded from a copy followed by zeros |
+| The mission soak's digest hashed Random2Class's three padding bytes | builds whose generators were in step showed different digests | **fixed** (yr/glue/yr_harness.cpp): the padding is left out |

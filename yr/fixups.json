@@ -1942,6 +1942,73 @@
    "old": "\t\tDAT_00B45B5C[0]->V2();\n",
    "new": "\t\t((MovieHandle *)DAT_00B45B5C[0])->Waiting();   /* NATIVE (lane P18): the vtable's third slot in MSVC's layout (see the row's why) */\n",
    "why": "lane P18: Call_Back 0x0048D080 polls the first in-game movie (IngameVQ[0]) through its vtable's third slot (gamemd.exe: call [edx+8]), which in MSVC's layout is MovieHandle::Waiting (BinkMovieHandle 0x005C0590, BinkHandle::Check_Frame_Ready: only asks BinkWait whether the next frame is due). The tree calls it through a placeholder struct (CallBackObject, V0..V2), and natively a virtual destructor takes two vtable slots (Itanium ABI: Mac, iPhone, the MinGW Windows build) where MSVC's takes one, so V2 landed on AdvanceFrame: every Call_Back decoded and played the radar's movie from the moment a trigger queued it, under the radar's EVA_IncomingTransmission and before the radar opened, and the radar then found it finished (the user's Duo report, 2026-11-24, Yuri's Revenge Allied 1: the transmission voice and the video on top of each other, events running fast). The call is made through the real class, so it reaches Waiting in every ABI."
+  },
+  {
+   "file": "hdr/getcpu.h",
+   "old": "extern char VendorID;",
+   "new": "extern char VendorID[14];",
+   "why": "Lane P44 (AddressSanitizer): VendorID (0x0084E865) is a string, \"Not available\" and its NUL in gamemd.exe's data, which FUN_004E6190 and Get_CPU_Type copy with strncpy; declared as one char it got one byte of storage and the copy read the next global. Declared as the 14 bytes of the original's string, which yr_data.py loads."
+  },
+  {
+   "file": "src/getcpu.cpp",
+   "old": "extern char VendorID;",
+   "new": "extern char VendorID[14];",
+   "why": "Lane P44: the declaration above, in the unit."
+  },
+  {
+   "file": "src/getcpu.cpp",
+   "old": "&VendorID",
+   "new": "VendorID",
+   "why": "Lane P44: the address of the array's first byte, as the address of the one char was (the declaration above)."
+  },
+  {
+   "file": "src/gdlgsupp.cpp",
+   "old": "(LPARAM)\"ab\")",
+   "new": "(LPARAM)\"ab\\0\")",
+   "why": "Lane P44 (AddressSanitizer): FUN_004E45A0 adds the colour combo's rows with message 0x4C2, whose handler reads its string as wide characters. gamemd.exe pushes 0x00822B78, \"ab\" with the two zero bytes of the string pool's padding, read as one wide character (0x6261) and a wide NUL; the native literal is three bytes, so the read took one byte of the next string. The fourth zero is the original's."
+  },
+  {
+   "file": "src/objtype.cpp",
+   "old": "_makepath(fullname, NULL, NULL, GraphicName, Theaters[Scen->Theater].Suffix);",
+   "new": "_makepath(fullname, NULL, NULL, GraphicName, Scen->Theater == THEATER_NONE ? \"@\" : Theaters[Scen->Theater].Suffix);",
+   "why": "Lane P44 (AddressSanitizer): the rules' AnimTypeClass::Read_INI loads theater images before a scenario has set Scen->Theater, so Fetch_Normal_Image reads Theaters[THEATER_NONE].Suffix, 34 bytes before the table (0x007E1B56 in gamemd.exe: 0x40 0x00, the extension \"@\"), and natively the bytes after the previous global. The original's \"@\" (no file has that extension)."
+  },
+  {
+   "file": "src/gdlgsupp.cpp",
+   "old": "(DAT_008B3F30\\[\\d\\]\\.Name = )\"(\\d)\";",
+   "regex": true,
+   "new": "\\1\"\\2\\\\0\\\\0\";",
+   "why": "Lane P44 (AddressSanitizer): FUN_004E4F50 names the start-position combo's rows \"1\" to \"8\" and \"0\", which FUN_004E50C0 adds with message 0x4C2 (read as wide characters, as the colour rows above). In gamemd.exe each is four bytes (0x00822BA4..C4: the digit and three zeros, a wide string); the native two-byte literal let the read take the next string's bytes. The two added zeros (with the literal's own) give the original's four bytes."
+  },
+  {
+   "file": "src/mission.cpp",
+   "old": "MissionControlClass const & MissionClass::Current_Mission_Control(void) const\n{\n\treturn(MissionControl[CurrentMission]);\n}",
+   "new": "/* native (lane P44): MissionControl[MISSION_NONE] as gamemd.exe reads it, the 32 bytes before the table at 0x00A8E3A8\n** (yr/fixups.json) */\nstatic MissionControlClass const & YR_Mission_Control_None(void)\n{\n\tstatic MissionControlClass none;\n\tstatic bool made = false;\n\tif (!made) {\n\t\tmade = true;\n\t\tnone.Mission = MissionType(0);   /* the Z of the coordinate at 0x00A8E380, set to 0 */\n\t\tnone.IsNoThreat = false;   /* four bytes of zero .bss padding (0x00A8E38C, no reference in the code) */\n\t\tnone.IsZombie = false;\n\t\tnone.IsRecruitable = false;\n\t\tnone.IsParalyzed = false;\n\t\tnone.IsRetaliate = true;   /* the Aircraft vector's vtable 0x007E9E64: 0x64, 0x9E */\n\t\tnone.IsScatter = true;\n\t\tnone.Rate = 0.0;   /* subnormal doubles in gamemd.exe (VectorMax with IsValid, ActiveCount with GrowthStep): delays of 0 */\n\t\tnone.AARate = 0.0;\n\t}\n\treturn(none);\n}\n\nMissionControlClass const & MissionClass::Current_Mission_Control(void) const\n{\n\tif (CurrentMission == MISSION_NONE) return(YR_Mission_Control_None());   /* native (lane P44) */\n\treturn(MissionControl[CurrentMission]);\n}",
+   "why": "Lane P44 (lane P35's Red Alert 2 row, ra2/fixups.json, on Yuri's Revenge): MissionClass::Current_Mission_Control (0x005B3A00) returns MissionControl[CurrentMission], and an object whose CurrentMission is MISSION_NONE (-1; a paratrooper falling, an object just made) reads the 32-byte record before the table; TechnoClass::Evaluate_Object asks it IsNoThreat, mission handlers its delays. In gamemd.exe the bytes before MissionControl (0x00A8E3A8) are the last word of a coordinate at 0x00A8E380 (zeroed by 0x004E6480), four bytes of .bss padding with no reference, then the Aircraft vector (0x00A8E390, initialised at 0x004E6BE0: vtable 0x007E9E64, Vector, VectorMax, IsValid=1, IsAllocated, ActiveCount, GrowthStep=10). So IsNoThreat, IsZombie, IsRecruitable and IsParalyzed are false, IsRetaliate and IsScatter true (the vtable's low bytes), and Rate and AARate subnormal doubles (Normal_Delay() and AA_Delay() 0). The port read whatever its linker put before globals.cpp's MissionControl. The row returns that record for MISSION_NONE on every platform and build; every other mission reads the table as before."
+  },
+  {
+   "file": "src/blowfish.cpp",
+   "old": "\tstatic char _temp_buf[256];",
+   "new": "\tstatic char _temp_buf[65536];   /* native (lane P44): one zero byte for every pixel of the widest line */",
+   "why": "Lane P44 (AddressSanitizer, yr-native-skirmish-long: global-buffer-overflow read in RLEBlitTransXlatAlphaZRead, an animation drawn by AnimClass::Draw_It; lane P35's Red Alert 2 row, ra2/fixups.json): with no z-shape RLE_Blit (0x00437A10) hands the blitter _temp_buf (static, 256 zero bytes, 0x0089C568 in gamemd.exe) as the z-shape, and the z-reading RLE blitters read one byte of it for each pixel of the line, from its start on every line, so a line wider than 256 pixels reads past it: in gamemd.exe into the Bombs vector (0x0089C668) and its .bss neighbours, never meant as depths; natively whatever the linker put next. The intent is a flat z-shape: the buffer now holds a zero for every pixel a shape line can have (widths are 16-bit); lines up to 256 pixels read what they always read."
+  },
+  {
+   "file": "src/ccini.cpp",
+   "old": "\tGet_String(section, entry, _pips[defvalue].Name, buffer, sizeof(buffer));",
+   "new": "\tGet_String(section, entry, (int)defvalue == ARRAY_SIZE(_pips) ? \"Ammo\" : (int)defvalue == ARRAY_SIZE(_pips) + 1 ? \"Tiberium\" : _pips[defvalue].Name, buffer, sizeof(buffer));   /* native (lane P44): the original's _pips[11] and [12] are the next table's first two names */",
+   "why": "Lane P44 (AddressSanitizer, yr-native-campaign-soviet: global-buffer-overflow read from InfantryTypeClass::Read_INI at a mission start, lane P35's Red Alert 2 row on Yuri's Revenge): CCINIClass::Get_PipEnum (0x004748A0) takes its default name from _pips[defvalue], indexed by the PipEnum value, but the table (0x0081B958, eleven entries of eight bytes) has no rows for PIP_EMPTY and PIP_PERSON_EMPTY, so PIP_PERSON_BLUE (11) and PIP_PERSON_PURPLE (12), an OccupyPip the rules set, read one and two entries past its end. In gamemd.exe those are the next table's first rows, {\"Ammo\", 1} (0x0081BBE0) and {\"Tiberium\", 2} (0x00817278); neither names a pip, so a type whose section has no key turns green. The row names the original's neighbours; every other default is read from the table as before (the shifted names inside the table are the original's too)."
+  },
+  {
+   "file": "src/wstring.cpp",
+   "old": "\tBit_Unstuff_String(text.get(), wide, count);",
+   "new": "\tchar * padded = new char[len + 64];   /* native (lane P44): the bit reader's tail reads zeros past the text */\n\tmemset(padded, 0, len + 64);\n\tif (len) memcpy(padded, text.get(), len);\n\tBit_Unstuff_String(padded, wide, count);\n\tdelete[] padded;",
+   "why": "Lane P44 (AddressSanitizer, yr-native-lan-lobby: heap-buffer-overflow read in Bits_Read from Bit_Unstuff_String, decoding the host's scenario name in a LAN game's options, DecodePubGameopt): FUN_007B83E0 (0x007B83E0) unstuffs count wide characters from the text's bytes, and with the seventh-bit skips the bit reader can step a byte or two past the text and its NUL before the count is reached. gamemd.exe reads whatever the Windows heap holds there, which cannot be recovered; those bits reach only the end of the decoded name (Bit_Unstuff_String then writes its terminator, dest[count - 1] = 0). The row decodes from a copy followed by zeros (the text's own NUL continued), so the bits read past the text are the same on every platform."
+  },
+  {
+   "file": "hdr/face.h",
+   "old": "\t\t\tFacing = short((rad - M_PI / 2) / -DEG_TO_RAD(360.0 / 65534.0));",
+   "new": "\t\t\tFacing = short((int)((rad - M_PI / 2) * (1.0 / -DEG_TO_RAD(360.0 / 65534.0)))); /* native: gamemd.exe's product by -10430.06, through _ftol's int then the low 16 bits (lane P44; Red Alert 2's lane P9 row) */",
+   "why": "Lane P44 (found as a release/ASan difference, not a report: the YR mission soak's digests parted at frame 2 of Soviet 1, a Guardian GI one lepton off; lldb on both builds traced it to WalkLocomotionClass::Movement_AI's Move_Coord angle, -1.7689 in the release build and 4.5145 under ASan). DirType::From_Radian converts the radian angle straight to short, and the value reaches 49150 (west of south), outside short's range: undefined in C++, so clang's release build kept the 32-bit fcvtzs result (34833) where the ASan build stored and reloaded the short (-30703): the facing, and with it every walk step, sin/cos lookup and turn west of south, depended on the optimiser. gamemd.exe multiplies by -10430.060040584269 (0x007E2818, 79 references in the code; the quotient's divisor at 0x007E2810 is not what it uses) and converts through _ftol's int, keeping the low 16 bits on the store. Red Alert 2's ra2/fixups.json row (lane P9) does the same for its tree. (1.0 / -DEG_TO_RAD(...)) folds to the same constant at compile time."
   }
  ]
 }

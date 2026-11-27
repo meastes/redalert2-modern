@@ -52,9 +52,11 @@ POD_STRUCTS = {'GUID', 'IID', 'CLSID', '_GUID', 'RECT', 'POINT', 'tagRECT', 'tag
                'ZGradStruct',   # _zbuffer.h: five ints and a bool (lane Y13: Bit_Blit's z steps divided by zero)
                'MouseStruct',   # mouse.h: seven ints, the cursors' frames (lane Y13: Draw_Waypoints divided by zero)
                'DoStruct',      # _infantr.h: four bytes, the infantry actions' rates and flags (lane Y13)
-               'TurnTrackType', 'TrackType'}   # drive.h: chars and enums, Point2D and an enum (lane Y16: YR's track tables)
+               'TurnTrackType', 'TrackType',   # drive.h: chars and enums, Point2D and an enum (lane Y16: YR's track tables)
+               'Rect',          # TRect<int>: four ints (lane P44: UnitCompositeDirtyRect, whose members the tree names DAT_00B1CFC4..CC)
+               'SpecialClass'}  # special.h: 19 one-bit fields in one unsigned (lane P44: Special, also named DAT_00A8E960)
 POD_SIZES = {'TheaterDataType': 0x70, 'VoxelRenderOrientation': 36, 'ZGradStruct': 24, 'MouseStruct': 28, 'DoStruct': 4,
-             'TurnTrackType': 12, 'TrackType': 12}
+             'TurnTrackType': 12, 'TrackType': 12, 'Rect': 16, 'SpecialClass': 4}
 ADDRESS = re.compile(r'_([0-9A-Fa-f]{8})$')
 
 
@@ -201,9 +203,19 @@ def main():
         if address is None or address < RDATA[0] or address >= DATA[2]:
             continue
         wanted.append((address, r['symbol'], name))
-    wanted.sort()
     starts = sorted(set(known.values()) | {w[0] for w in wanted})
     index = text_index(a.gen)
+
+    def struct_first(w):
+        # One address, several names, one storage, made by the first name (below): a structure name there makes it
+        # (lane P44). Special (SpecialClass, 4 bytes) is also DAT_00A8E960 (unsigned char), UnitCompositeDirtyRect (a
+        # Rect) also DAT_00B1CFC0 (int): storage made for the scalar was too small for the structure, whose writes ran
+        # into the next global, and the names of its later members (DAT_00B1CFC4..CC) had storage of their own.
+        short = w[2].split('::')[-1]
+        lines = (index.get('::'.join(w[2].split('::')[-2:]), []) if '::' in w[2] else []) or index.get(short, [])
+        d = original_data.declaration(short, lines)
+        return (w[0], 0 if d and d[1] == 0 and not d[2] and d[0] in POD_SIZES else 1, w[1])
+    wanted.sort(key=struct_first)
     ENUM_VALUES.update(enum_values(a.gen))
     covers = []                  # (start, end, symbol) of storage with a declared extent
     # Enumerations are loaded as their 32-bit value (VC6 and the native build both give an
@@ -283,6 +295,13 @@ def main():
                     extent = POD_SIZES[base] * count
                     covers.append((address, address + extent, symbol))
                 shape, storage = 0, extent
+        if decl and decl[1] == 0 and not decl[2] and any(
+                (d or (None, 0))[1] >= 1 for d in (original_data.declaration(short, [l]) for l in lines)):
+            # One unit declares a scalar, another a pointer (ownrdraw.cpp's `extern int DAT_00B0FB48;`, a shape that
+            # txtlabel2.cpp loads; mainloop.cpp's `extern int DAT_00A8EA0C;`, connect.cpp's ConnectionClass *): the
+            # first declaration sizes the load, the storage has room for the native pointer the other unit writes
+            # (lane P44, AddressSanitizer: eight-byte writes into four bytes).
+            storage = max(storage, 8)
         if storage <= 0:
             storage = 8
         var = 'yr_g%d' % n

@@ -562,3 +562,35 @@ set_tests_properties(yr-native-lan-pair-wine PROPERTIES SKIP_RETURN_CODE 77 TIME
 
 # One game (lane Y5, -DRA2_NATIVE_COMBINED=ON): yr/combined.cmake.
 include("${CMAKE_CURRENT_SOURCE_DIR}/yr/combined.cmake")
+
+# Lane P44: in an AddressSanitizer build (RA2_NATIVE_ASAN=ON, CMakeLists.txt) every Yuri's Revenge test's game runs
+# with ASAN_OPTIONS halt_on_error=0 (with the build's -fsanitize-recover=address each report is written and the run goes
+# on, where the default stops the game at its first report) and the reports go to
+# build/<dir>/asan-yr-logs/<test>/asan.<pid>. The harnesses pass their environment through (dict(os.environ, ...)).
+#
+# ctest yr-native-asan-soak-allied / -soviet (lane P44; label yr-asan, only in an RA2_NATIVE_ASAN build, about four
+# minutes each): the mission soak of every campaign mission of the side under ASan (tests/mission_soak.py --asan), which
+# fails on any report; with RA2_NATIVE_YR_REFERENCE_BINARY (a release build's yr-native) each mission is also played by
+# it and the two builds' digests must be the same (a read that depends on the memory layout shows as a desync).
+if(RA2_NATIVE_ASAN AND NOT WIN32)
+  set(RA2_NATIVE_YR_REFERENCE_BINARY "" CACHE FILEPATH "A release build's yr-native for yr-native-asan-soak-* (optional)")
+  foreach(yr_asan_side allied soviet)
+    set(yr_asan_reference)
+    if(RA2_NATIVE_YR_REFERENCE_BINARY)
+      set(yr_asan_reference --reference "${RA2_NATIVE_YR_REFERENCE_BINARY}")
+    endif()
+    add_test(NAME yr-native-asan-soak-${yr_asan_side} COMMAND "${Python3_EXECUTABLE}" -B "${CMAKE_CURRENT_SOURCE_DIR}/tests/mission_soak.py"
+             --game yr --side ${yr_asan_side} --binary $<TARGET_FILE:yr-native> --data-dir "${RA2_NATIVE_YR_DATA_DIR}"
+             --work "${CMAKE_CURRENT_BINARY_DIR}/mission-soak/yr-asan-${yr_asan_side}" --asan ${yr_asan_reference} --jobs 3)
+    set_tests_properties(yr-native-asan-soak-${yr_asan_side} PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 1800 RUN_SERIAL TRUE
+                         LABELS yr-asan)
+  endforeach()
+  get_property(yr_asan_tests DIRECTORY PROPERTY TESTS)
+  foreach(yr_asan_test IN LISTS yr_asan_tests)
+    if(yr_asan_test MATCHES "^(yr-|one-)")
+      set_property(TEST ${yr_asan_test} APPEND PROPERTY ENVIRONMENT
+                   "ASAN_OPTIONS=halt_on_error=0:detect_leaks=0:detect_odr_violation=0:log_path=${CMAKE_CURRENT_BINARY_DIR}/asan-yr-logs/${yr_asan_test}/asan")
+      file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/asan-yr-logs/${yr_asan_test}")
+    endif()
+  endforeach()
+endif()
