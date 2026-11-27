@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 // ---------------------------------------------------------------------------------------------
-// NON-EXACT NATIVE DRAFTS (lane Y12; in gamemd.exe the unnamed bodies after Shadow_Matrix 0x005142A0, Move_To 0x00514D90 and Reduce_Path_Length 0x005163B0; link-closure traps a Soviet campaign mission reached; not compared with gamemd.exe yet): functions unmatched in the YR tree, the text TibSun's
+// NON-EXACT NATIVE DRAFTS (lane Y12; in gamemd.exe the unnamed bodies after Shadow_Matrix 0x005142A0, Move_To 0x00514D90 and Reduce_Path_Length 0x005163B0; link-closure traps a Soviet campaign mission reached; compared step by step with gamemd.exe 0x00514310, 0x00514F70 and 0x005164D0 by lane P62, YR's steps marked "YR (P62)"): functions unmatched in the YR tree, the text TibSun's
 // (TibSun archive code/hover.cpp; SPDX GPL-3.0-or-later, Copyright 2025 Electronic Arts Inc. and
 // OpenTS contributors, EA's GPL section 7 terms; THIRD_PARTY.md); native changes are marked
 // NATIVE. Behaviour code for the native build; never part of an exact build.
@@ -11,6 +11,7 @@ boolean STDMETHODCALLTYPE HoverLocomotionClass::Process(void)
 {
 	if (Is_Moving() && Is_Moving1()) {
 		Motion_AI();
+		if (!LinkedTo->IsActive) return(false);	// YR (P62): gamemd.exe 0x00514349
 
 		int height = LinkedTo->Height;
 		int speed = LinkedTo->Current_Speed() * Acceleration;
@@ -32,13 +33,25 @@ boolean STDMETHODCALLTYPE HoverLocomotionClass::Process(void)
 				HeadToCoord = COORD_NONE;
 			}
 
-			if (DestinationCoord != COORD_NONE) {
+			/*
+			**	YR (P62): gamemd.exe 0x00514584: a unit standing on its radio contact's docking cell takes
+			**	the next step even with no destination.
+			*/
+			Cell dock = CELL_NONE;
+			TechnoClass * contact = LinkedTo->Contact_With_Whom();
+			if (contact != NULL) {
+				dock = contact->Destination_Coord(LinkedTo).As_Cell();
+			}
+			bool docked = LinkedTo->Get_Cell() == dock;
+
+			if (DestinationCoord != COORD_NONE || docked) {
 				MoveType ok = While_Moving(true);
 				if (!LinkedTo->IsActive || LinkedTo->IsInLimbo || LinkedTo->IsFalling) return(MOVE_NO);
 				if (ok == MOVE_OK && HeadToCoord == COORD_NONE) {
 					/*
 					**	Perform "per cell" activities.
 					*/
+					LinkedTo->Set_Occupy_Bit(LinkedTo->PositionCoord);	// YR (P62): gamemd.exe 0x005146BD
 					LinkedTo->Per_Cell_Process(PCP_END);
 					if (LinkedTo == NULL || !LinkedTo->IsActive || LinkedTo->IsInLimbo || LinkedTo->IsFalling) return(false);
 				}
@@ -137,6 +150,8 @@ MoveType HoverLocomotionClass::While_Moving(bool first_pass)
 		LinkedTo->Clear_Occupy_Bit(HeadToCoord);
 		HeadToCoord = COORD_NONE;
 	}
+
+	if (LinkedTo->IsParalyzed()) return(MOVE_NO);	// YR (P62): gamemd.exe 0x00514FCD
 
 	/*
 	**	Perform quick legality checks.
@@ -422,7 +437,7 @@ void HoverLocomotionClass::Start_Of_Move(int num)
 					**	to do so if we aren't very close to the target and this
 					**	object can just say "good enough" and stop here.
 					*/
-					if (LinkedTo->Center_Coord().Distance_To(DestinationCoord) < Rule->CloseEnoughDistance && !LinkedTo->In_Radio_Contact() &&
+					if (LinkedTo->Center_Coord().Distance_To(DestinationCoord) < Rule->CloseEnoughDistance && !LinkedTo->HasAnyLink() /* YR (P62): gamemd.exe 0x00516ADE */ &&
 						abs(DestinationCoord.Z - LinkedTo->PositionCoord.Z) < 2 * LEVEL_LEPTON_H && Map[LinkedTo->Get_Coord()].Land_Type() != LAND_TUNNEL) {
 
 						Stop_Moving();
