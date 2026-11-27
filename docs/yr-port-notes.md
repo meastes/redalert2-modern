@@ -2047,3 +2047,42 @@ build (Reset_Subzone, Zone_Reset). No source change to game code; no test added 
 Harness orders added (glue/yr_harness.cpp): `teams [<text>]` (each team's script line and members: mission, limbo,
 cargo, NavCom), `units <ID>` (mission, queue, team, recruitability, threat avoidance), `locals <i>...`,
 `path <ID|&addr> <x> <y> [nothreat]` (the path AStarClass::Find_Path gives), `zonemap <x0> <y0> <x1> <y1> <ID>`.
+
+## Lane P62 (2026-11-27): the hover locomotor against gamemd.exe; YR Soviet 1's lock is not the hover glue
+
+Compared HoverLocomotionClass::Process (gamemd.exe 0x00514310), While_Moving (0x00514F70, ra2-decomp's sub_514F70) and
+Start_Of_Move (0x005164D0, sub_5164D0) in yr/glue/hover_native.inc step by step (yr_dis.py; vtable slots read from
+UnitClass's table at 0x007F5C70). P58's "Start() replaced" is not a difference: the stopped start in gamemd.exe's Process
+is the matched HoverLocomotionClass::Start (0x00517110) inlined (Height 1.0, Set_Speed(1.0), Start_Of_Move(0),
+While_Moving(true) when HeadToCoord is none or the unit's own cell). Stop and Stop_Driver are likewise inlined; the wake's
+AnimClass arguments are the defaults (0x600 is SHAPE_WIN_REL|SHAPE_CENTER); Distance and Distance_To on Coord are 3D as
+gamemd.exe's. The steps the draft lacked, now marked "YR (P62)":
+* Process: returns false when the unit is no longer active after Motion_AI (0x00514349); the arrival step (While_Moving
+  and the per-cell check) also runs when the unit stands on its radio contact's docking cell (Contact_With_Whom,
+  Destination_Coord(unit), 0x00514584) and not only when it has a destination; on arriving (MOVE_OK with no next cell)
+  Set_Occupy_Bit(PositionCoord) before Per_Cell_Process (0x005146BD): the draft left a stopped hovercraft's cell without
+  its occupy bit (it is cleared when the move starts).
+* While_Moving: a paralysed unit (FootClass::IsParalyzed) returns MOVE_NO after HeadToCoord is released (0x00514FCD).
+* Start_Of_Move: the "close enough" stop for a friendly blockage tests RadioClass::HasAnyLink (0x00516ADE), not the first
+  link only. Otherwise the same as the draft.
+
+Also fixed: the P58 merge (a407dc5) had dropped the `return(1); }` that ends the harness's `slaves` order, so
+yr_harness.cpp did not compile at main's head.
+
+**Soviet 1 rerun** (try1-locked.replay from a fresh start through the step server, then 2-3 frame steps with `units SAPC`
+and `locals 8`): unchanged. The lock is a 3-frame race, timed:
+| tick | Flak Trak SAPC (team Trans_4 Flak Trak) | Boris's SAPC |
+| --- | --- | --- |
+| 9,179 | reaches 85,74 (wp57) | 85,72, north route, moving |
+| 9,200-9,203 | guard, then local 8 set and MISSION_UNLOAD (16) | |
+| 9,206 / 9,221 / 9,236 / ~9,251 | the four HTK leave (one per 15 frames); its team disbands | 86,74 - 86,76 |
+| 9,278 | still MISSION_UNLOAD (door closing) | recruited by "TM_Sov_1 Trans (Flak)" (SP2.6b, local 8 + 75 frames) at 85,76 |
+| 9,281 | guard: recruitable, three frames too late | sails west with its 12 passengers; local 9 never set |
+
+UnitClass::Do_MISSION_UNLOAD (0x0073D630) is matched; each of its states waits the mission control's rate plus
+Scen->RandomNumber(0, 2) (0x0073DD4B, 0x0073DE5F, 0x0073E2B0), so the unload's length moves by a few frames with the
+random sequence, and the 3-frame margin can go either way in gamemd.exe too. **Next suspect:** whatever shifts the
+random sequence or the Flak SAPC's arrival by a few frames before 9,203 (another draft that draws Scen random numbers, or
+the team's route timing); without a gamemd.exe run of the same inputs the two cannot be told apart. Not ground further.
+Boris's SAPC still takes the north route (Find_Path_Hierarchical's 3.000 against 3.001, P58). No hovercraft behaviour
+visibly changed in this mission, so no ctest added. Checks: yr-native-campaign-won-all01, -all03, -campaign-crash-all05, -tank-bunker, -robot-tank, -slave-miner, -planning-click pass.

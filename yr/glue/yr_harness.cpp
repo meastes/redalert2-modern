@@ -1327,6 +1327,8 @@ int Run_Order(int frame, char const * text)
 			++n;
 		}
 		if (!n) fprintf(stderr, "harness-slaves %s gone\n", word[1]);
+		return(1);
+	}
 	if (!strcmp(word[0], "teams")) {
 		int listed = 0;
 		for (int i = 0; i < Teams.Count(); ++i) {
