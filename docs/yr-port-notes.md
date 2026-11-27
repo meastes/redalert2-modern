@@ -1913,3 +1913,32 @@ that took the sold bunker's memory, a GAWEAP); yr-native-campaign-crash-all05 (y
 recording to tick 95,575, replayed to tick 97,000 with `ra2_campaign.py --survive`; label yr-campaign-won). Not done here:
 the slave manager call just before it (0x0044AA3D: SlaveManagerClass::FUN_006B0DB0 when the building has a
 SlaveManager, under a test of its +0x218 object) is also missing from the draft.
+
+## Lane P56 (2026-11-27): the prism tanks that stopped answering orders (Allied 5)
+
+Found by lane P52 in Allied 5 (resume-from-90439.replay): from some point every prism tank (SREF) kept mission 5 (guard)
+whatever it was ordered; move and force-fire orders drew their lines and nothing happened (16 tanks in BadGuy1's cloning
+vat block at 160-165,130-136, 20 new ones by the home war factories at 55,80-86), while the harvesters worked. A5STUCK.SAV
+(tick 191,948), loaded, gave tanks that drove when ordered; the harness's new `orders <ID>` (glue/yr_harness.cpp: mission,
+MissionQueue, MegaMission, NavCom, the navigation and route queues, radio contact, IsDeactivated, MindControlledBy, Team,
+the locomotor's Is_Moving and Is_Powered, LocomotorSource) showed every tank clean: no queued mission, no destination, no
+radio contact (so not P53's factory-exit check, gamemd.exe 0x00742D46, which this path never reached), not deactivated, not
+mind controlled, the locomotor powered. The live state (the replay preloaded to 191,948, about 15 minutes) differed in one
+thing: `plans` showed planning mode on. The step server now logs planning mode on and off; it came on at tick 94,642,
+eight ticks after a move click at @=163,140 (a cell by the map's south edge, which `look` cannot centre). The step server
+resolved that point with Tactical::Coord_To_Pixel, which answers true up to 180 pixels past the view's bottom (and 360
+beside it): 316,568, the command bar's Planning Mode button (the bar starts at the view's height, 568). In planning mode
+gamemd.exe makes a move click a planned waypoint and carries it out only when planning mode ends (PLAN_COMMIT), so the
+game did as the original; a load ends planning mode (it is not saved), which is why the save looked free. Fixed in the step
+server: "@=X,Y" and "@ID+dx,dy" give a point only inside the tactical view (as "@^ID" already did), else no point (the
+host drops the event, and the server logs "step: @<spec> is at x,y, outside the tactical view"); news lines `planning on`
+and `planning off`. Replayed to 95,000 with the fix the click is refused, planning mode stays off and the tanks drive. In
+the 191,948 ticks of the replay that was the only point refused; the won replays (Allied 1, 3) still win.
+
+Red Alert 2's resolver (ra2/glue/harness_input_native.inc RB_Resolve, "@=X,Y" and "@ID") has the same gap; not changed here.
+
+Check: ctest `yr-native-planning-click` (yr/tests/yr_planning_click.py, Allied 1 by the step server): a click 10,10 cells
+below a tank the view is centred on (316,584, on the command bar) is refused and planning mode stays off; the bar's Planning
+Mode button starts planning mode, a move click leaves the tank where it is; the button again ends it and the tank drives to
+the planned cell; a plain move click moves it. Without the fix the first click starts planning mode and the last order is
+not carried out.
