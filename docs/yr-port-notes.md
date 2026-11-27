@@ -2109,3 +2109,78 @@ Soviet 3: Boris's range is not a port bug. Ordered at the beacon from 12.5 cells
 | Soviet 4 (SOV04UMD) | in progress | 0.4 (P60) + 0.5 | P60's try1.replay still preloads to its S4A state at 15,975 (13 HTNK, 10 E2, 5 dogs, credits 25). Credits stayed at 25 to 21,500 with three harvesters and the oil derrick at 42,114 taken (52,68's engineer did not arrive); 20 HTNK up the central road died by 26,189 at 95,78-84 to the garrisoned Moroccan houses there (CAMORR05/07, YuriCountry) and the plaza's gattlings. Next: Romanov is the Germans' (PlayerControl=yes: the owner's dossier), the economy first (more refineries are not possible on this ore; the derricks), V3 or Ivans for the garrisons, and the reactors at 103-107,32 for the airport's towers. Recording private/campaign_saves/yr/sov04/p63/s4-try1.replay |
 | Soviet 5 (SOV05UMD) | shelved for now | 1.8 | Medium: the Submarine Pen (YAYARD 138,151) alone wins. The map has 16 Boomers preplaced in [Units] off the south coast and in the pen's inlet besides the team ones at waypoints AN-AY and others (the dossier counted 12): about 44 at the start. The fleet ordered at the pen took the west route (the pathfinder's choice: cost 330 against about 220 by the east channel, which is navigable: the fleet sailed it to 236,172 in legs) and the dreadnoughts swung between the two routes on the way; both times the escorts and dreadnoughts sank to the Boomers (east channel by 8,900, west by 12,600). The MCV deploys only off the ore at the AL beach (origin 211,120: move it to 212,121; at 214,124 the footprint is on TIB01). A beach base (two refineries, coils, sentry guns) lost a refinery at 25,752 and went broke; one Kirov by 45,000. Next: the derricks early, a naval yard and Typhoons against the inlet's Boomers, or Kirovs with a second ore field. Recordings in private/campaign_saves/yr/sov05/p63 |
 | Allied 7 (ALL07SMD) | not started here | 1.0 (P60) | P60's try2-dossier.replay no longer matches after P57/P59/P62: preloaded to 20,502 its Soviet base (NACNST, war factory, refineries, tanks) is gone, only the Allied MCV's base stands. A fresh start is needed; the super weapons' sidebar cameos (tab 1 shows them as ...Special) and a map click may do without a new step-server command |
+## Lane P61 (2026-11-27): Per_Cell_Process and Exit_Object brought to gamemd's shape; Grinder, Cloning Vats, pads
+
+Lane P57's "screened but unfixed" list, taken in order of player impact. Each draft was disassembled from gamemd.exe
+(capstone, named from vendor/ra2-decomp's manifest and FUNCTION comments, vtable slots from gamemd.exe's RTTI) and its
+member offsets named from the i686 layouts (tools/original_layouts.py --game yr --members). Changes are marked
+"YR (P61)" in the drafts.
+
+**InfantryClass::Per_Cell_Process** (glue/infantry_native.inc, gamemd.exe 0x00519630, 5,083 B; every step compared):
+* **The Grinder (MISSION_EATEN, 0x0051973C-0x00519945): the draft had no step for it**, so a soldier sent into a Grinder
+  (YAGRND) walked up to it and stood there, no refund. Now as gamemd.exe (and UnitClass's matched text): the die voice
+  (the player's) and die sound, the grinder's house refunded Refund_Amount, the soldier's tag, EnterGrinderSound and the
+  grinding animation (BANIM_ACTIVE_ONE ended, BANIM_SPECIAL_ONE), the soldier deleted.
+* Entering a building (0x0051A2AD-0x0051A39D): the weapon state and any mind control dropped; a bio reactor
+  (InfantryAbsorb) plays EnterBioReactorSound and marks the soldier Absorbed; a soldier counted as its house's
+  infantry (CountedAsOwnedSpecial) stops counting (lane P57's deconstruction counts it again); the reactor gets no radio
+  HELLO but its house's RecalcPower when it has ExtraPower; AbortMotion (the draft cleared NavCom).
+* Bridge repair (0x00519B90): the player's EVA line only when RadarEventClass::Create(RADAREVENT_BRIDGE_REPAIRED) makes
+  the event; RepairBridgeSound at the hut; a low bridge overlay (74-101) near the hut counts as the train bridge tiles do.
+* Engineer (0x00519D47-0x00519F2C): a neutral house's garrisonable building (IsMultiplayPassive, CanBeOccupied) is
+  repaired as an ally's; a building at full strength sends the engineer away instead of using it up; a building being
+  sold or warped out is not captured.
+* Other soldiers sent into a building they target (0x0051A03E) are sent away, not deleted; the spy's EVA line is
+  BuildingClass::Infiltrate's own (the draft played EVA_BuildingInfiltrated a second time).
+* Sabotage (0x0051A4BF): only a bomber (IsBomber); no charge on an iron-curtained building; a charge already set sends
+  the soldier away; AbortMotion.
+* The idle test is HasAnyLink (any radio link, 0x0051A8AA); the sight moves by vt_entry_48C, UpdateSight and
+  Map.RevealArea3(coord, 0, LastSightRange + 3) as UnitClass::Per_Cell_Process (0x0051A8CB; the draft called Look).
+* **No ore damage** (the last commit): the draft (TibSun) hurt a soldier entering an ore cell (Power / 10, at least 1)
+  and could make a visceroid; gamemd.exe goes from the land test straight to FootClass::Per_Cell_Process (0x0051A9EB) and
+  nothing else in the tree hurts infantry on ore. Owner's ruling: the original's behaviour; the won replays recorded
+  under the draft's ore damage are re-recorded by the campaign lane (see below).
+* Compared and the same: the garrison step (lane N4), the strange-building capture, the transport boarding (lane P18),
+  the bridge sabotage, the tether, the land test. Kept and noted: the draft's vehicle-thief branch (gamemd.exe takes only
+  IsStrange buildings there; its hijack path is elsewhere, not compared).
+
+**BuildingClass::Exit_Object** (glue/building_native.inc, gamemd.exe 0x00443C60, 6,759 B):
+* **Cloning Vats (0x004449D9-0x00444A51): the draft never cloned.** A soldier leaving a barracks (ToBuild
+  INFANTRYTYPE, not a vat) is copied by each of the house's CloningVats: a new one of its type for the vat's house, put
+  out by the vat's own Exit_Object.
+* Aircraft (0x00443CB4-0x00444091): onto a pad while the building has a free radio link (HasFreeLink; an Airforce
+  Command's four pads take one each), tethered to the aircraft itself, DockNowHeadingTo set; an airport-bound aircraft
+  with no free pad is not made (0) and is not sent to the rally point. The draft took the first link only, so a second
+  Harrier made while the first held its pad came in from the map edge. gamemd.exe's ion storm test (FUN_0053A130)
+  always returns false, so its storm placement is never reached and is not carried.
+* Units and infantry are refused only when every link is taken (0x004440BC); a cloning vat is not a vehicle exit
+  (0x0044462A).
+* Naval yard (0x00444167-0x0044448F): the boat goes straight onto the water: from the yard's centre cell towards the
+  rally point to the first cell outside the yard, that cell when it is open water in the visible map, else
+  Map.Nearby_Location for the boat's SpeedType; faces east; sent to the rally point; no radio contact (the draft took
+  the war factory's tethered unload). Not covered by a test (the test skirmish map has no water).
+* Yuri's barracks' door (+2,1; IsYuriBarracks) as GDI's and Nod's (0x00444857, 0x00444C2C).
+* Compared and the same: the war factory (the other-factory hand-off), the AI building placement (lane P57).
+  Not changed: the infantry path after Unlimbo moves the soldier to the exit cell only when it has a NavCom (and is not
+  a jump jet or teleporter, 0x00444CA3) and gives a hospital's patients GUARD_AREA; the draft moves every one. Left for
+  a later lane (the barracks' exit works and the replays lean on it).
+
+**Checks:** ctest `yr-native-grinder` (yr/tests/yr_grinder.py; harness orders `enter <ID> <BLDG> eaten`, `absorb <BLDG>`):
+a GI sent into the player's Grinder is refunded (10,000 -> 10,100) and gone; one sent into a Bio Reactor is a passenger
+and the power rises (150 -> 250). ctest `yr-native-factory-exits` (yr/tests/yr_factory_exits.py): an Initiate made at a
+barracks with a Cloning Vats (NACLON) gives two; two Harriers made at an Airforce Command both start on its pads (before:
+the second at 9,65 with the Command at 53,98). Garrison, standins, standins-triggers, combat, tank-bunker, bridge-repair,
+slave-miner, deployers and crash-all05 pass.
+
+**Won replays** (the owner's ruling: the original's behaviour; re-recorded once by the campaign lane after lane P64's pin
+move): at the branch tip all four YR won replays fail: all01 is lost at tick 138,623 (won at 33,939), all03 does not end
+(won at 12,952), all05 does not end (won at 112,634), sov02 does not end (won at 8,320). Bisected with a temporary
+toggle per step on the first two: all01 depends only on the draft's ore damage (it wins with every other P61 step in);
+all03 depends on the ore damage and on the building-entry step (it wins when both are put back). all05 and sov02 were
+only run at the tip. crash-all05, tank-bunker, slave-miner, garrison, standins, standins-triggers, combat,
+bridge-repair and deployers pass.
+
+**Still unfixed from P57's list** (not reached in the time box): Do_MISSION_UNLOAD's delay timers (lanes P58/P62 work
+there), FootClass::Active_Click_With (Get_Height_AGL, FUN_0056D100), MapClass::Set_Map_Dimensions (FUN_00588C10,
+HouseClass::FUN_0050D250), Fly/Mech locomotors and Spark_Behavior_AI, the drafts with no address found, and Exit_Object's
+infantry move-after-Unlimbo noted above.

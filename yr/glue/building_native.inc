@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "slavemgr.h"	// YR (lane P57): SlaveManagerClass (Exit_Object's Deploy2, the deconstruction's FUN_006B0DB0 and SetOwner)
+#include "airctype.h"	// YR (P61): AircraftTypeClass (Exit_Object's IsAirportBound)
 
 // ---------------------------------------------------------------------------------------------
 // NON-EXACT NATIVE DRAFT (lane Y4), appended to the building unit: BuildingClass::Exit_Object
@@ -37,32 +38,39 @@ int BuildingClass::Exit_Object(TechnoClass * base, Cell preferred)	// NATIVE: YR
 			House->Update_Production_Mode(RTTI_AIRCRAFT);
 			House->BuildAircraft = AIRCRAFT_NONE;
 
-			if (!In_Radio_Contact() || IonStormClass::Is_Ion_Storm_Active()) {
+			/*
+			**	YR (P61, gamemd.exe 0x00443CB4-0x00444091): an aircraft goes onto a free pad (RadioClass::HasFreeLink:
+			**	any empty link, so an Airforce Command's four pads each take one), tethered to it (RADIO_TETHER to the
+			**	aircraft itself), its position set to the pad's docking point and the pad noted (DockNowHeadingTo); an
+			**	airport-bound aircraft (IsAirportBound) is not sent to the rally point and, with no free pad, is not
+			**	made at all (return 0, the factory waits). TibSun's text took only the first link (In_Radio_Contact),
+			**	so a second Harrier flew in from the map edge, and sent TETHER to the first link. gamemd.exe's ion storm
+			**	test (FUN_0053A130) is always false, so its storm placement is never reached.
+			*/
+			if (HasFreeLink((TechnoClass *)base)) {
 				AircraftClass * air = (AircraftClass *)base;
 
 				air->Set_Height(0);
 				ScenarioInit++;
 
-				if (IonStormClass::Is_Ion_Storm_Active()) {
-					Cell nearby = air->Nearby_Location(this);
-					if (air->Unlimbo(Coord(nearby, 0), air->Pose_Dir())) {
-						ScenarioInit--;
-						return(2);
-					}
-				} else {
-					if (air->Unlimbo(Docking_Coord(air), air->Pose_Dir())) {
-						Transmit_Message(RADIO_HELLO, air);
-						Transmit_Message(RADIO_TETHER);
+				if (air->Unlimbo(Docking_Coord(air), air->Pose_Dir())) {
+					Transmit_Message(RADIO_HELLO, air);
+					Transmit_Message(RADIO_TETHER, air);
+					air->Set_Coord(Docking_Coord(air));
+					air->DockNowHeadingTo = this;
 
-						if (ArchiveTarget != NULL) {
-							air->Assign_Destination(ArchiveTarget);
-							air->QueueMission(MISSION_MOVE, false);
-						}
-						ScenarioInit--;
-						return(2);
+					if (ArchiveTarget != NULL && !air->Class->IsAirportBound) {
+						air->Assign_Destination(ArchiveTarget);
+						air->QueueMission(MISSION_MOVE, false);
 					}
+					ScenarioInit--;
+					return(2);
 				}
 				ScenarioInit--;
+				return(0);
+
+			} else if (((AircraftClass *)base)->Class->IsAirportBound) {
+				return(0);
 
 			} else {
 
@@ -116,8 +124,9 @@ int BuildingClass::Exit_Object(TechnoClass * base, Cell preferred)	// NATIVE: YR
 				/*
 				 * If a unit is already exiting and this building doesn't allow more than
 				 * one exit at a time, then refuse the exit attempt for now.
+				 * YR (P61, gamemd.exe 0x004440BC): refused only when every radio link is taken (HasFreeLink).
 				 */
-				if (!Class->IsArmory && !Class->IsWeaponsFactory && In_Radio_Contact()) {
+				if (!Class->IsArmory && !Class->IsWeaponsFactory && !HasFreeLink()) {
 					return(1);
 				}
 			}
@@ -135,7 +144,46 @@ int BuildingClass::Exit_Object(TechnoClass * base, Cell preferred)	// NATIVE: YR
 
 			if (!Class->IsRefinery && !Class->IsWeeder) {
 
-				if (Class->IsWeaponsFactory) {
+				if (Class->IsWeaponsFactory && Class->Naval) {
+
+					/*
+					**	YR (P61, gamemd.exe 0x00444167-0x0044448F): a naval yard puts the boat straight onto the water:
+					**	from the yard's centre cell towards the rally point (ArchiveTarget) to the first cell outside the
+					**	yard; that cell when it is open water inside the visible map, else the nearest place the boat can
+					**	go (MapClass::Nearby_Location for its SpeedType); the boat faces east, is sent to the rally
+					**	point, and its position is set to the cell's coordinate. No radio contact; the yard plays its
+					**	unload mission while no link is held. TibSun's text took the war factory's path (the exit
+					**	coordinate, a tethered unload).
+					*/
+					if (!HasAnyLink()) {
+						QueueMission(MISSION_UNLOAD, false);
+					}
+					Cell exitcell = Center_Coord().As_Cell();
+					if (ArchiveTarget != NULL) {
+						Cell rally = ArchiveTarget->Center_Coord().As_Cell();
+						FacingType facing = ::Direction(Get_Cell(), rally).As_Dir8();
+						while (Map[exitcell].Cell_Building() == this) {
+							exitcell = Adjacent_Cell(exitcell, facing);
+						}
+					}
+					if (ArchiveTarget == NULL || Map[exitcell].Land_Type() != LAND_WATER || Map[exitcell].Cell_Techno() != NULL
+							|| !Map.In_Local_Radar(exitcell, true)) {
+						Cell center = Center_Coord().As_Cell();
+						exitcell = Map.Nearby_Location(center, base->Techno_Type_Class()->Speed);
+					}
+					if (!base->Unlimbo(Map[exitcell].Center_Coord(), DIR_E)) {
+						return(0);
+					}
+					if (ArchiveTarget != NULL) {
+						base->Assign_Destination(ArchiveTarget);
+						base->QueueMission(MISSION_MOVE, false);
+					}
+					base->Mark(MARK_UP);
+					base->Set_Coord(Map[exitcell].Cell_Coord());
+					base->Mark(MARK_DOWN);
+					return(2);
+
+				} else if (Class->IsWeaponsFactory) {
 
 					base->ArchiveTarget = ArchiveTarget;
 
@@ -166,7 +214,7 @@ int BuildingClass::Exit_Object(TechnoClass * base, Cell preferred)	// NATIVE: YR
 						return(2);
 					}
 
-				} else if (Class->ToBuild != RTTI_INFANTRYTYPE && !Class->IsHospital && !Class->IsArmory) {
+				} else if (Class->ToBuild != RTTI_INFANTRYTYPE && !Class->IsHospital && !Class->IsArmory && !Class->Cloning) {	// YR (P61): not a cloning vat (0x0044462A)
 
 					Cell exitcell = Find_Exit_Cell(base, preferred);
 					if (exitcell == CELL_NONE) {
@@ -203,6 +251,10 @@ int BuildingClass::Exit_Object(TechnoClass * base, Cell preferred)	// NATIVE: YR
 					if (Class->IsNODBarracks && exitcell.X == x + 2 && exitcell.Y == y + 2) {
 						exitcoord = exitcoord + Class->ExitCoordinate;
 					}
+					// YR (P61, gamemd.exe 0x00444857, 0x00444C2C): Yuri's barracks' door is at + 2,1
+					if (Class->IsYuriBarracks && exitcell.X == x + 2 && exitcell.Y == y + 1) {
+						exitcoord = exitcoord + Class->ExitCoordinate;
+					}
 
 					ScenarioInit++;
 					if (base->Unlimbo(exitcoord, dir)) {
@@ -235,6 +287,19 @@ int BuildingClass::Exit_Object(TechnoClass * base, Cell preferred)	// NATIVE: YR
 						return(0);
 					}
 
+					/*
+					**	YR (P61, gamemd.exe 0x004449D9-0x00444A51): a soldier leaving a barracks (not a cloning vat)
+					**	is copied by each of the house's Cloning Vats: a new one of its type for the vat's house, put
+					**	out of the vat by its own Exit_Object. TibSun's text had no cloning: the vats never cloned.
+					*/
+					if (Class->ToBuild == RTTI_INFANTRYTYPE && !Class->Cloning) {
+						TechnoTypeClass const * type = base->Techno_Type_Class();
+						for (int index = 0; index < House->CloningVats.Count(); index++) {
+							BuildingClass * vat = House->CloningVats[index];
+							vat->Exit_Object((TechnoClass *)type->Create_One_Of(vat->House), CELL_NONE);
+						}
+					}
+
 					Coord exitcellcoord(exitcell);
 					Dir256 dir = ::Direction(Center_Coord(), exitcellcoord).As_Dir256();
 
@@ -264,6 +329,10 @@ int BuildingClass::Exit_Object(TechnoClass * base, Cell preferred)	// NATIVE: YR
 						}
 					}
 					if (Class->IsNODBarracks && exitcell.X == x + 2 && exitcell.Y == y + 2) {
+						exitcoord = exitcoord + Class->ExitCoordinate;
+					}
+					// YR (P61, gamemd.exe 0x00444857, 0x00444C2C): Yuri's barracks' door is at + 2,1
+					if (Class->IsYuriBarracks && exitcell.X == x + 2 && exitcell.Y == y + 1) {
 						exitcoord = exitcoord + Class->ExitCoordinate;
 					}
 

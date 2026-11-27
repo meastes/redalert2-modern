@@ -42,10 +42,13 @@
 //                   near <OTHER> <dx> <dy>` places it from the player's first techno of type OTHER instead (lane N6);
 //   fire <ID> <TARGET>  the player's first unit of type ID attacks the nearest techno of type TARGET (the enemy's,
 //                   else any house's) (MISSION_ATTACK: a force-fire click's order); logs `harness-fire ...`;
-//   enter <ID> <TARGET> [capture|enter|hijack|own]  the player's first unit of type ID is sent into the nearest techno of
+//   enter <ID> <TARGET> [capture|enter|hijack|own|eaten]  the player's first unit of type ID is sent into the nearest techno of
 //                   type TARGET not the player's (MISSION_CAPTURE, a spy's click; or MISSION_ENTER; hijack: MISSION_CAPTURE
 //                   with the vehicle as the destination only, a vehicle thief's click; own: MISSION_ENTER into the player's
-//                   own, a soldier's click on a transport, lane P18);
+//                   own, a soldier's click on a transport, lane P18; eaten: MISSION_EATEN into the player's own grinder,
+//                   the building as the destination only, lane P61);
+//   absorb <BLDG>   logs `harness-absorb <BLDG> cargo <n> power <p> drain <d> infantry <n>` for the player's first building
+//                   of type BLDG: its passengers (a bio reactor's), the house's power, drain and infantry count (lane P61);
 //   owner <ID>      logs `harness-owner <ID> h<house> p|e &<addr>` for each techno of type ID (p: the player's);
 //   weapon <ID>     logs `harness-weapon <ID> w<weapon> t<turret> cargo <n> &<addr>` for each techno of type ID: the weapon
 //                   and turret it uses (TechnoClass CurrentWeaponNumber, CurrentTurretNumber; a gunner transport's follow
@@ -585,7 +588,10 @@ int Run_Order(int frame, char const * text)
 	if ((!strcmp(word[0], "fire") || !strcmp(word[0], "enter")) && words >= 3) {
 		TechnoClass * unit = First_Of(word[1], PlayerPtr);
 		bool enter = word[0][0] == 'e';
-		bool own = enter && words >= 4 && !strcmp(word[3], "own");	// lane P18: into the player's own transport
+		// `eaten` (lane P61): into the player's own grinder, as the grinder click assigns it (FootClass::Active_Click_With's
+		// ACTION_EATEN: MISSION_EATEN, the building as the destination, no target)
+		bool eaten = enter && words >= 4 && !strcmp(word[3], "eaten");
+		bool own = enter && words >= 4 && (!strcmp(word[3], "own") || eaten);	// lane P18: into the player's own transport
 		// the nearest techno of type TARGET: the enemy's, else any not the player's, else (fire) the player's own
 		TechnoClass * target = NULL;
 		HouseClass * enemy = Enemy_House();
@@ -604,12 +610,13 @@ int Run_Order(int frame, char const * text)
 			fprintf(stderr, "harness-%s: no %s or no target %s\n", word[0], word[1], word[2]);
 			return(-1);
 		}
-		MissionType mission = !enter ? MISSION_ATTACK : (own || (words >= 4 && !strcmp(word[3], "enter"))) ? MISSION_ENTER : MISSION_CAPTURE;
+		MissionType mission = !enter ? MISSION_ATTACK : eaten ? MISSION_EATEN
+			: (own || (words >= 4 && !strcmp(word[3], "enter"))) ? MISSION_ENTER : MISSION_CAPTURE;
 		TargetClass who(unit);
 		// hijack: the capture click's assignment (FootClass::Active_Click_With: MISSION_CAPTURE, no target, the
 		// vehicle as the destination; a target as well would keep it a firing target)
 		bool hijack = enter && words >= 4 && !strcmp(word[3], "hijack");
-		TargetClass tarcom = hijack ? TargetClass() : TargetClass(target);
+		TargetClass tarcom = (hijack || eaten) ? TargetClass() : TargetClass(target);
 		TargetClass navcom = enter ? TargetClass(target) : TargetClass();
 		Queue_Mission(who, mission, tarcom, navcom);
 		fprintf(stderr, "harness-%s %s &%p -> %s h%d &%p\n", word[0], word[1], (void *)unit, word[2],
@@ -1475,6 +1482,17 @@ int Run_Order(int frame, char const * text)
 		ResultType result = found->Take_Damage(damage, 0, Rule->C4Warhead, NULL, true, true, NULL);
 		fprintf(stderr, "harness-kill %s result %d\n", word[1], (int)result);
 		return(1);
+	}
+	if (!strcmp(word[0], "absorb") && words >= 2) {
+		for (int i = 0; i < Buildings.Count(); ++i) {
+			BuildingClass * building = Buildings[i];
+			if (building == NULL || building->IsInLimbo || building->House != PlayerPtr || strcmp(Type_Name(building), word[1])) continue;
+			fprintf(stderr, "harness-absorb %s cargo %d power %d drain %d infantry %d\n", word[1], building->Cargo.How_Many(),
+				PlayerPtr->Power, PlayerPtr->Drain, PlayerPtr->CurInfantry);
+			return(1);
+		}
+		fprintf(stderr, "harness-absorb %s none\n", word[1]);
+		return(-1);
 	}
 	if (!strcmp(word[0], "occupants") && words >= 2) {
 		// logs `harness-occupants <BLDG> h<house> <n>[p]` for each building of type BLDG (p: the player's) (lane N4)
