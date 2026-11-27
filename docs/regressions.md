@@ -240,3 +240,17 @@ Other platforms (lane P21): the replays are Mac rows only for now. One try of al
 hung for seven minutes and, once ended, the game wrote nothing past MoltenVK's start lines, so whether the replay is
 deterministic there is not known yet. The iOS Simulator was not tried (the replay needs no socket, so both rows are a
 matter of running `ra2/tests/ra2_campaign.py` with ra2_wine.sh or ra2_ios_sim.sh as the binary once those start).
+
+## Lane P50: Yuri's Revenge missions played to a real win through its step server (2026-11-27)
+
+yr/glue/yr_stepserver.cpp (Red Alert 2's step server on the YR tree; docs/yr-port-notes.md lane P50), replays in
+yr/tests/campaign/, checked by `yr-native-campaign-won-*` (label yr-campaign-won).
+
+| Fault | What it did | Status |
+| --- | --- | --- |
+| A replay parted from itself in some runs (lane P50, Allied 1) | YR's per-frame mouse call (wwmous.cpp FUN_007B84D0) returns at once while the mouse thread runs, so the game's pointer was the mouse thread's, read at wall-clock moments: a click's press read the pointer parked in the view's middle and the click became a band box (two tanks selected instead of one in 2 of 6 runs; digests parted from frame 2,538) | **fixed**: the step server calls WWMouseClass::Process_Mouse once a frame (as Red Alert 2's does); six parallel runs agree at every 50th frame |
+| SuperClass::Is_Charging is a link-closure trap in the YR tree (lane P50) | the step server's super line stopped the game at its first `state` | **worked around**: the line reads IsReady and IsSuspended |
+
+| Mission | Result | Check |
+| --- | --- | --- |
+| YR Allied 1 (ALL01UMD) | won at tick 24,522 | yr-native-campaign-won-all01 (about 45 s) |

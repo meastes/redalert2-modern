@@ -7,6 +7,8 @@
           game paused at the mission's first frame and served on <work>/step.sock; every command that changes the game
           recorded in <work>/step.replay ("<tick> <command>": inputs and ticks only)
             ra2_step.py start --binary build/mac/ra2-native --data-dir <game> --work <dir> --side allied --mission 1
+          --game yr (lane P50): Yuri's Revenge's (yr-native, its step server yr/glue/yr_stepserver.cpp; the 800x600 menus,
+          RA2MD.INI, seven missions a side)
   send    commands to the running game, each reply printed (one connection; commands in order)
             ra2_step.py send --work <dir> "advance 300" "state"
   stop    quit the game (the step server's quit), else end the process started
@@ -37,12 +39,19 @@ def uses_frame_clock(path):
         return any(l.startswith('# frame clock') for l in f)
 
 
+def game_of(a):
+    """'ra2' or 'yr' (lane P50: --game)."""
+    return getattr(a, 'game', None) or 'ra2'
+
+
 def campaign_env(a, work, write):
     env = dict(os.environ, RA2_NATIVE_MOVIE_SKIP='1', RA2_NATIVE_IGNORE_FOCUS='1', RA2_NATIVE_MSG_LOG='0',
                RA2_NATIVE_CRASH_TRACE='1', RA2_NATIVE_UNCAPPED='1', RA2_NATIVE_SOAK_SEED=str(mission_soak.SEED),
                RA2_NATIVE_SOAK_SPEED='0', RA2_NATIVE_SCRIPT_ONLY='1', RA2_NATIVE_DIALOG_LOG='1',
                RA2_NATIVE_STEP_MISSION=str(a.mission), RA2_NATIVE_ENHANCEMENTS='zoomgestures=off',
-               RA2_GAME_EXE=a.game_exe or os.path.join(a.data_dir, 'game.exe'))
+               )
+    if game_of(a) == 'ra2':
+        env['RA2_GAME_EXE'] = a.game_exe or os.path.join(a.data_dir, 'game.exe')
     for k in ('RA2_NATIVE_ORDERS', 'RA2_NATIVE_TRAP_CONTINUE', 'RA2_NATIVE_FORCE_END', 'RA2_NATIVE_SOAK_DUMP', 'RA2_NATIVE_SOAK',
               'RA2_NATIVE_SOAK_END', 'RA2_NATIVE_STEP', 'RA2_NATIVE_STEP_REPLAY', 'RA2_NATIVE_STEP_RECORD', 'RA2_NATIVE_SAVE_AT',
               'RA2_NATIVE_FRAME_CLOCK'):
@@ -58,11 +67,12 @@ def prepare(a, work):
     write = os.path.join(work, 'w')
     shutil.rmtree(write, ignore_errors=True)
     os.makedirs(write)
-    with open(os.path.join(write, 'RA2.INI'), 'w') as f:
-        f.write(mission_soak.settings(argparse.Namespace(game='ra2', data_dir=a.data_dir)))
+    game = game_of(a)
+    with open(os.path.join(write, mission_soak.GAMES[game]['settings']), 'w') as f:
+        f.write(mission_soak.settings(argparse.Namespace(game=game, data_dir=a.data_dir)))
     script = os.path.join(work, 'menus.script')
     with open(script, 'w') as f:
-        f.write(mission_soak.script('ra2', a.side, a.mission))
+        f.write(mission_soak.script(game, a.side, a.mission))
     return write, script
 
 
@@ -168,6 +178,7 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest='what', required=True)
     s = sub.add_parser('start')
+    s.add_argument('--game', default='ra2', choices=['ra2', 'yr'], help="the game: ra2 (ra2-native) or yr (yr-native)")
     s.add_argument('--binary', required=True)
     s.add_argument('--data-dir', required=True)
     s.add_argument('--game-exe', default='')

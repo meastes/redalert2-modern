@@ -13,6 +13,11 @@ recording (step.replay) stays inputs and ticks only and replays the same.
     g.select([o.id for o in me if o.type == 'E1'], team=1)
     g.move_team(1, (100, 60))
 
+Yuri's Revenge (lane P50, ra2_step.py start --game yr): the same helpers; the game's 800x600 screen is read from the
+step server's view line (Game.yr), so the view's middle, the band box's bounds and the sidebar's sell and repair
+buttons ("@sell", "@repair", yr/glue/yr_stepserver.cpp) follow it. YR's types: DEFENCES and DEFENSE_TYPES include
+Yuri's (YAGGUN, NATBNK, YAPSYT, NABNKR ...).
+
 Clicks are written as raw pointer events (move, button down two frames later, up four after that), so a click
 costs seven ticks and never overlaps the next one; a pointer is parked in the view's middle only on request.
 """
@@ -77,6 +82,15 @@ class Game:
             m = re.match(r'^player (.+?) credits', line)
             if m:
                 self.player = m.group(1)
+            m = re.match(r'^view .* tactical (\d+)x(\d+)', line)
+            if m:
+                self.tactical = (int(m.group(1)), int(m.group(2)))
+                self.yr = self.tactical[0] < 700   # Yuri's Revenge's 800x600 screen (lane P50)
+        if self.yr:
+            w, h = self.tactical
+            self.mid = '%d %d' % (w * 2 // 3, h * 2 // 3)     # a free spot in the view (deselect's right click)
+            self.park_at = '%d %d' % (w // 2 + 40, h // 2 + 30)
+            self.sell_spec, self.repair_spec = '@sell', '@repair'
 
     # -- transport -------------------------------------------------------------------------------------------------
     def send(self, *commands):
@@ -110,6 +124,12 @@ class Game:
 
     player = None
     look_wait = 3
+    yr = False
+    tactical = (856, 768)
+    mid = '428 368'          # RA2's 1024x768 screen
+    park_at = '470 400'
+    sell_spec = '958 180'
+    repair_spec = '914 180'
 
     # -- time ------------------------------------------------------------------------------------------------------
     def adv(self, n):
@@ -201,7 +221,7 @@ class Game:
         self._view = None
 
     def park(self):
-        self.cmd('input move 470 400')
+        self.cmd('input move %s' % self.park_at)
         self.adv(1)
 
     def click_cell(self, cell, right=False):
@@ -274,7 +294,7 @@ class Game:
         self.adv(2)
 
     def deselect(self):
-        self.raw_click('428 368', right=True, wait=12)
+        self.raw_click(self.mid, right=True, wait=12)
 
     def selected(self):
         return [o for o in self.objects('all') if o.sel]
@@ -591,8 +611,8 @@ def band_select(g, objs, team=None):
         return 0
     x0 = max(2, min(p[0] for p in pts) - 30)
     y0 = max(2, min(p[1] for p in pts) - 40)
-    x1 = min(850, max(p[0] for p in pts) + 30)
-    y1 = min(730, max(p[1] for p in pts) + 20)
+    x1 = min(850 if not g.yr else g.tactical[0] - 2, max(p[0] for p in pts) + 30)
+    y1 = min(730 if not g.yr else g.tactical[1] - 2, max(p[1] for p in pts) + 20)
     g.send('input move %d %d' % (x0, y0), 'input +2 ldown %d %d' % (x0, y0), 'input +5 move %d %d' % ((x0 + x1) // 2, (y0 + y1) // 2),
            'input +8 move %d %d' % (x1, y1), 'input +11 lup %d %d' % (x1, y1))
     g.adv(15)
@@ -607,11 +627,11 @@ SELL_BUTTON = '958 180'   # the sidebar's sell ($) button at the 1024x768 screen
 def sell(g, o, wait=200):
     """A building sold through the sidebar's sell button; returns the credits after."""
     g.look(o.x, o.y)
-    g.raw_click(SELL_BUTTON)
+    g.raw_click(g.sell_spec)
     g.adv(5)
     g.raw_click('@^%d' % o.id)
     g.adv(wait)
-    g.raw_click('428 368', right=True)
+    g.raw_click(g.mid, right=True)
     return g.state()['credits']
 
 
@@ -668,7 +688,8 @@ def war(g, houses, home, home_r, def_team, off_team, near=None, skip=(), ticks=2
     return False
 
 
-DEFENCES = ('NALASR', 'NATSLA', 'NAFLAK', 'GAPILL', 'ATESLA', 'GAPRIS', 'NABNKR', 'GTGCAN', 'NAPSIS')
+DEFENCES = ('NALASR', 'NATSLA', 'NAFLAK', 'GAPILL', 'ATESLA', 'GAPRIS', 'NABNKR', 'GTGCAN', 'NAPSIS',
+            'YAGGUN', 'YAPSYT', 'NATBNK', 'GAFWLL', 'YACOMD')   # Yuri's Revenge (lane P50): gattling and psychic towers
 
 
 def fight_along(g, team, waypoints, radius=8, step=60, ticks_per_leg=3000, ground_defences=('NALASR', 'NATSLA',
@@ -973,14 +994,14 @@ def place_legal(g, name, near, r=8, avoid=None, tries=3, pick=None):
         cells=[(o0[0]+(w-1)//2, o0[1]+(h-1)//2)]
         if (w//2,h//2)!=((w-1)//2,(h-1)//2): cells.append((o0[0]+w//2, o0[1]+h//2))
         for c in cells:
-            g.raw_click('428 368', right=True)
+            g.raw_click(g.mid, right=True)
             g.raw_click('@tab=%d'%t); g.raw_click('@cameo=%s'%name)
             g.look(*c); g.raw_click('@=%d,%d'%c); g.adv(2)
             now=[o for o in g.mine() if o.type==name and o.id not in before]
             if now: break
         now=[o for o in g.mine() if o.type==name and o.id not in before]
         if now: print('placed',name,o0,now[0],g.tick,flush=True); return now[0]
-    g.raw_click('428 368', right=True)
+    g.raw_click(g.mid, right=True)
     print('place_legal: failed',name,sp[:tries],g.tick,flush=True)
     return None
 def wait_built(g, kind='building', timeout=4000, step=30, during=None):
@@ -1002,7 +1023,8 @@ def build_legal(g, name, near, r=8, timeout=4000, during=None, **kw):
 
 # -- lane P26/P27 helpers (folded in from the lanes' build folders) -----------------------------------------------------
 DEFENSE_TYPES = {'TESLA', 'NAFLAK', 'NALASR', 'NAWALL', 'NAIRON', 'NAMISL', 'NAPSIS',   # BuildCat=Combat: the defense queue
-                 'ATESLA', 'GAPILL', 'NASAM', 'GAWALL', 'GACSPH', 'GAWEAT'}
+                 'ATESLA', 'GAPILL', 'NASAM', 'GAWALL', 'GACSPH', 'GAWEAT',
+                 'GAFWLL', 'NATBNK', 'YAGGUN', 'YAPSYT', 'GAWALL', 'YAWALL', 'NAGATE', 'GAGATE', 'YAGATE'}   # Yuri's Revenge (lane P50)
 
 
 class Mgr:
@@ -1142,11 +1164,11 @@ def repair_all(g, frac=0.75, types=None, done=None):
         if o.kind == 'bld' and o.s < o.smax * frac and o.type != 'CAOILD' and (types is None or o.type in types) \
                 and o.id not in done:
             g.look(o.x, o.y)
-            g.raw_click(REPAIR_BUTTON)
+            g.raw_click(g.repair_spec)
             g.adv(2)
             g.raw_click('@^%d' % o.id)
             g.adv(2)
-            g.raw_click('428 368', right=True)
+            g.raw_click(g.mid, right=True)
             done.add(o.id)
     for o in mine:
         if o.kind == 'bld' and o.s >= o.smax:

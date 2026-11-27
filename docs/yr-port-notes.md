@@ -1810,3 +1810,33 @@ Reproduced on the Mac from New Campaign (Allied), with logs; all three are in th
    copy of each native/link module and its fixups in the YR units (lane Y8 section: why). Map zoom and
    the gestures from 1x up (lane N18), Game interface size and HD vehicles (lane N19) and Map zoom below 1x
    (lane N20) are done: every Enhancements row Red Alert 2 has is Yuri's Revenge's too.
+
+## Lane P50 (2026-11-27): the step server for Yuri's Revenge; campaign missions played to wins
+
+Red Alert 2's step server (ra2/glue/stepserver_native.inc, lanes P21-P47) carried over to yr-native as
+`yr/glue/yr_stepserver.cpp` against the YR tree's classes (vendor/ra2-decomp's names: TacticalMap, SidebarClass::Column,
+SidebarClass::TabButtons, Repair, Power, SuperClass::IsPresent, IsReady, FactoryClass::Completion, ...), called once a
+loop frame from yr_native_main_loop (glue/yr_app_hooks.cpp) after the harness's orders. The same environment and command
+set: RA2_NATIVE_STEP, _MISSION, _RECORD, _PRELOAD, _REPLAY, _SLOW, the frame clock (RA2_NATIVE_FRAME_CLOCK, "# frame
+clock" in a recording), state (houses' power, drain and credits; every house's super weapons), look, input (Escape
+refused), order (glue/yr_harness.cpp's RA2_NATIVE_ORDERS orders, yr_harness_run_order), save, cell, terrain, buildable,
+mapfile, screenshot, release, quit. The input script's "@^ID", "@=X,Y", "@ID[:n]", "@!ID", "@tab=N", "@cameo=ID" points
+are answered by yr_step_resolve_point (asked by yr_app_hooks.cpp's resolver after its own), plus "@repair" and "@sell".
+The game's end is logged as Red Alert 2 logs it ("game-over: player wins at frame <n>"). SuperClass::Is_Charging is not
+ported in the YR tree (a trap when called): the state line reads `!IsReady && !IsSuspended` instead.
+
+Clients: `ra2/tools/ra2_step.py start --game yr` (the 800x600 menus, RA2MD.INI), ra2/tools/ra2_commander.py (reads the
+800x600 screen from the view line: Game.yr, the view's middle, the band box's bounds, "@sell"/"@repair"; Yuri's defence
+types), `ra2/tests/ra2_campaign.py --game yr` (gamemd.exe; `--soak <n>` puts the mission soak's digests in the log, to
+find where two runs part). Replays in yr/tests/campaign/, ctests `yr-native-campaign-won-<mission>` (yr/yr.cmake yr_won
+list, label yr-campaign-won).
+
+Determinism (found here): YR's FUN_007B84D0 (the per-frame mouse call Red Alert 2's step server makes) does nothing while
+the mouse thread runs, so the pointer the game read at a click's press was wherever the mouse thread had last left it:
+a press read the parked pointer and the click became a band box from there (two tanks selected in two of six runs of one
+replay). The step server now calls WWMouseClass::Process_Mouse itself once a frame; six parallel runs of the replay then
+gave the same digest at every 50th frame.
+
+| Mission | Result | Lane-hours | Notes |
+| --- | --- | --- | --- |
+| Allied 1 (ALL01UMD, Time Shift) | won at tick 24,522 | 1.5 (with the step server's port) | win: Yuri's new Psychic Dominator (YAPPPT, 47,70 on Alcatraz) gone (PsychicDead / Check_New_Dom). The tanks clear the initiates at the power plants (131,130); the IFV's engineer takes CAPOWR01, four built engineers CAPOWR02-04 after the tanks (six more MTNK bought) cleared the gattling tower at 125,148; full power (800/736) is Power_Online: the time shift. The Apocalypses and the Kirov die to the Grand Cannons and the Guardian GIs (Apocs_Gone), Tanya swims to Alcatraz (74,96 - 68,86 - 63,76 - 62,68) and dies to the hydrofoils on landing; her death sends six carriers (Tanya_Death), which, ordered at the Dominator, sink it. Saves in private/campaign_saves/yr/all01 |

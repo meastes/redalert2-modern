@@ -1357,6 +1357,14 @@ void Force_End(int frame)
 // The mission soak (lane N25): see the file comment; the same lines as RA2's link/harness_soak.cpp.
 } // namespace
 
+// One order (the step server's `order`, glue/yr_stepserver.cpp; lane P50): as an RA2_NATIVE_ORDERS entry at this frame.
+extern "C" int yr_harness_run_order(int frame, char const * text)
+{
+	int result = Run_Order(frame, text);
+	fprintf(stderr, "harness-order %d %s: %d\n", frame, text, result);
+	return(result);
+}
+
 // Test scaffolding (lane P19): an input script's point "@unit=<ID>" is the player's first techno of type ID on the
 // tactical view (the `where` order's pixel, in the screen's coordinates as "@node=N"): a click on the unit itself.
 extern "C" int yr_harness_unit_point(char const * id, int * x, int * y)

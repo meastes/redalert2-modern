@@ -19,6 +19,10 @@ installed game.
 
   ra2_campaign.py --replay ra2/tests/campaign/all01.replay --side allied --mission 1 --binary <ra2-native>
                   --data-dir <game folder> [--game-exe <game.exe>] --work <dir> [--seconds 900] [--keep] [--asan]
+
+--game yr (lane P50; ctests yr-native-campaign-won-<mission>, yr/yr.cmake): Yuri's Revenge's (yr-native, its step server
+yr/glue/yr_stepserver.cpp; replays in yr/tests/campaign/), skipped without gamemd.exe in --data-dir. --soak <n> adds the
+mission soak's digests every n game frames to the log (RA2_NATIVE_SOAK: where two runs of a replay part).
 """
 import argparse
 import glob
@@ -52,9 +56,12 @@ def main():
     ap.add_argument('--seconds', type=int, default=900)
     ap.add_argument('--keep', action='store_true', help='keep the write folder (saves) after a pass')
     ap.add_argument('--asan', action='store_true', help='an AddressSanitizer build: any report fails (lane P35)')
+    ap.add_argument('--game', default='ra2', choices=['ra2', 'yr'], help='the game (lane P50): ra2-native or yr-native')
+    ap.add_argument('--soak', type=int, default=0, help='the mission soak\'s digests every n game frames (diagnostics)')
     a = ap.parse_args()
-    if not a.data_dir or not os.path.isfile(os.path.join(a.data_dir, 'game.exe')):
-        print('campaign-won: skipped: no installed game (game.exe) in --data-dir')
+    exe = 'gamemd.exe' if a.game == 'yr' else 'game.exe'
+    if not a.data_dir or not os.path.isfile(os.path.join(a.data_dir, exe)):
+        print('campaign-won: skipped: no installed game (%s) in --data-dir' % exe)
         return SKIP
     with open(a.replay) as f:
         text = f.read()
@@ -73,6 +80,10 @@ def main():
     env['RA2_NATIVE_STEP_REPLAY'] = os.path.abspath(a.replay)
     if re.search(r'^# frame clock', text, re.M):
         env['RA2_NATIVE_FRAME_CLOCK'] = '1'   # recorded with the frame clock (lane P33)
+    if a.soak:
+        env['RA2_NATIVE_SOAK'] = str(a.soak)
+        if os.environ.get('RA2_NATIVE_SOAK_DUMP'):
+            env['RA2_NATIVE_SOAK_DUMP'] = os.environ['RA2_NATIVE_SOAK_DUMP']   # every techno at those frames
     if a.asan:
         # halt_on_error=0 with the build's -fsanitize-recover=address: every report is written, the run goes on.
         env['ASAN_OPTIONS'] = 'halt_on_error=0:detect_leaks=0:detect_odr_violation=0:log_path=' + os.path.join(work, 'asan')

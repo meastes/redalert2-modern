@@ -91,12 +91,14 @@ extern int DAT_00B0CC1C;   // tab.cpp: the PlanningMode command
 extern "C" int yr_harness_node_point(int n, int *x, int *y);   // glue/yr_harness.cpp: "@node=N" (lane N23)
 extern "C" int yr_harness_thumb_point(int *x, int *y);           // glue/yr_harness.cpp: "@thumb" (lane N27)
 extern "C" int yr_harness_unit_point(char const *id, int *x, int *y);   // glue/yr_harness.cpp: "@unit=ID" (lane P19)
+extern "C" int yr_step_resolve_point(char const *spec, int *x, int *y);  // glue/yr_stepserver.cpp: "@^ID", "@=X,Y" ... (lane P50)
 static int Resolve_Bar_Point(const char *spec, int *x, int *y)
 {
 	if (!strncmp(spec, "unit=", 5)) return yr_harness_unit_point(spec + 5, x, y);
 	if (!strncmp(spec, "node=", 5)) return yr_harness_node_point(atoi(spec + 5), x, y);
 	if (!strcmp(spec, "thumb")) return yr_harness_thumb_point(x, y);
-	if (strncmp(spec, "cmd=", 4) || !Map.ThumbActive) return 0;
+	if (strncmp(spec, "cmd=", 4)) return yr_step_resolve_point(spec, x, y);   // glue/yr_stepserver.cpp (lane P50)
+	if (!Map.ThumbActive) return 0;
 	int command = -1;
 	if (!strcmp(spec + 4, "TypeSelect")) command = DAT_00B0CB38;
 	else if (!strcmp(spec + 4, "Beacon")) command = DAT_00B0CB3C;
@@ -168,6 +170,7 @@ static void yr_native_harness_save(int frame)
 }
 
 void yr_native_harness_frame(int frame);
+extern "C" void yr_step_server_frame(int frame);   // glue/yr_stepserver.cpp (lane P50)
 
 void Yr_Map_Zoom_Frame();   // glue/yr_map_zoom.cpp: a zoom gesture's step (lane N18)
 void Yr_Map_Zoom_End();     // glue/yr_map_zoom.cpp: play is over (lane N21)
@@ -186,6 +189,7 @@ bool yr_native_main_loop(void)
     ra2port_frame(++frames);
     yr_native_harness_save(frames);
     yr_native_harness_frame(frames);   // yr_harness.cpp: RA2_NATIVE_ORDERS, RA2_NATIVE_FORCE_END (lane Y12)
+    yr_step_server_frame(frames);      // yr_stepserver.cpp: the step server (RA2_NATIVE_STEP, _REPLAY; lane P50)
     // --run-to=frames --frames=N (lane Y10, as the RA2 game's Main_Loop seam): N frames of a game
     // started from the menus, or loaded (--load-save: the count starts with the loaded game).
     if (frames == ra2port_skirmish_frames()) {

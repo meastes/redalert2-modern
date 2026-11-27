@@ -500,6 +500,25 @@ foreach(yr_campaign_side allied soviet)
   set_tests_properties(yr-native-campaign-${yr_campaign_side} PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 900)
 endforeach()
 
+# ctests yr-native-campaign-won-<mission> (lane P50): Yuri's Revenge campaign missions won by a recorded play (the step
+# server, glue/yr_stepserver.cpp; ra2/tools/ra2_step.py --game yr), replayed from yr/tests/campaign/<name>.replay (inputs
+# and ticks only); pass: the mission's own triggers win it at the recorded tick and its score screen shows
+# (ra2/tests/ra2_campaign.py --game yr; label yr-campaign-won, about a minute each). Entries: <name>|<side>|<mission>.
+if(NOT WIN32)
+  foreach(yr_won "all01|allied|1")
+    string(REPLACE "|" ";" yr_won_parts "${yr_won}")
+    list(GET yr_won_parts 0 yr_won_name)
+    list(GET yr_won_parts 1 yr_won_side)
+    list(GET yr_won_parts 2 yr_won_mission)
+    add_test(NAME yr-native-campaign-won-${yr_won_name} COMMAND "${Python3_EXECUTABLE}" -B "${CMAKE_CURRENT_SOURCE_DIR}/ra2/tests/ra2_campaign.py"
+             --game yr --replay "${CMAKE_CURRENT_SOURCE_DIR}/yr/tests/campaign/${yr_won_name}.replay" --side ${yr_won_side}
+             --mission ${yr_won_mission} --binary $<TARGET_FILE:yr-native> --data-dir "${RA2_NATIVE_YR_DATA_DIR}"
+             --work "${CMAKE_CURRENT_BINARY_DIR}/tests/yr-campaign-won-${yr_won_name}")
+    set_tests_properties(yr-native-campaign-won-${yr_won_name} PROPERTIES SKIP_RETURN_CODE 77 RUN_SERIAL TRUE TIMEOUT 1200
+                         LABELS yr-campaign-won)
+  endforeach()
+endif()
+
 # ctest mission-soak-yr-allied / -soviet (lane N25; label soak, not in the default gate; named outside yr-native so
 # the gate's -R yr-native leaves them out): every mission of the side reached through the menus and forced wins,
 # then played 4,000 game frames with the soak's scripted orders, twice with one seed (tests/mission_soak.py).
