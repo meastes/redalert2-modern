@@ -23,6 +23,10 @@ installed game.
 --game yr (lane P50; ctests yr-native-campaign-won-<mission>, yr/yr.cmake): Yuri's Revenge's (yr-native, its step server
 yr/glue/yr_stepserver.cpp; replays in yr/tests/campaign/), skipped without gamemd.exe in --data-dir. --soak <n> adds the
 mission soak's digests every n game frames to the log (RA2_NATIVE_SOAK: where two runs of a replay part).
+
+--survive <tick> (lane P55; ctest yr-native-campaign-crash-all05): a recording that ended in a fault, not a win, replayed
+past it: a copy of the replay gets "<tick> order money" (a harness line in the log at that tick) and a quit just after it.
+Pass: the game reaches that tick with no fault, trap or assertion, and the mission was not lost; no win is expected.
 """
 import argparse
 import glob
@@ -58,6 +62,7 @@ def main():
     ap.add_argument('--asan', action='store_true', help='an AddressSanitizer build: any report fails (lane P35)')
     ap.add_argument('--game', default='ra2', choices=['ra2', 'yr'], help='the game (lane P50): ra2-native or yr-native')
     ap.add_argument('--soak', type=int, default=0, help='the mission soak\'s digests every n game frames (diagnostics)')
+    ap.add_argument('--survive', type=int, default=0, help='pass when this tick is reached with no fault (lane P55)')
     a = ap.parse_args()
     exe = 'gamemd.exe' if a.game == 'yr' else 'game.exe'
     if not a.data_dir or not os.path.isfile(os.path.join(a.data_dir, exe)):
@@ -71,13 +76,20 @@ def main():
     work = os.path.abspath(a.work)
     shutil.rmtree(work, ignore_errors=True)
     os.makedirs(work)
+    replay = os.path.abspath(a.replay)
+    if a.survive:
+        # the replay's copy runs on to the tick, logs there and quits (the step server queues the quit as input)
+        replay = os.path.join(work, 'survive.replay')
+        with open(replay, 'w') as f:
+            f.write(text + ('' if text.endswith('\n') else '\n'))
+            f.write('%d order money\n%d input +10 quit\n' % (a.survive, a.survive))
     write, script = ra2_step.prepare(a, work)
     # The score screen of mission n is dialog 3 + n (the menus are 1-3; each forced win before it shows one): leave
     # two seconds after it is shown.
     with open(script, 'a') as f:
         f.write('d%d+2000 quit\n' % (3 + a.mission))
     env = ra2_step.campaign_env(a, work, write)
-    env['RA2_NATIVE_STEP_REPLAY'] = os.path.abspath(a.replay)
+    env['RA2_NATIVE_STEP_REPLAY'] = replay
     if re.search(r'^# frame clock', text, re.M):
         env['RA2_NATIVE_FRAME_CLOCK'] = '1'   # recorded with the frame clock (lane P33)
     if a.soak:
@@ -106,6 +118,19 @@ def main():
     if not m:
         bad.append('the replay was not loaded')
     over = re.search(r'^step-replay: game over at tick (\d+) \((win|lose)\)', out, re.M)
+    if a.survive:
+        if over and over.group(2) == 'lose':
+            bad.append('the mission was lost at tick %s' % over.group(1))
+        if not re.search(r'^step-replay %d order money$' % a.survive, out, re.M):
+            ticks = re.findall(r'^step-replay (\d+) ', out, re.M)
+            bad.append('tick %d was not reached (the last command run at tick %s)' % (a.survive, ticks[-1] if ticks else '-'))
+        for b in bad:
+            print('campaign-survive: FAIL: %s' % b)
+        print('campaign-survive: %s %s: tick %d, exit %d (%s)' % (os.path.basename(a.replay), 'FAIL' if bad else 'OK',
+                                                                 a.survive, code, log))
+        if not bad and not a.keep:
+            shutil.rmtree(write, ignore_errors=True)
+        return 1 if bad else 0
     if not over:
         bad.append('the mission did not end (no game over)')
     elif over.group(2) != 'win':
