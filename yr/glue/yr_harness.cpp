@@ -75,6 +75,10 @@
 //                   Do_MISSION_UNLOAD); logs `harness-produce <FACTORY> <ID> exit <result> &<addr>` (lane N3);
 //   produced        logs `harness-produced <ID> cell x,y factory x,y limbo <0|1> mission <m> factory-mission <m>` for
 //                   the last unit `produce` made (lane N3);
+//   robots          logs `harness-robots centres <n> deactivated <0|1|-1> online <ID>:<0|1>[...]`: the player's
+//                   HouseClass::PoweredUnitCenters, the last unit `produce` made's UnitClass::IsDeactivated (-1: none or
+//                   not a unit), and for each of the player's buildings whose type has PowersUnit= its
+//                   RegisteredAsPoweredUnitSource (lane P53);
 //   mission <ID>    logs `harness-mission <ID> <mission> &<addr>` for the player's first techno of type ID (lane N3);
 //   plan <dx> <dy>  every selected techno of the player's is ordered to the cell dx,dy from the first one's as a map
 //                   click orders it (Player_Assign_Mission): in planning mode a planned waypoint (lane N3);
@@ -781,6 +785,22 @@ int Run_Order(int frame, char const * text)
 		Cell at = produced->Get_Cell(), home = produced_from->Get_Cell();
 		fprintf(stderr, "harness-produced %s cell %d,%d factory %d,%d limbo %d mission %d factory-mission %d\n", Type_Name(produced),
 			at.X, at.Y, home.X, home.Y, produced->IsInLimbo ? 1 : 0, (int)produced->Get_Mission(), (int)produced_from->Get_Mission());
+		return(1);
+	}
+	if (!strcmp(word[0], "robots")) {
+		// logs `harness-robots centres <n> deactivated <0|1|-1> online <ID>:<0|1>...` (lane P53)
+		if (PlayerPtr == NULL) return(-1);
+		int deactivated = -1;
+		if (produced != NULL && Is_Live(produced) && produced->Fetch_RTTI() == RTTI_UNIT) {
+			deactivated = ((UnitClass *)produced)->IsDeactivated() ? 1 : 0;
+		}
+		char line[512] = "";
+		for (int i = 0; i < PlayerPtr->Buildings.Count(); ++i) {
+			BuildingClass * b = PlayerPtr->Buildings[i];
+			if (b == NULL || b->Class->PowersUnit == NULL || strlen(line) > sizeof(line) - 40) continue;
+			sprintf(line + strlen(line), " %s:%d", Type_Name(b), b->RegisteredAsPoweredUnitSource ? 1 : 0);
+		}
+		fprintf(stderr, "harness-robots centres %d deactivated %d online%s\n", PlayerPtr->PoweredUnitCenters, deactivated, line);
 		return(1);
 	}
 	if (!strcmp(word[0], "mission") && words >= 2) {
