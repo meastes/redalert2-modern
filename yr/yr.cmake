@@ -465,6 +465,12 @@ add_test(NAME yr-native-grinder COMMAND "${Python3_EXECUTABLE}" -B "${CMAKE_CURR
          --binary $<TARGET_FILE:yr-native> --data-dir "${RA2_NATIVE_YR_DATA_DIR}"
          --work "${CMAKE_CURRENT_BINARY_DIR}/yr-grinder")
 set_tests_properties(yr-native-grinder PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 300)
+# ctest yr-native-factory-exits (lane P61): the Cloning Vats copy a soldier leaving a barracks, and an Airforce Command puts
+# each new Harrier on a free pad (BuildingClass::Exit_Object, gamemd.exe 0x004449D9, 0x00443CD4; yr/tests/yr_factory_exits.py)
+add_test(NAME yr-native-factory-exits COMMAND "${Python3_EXECUTABLE}" -B "${CMAKE_CURRENT_SOURCE_DIR}/yr/tests/yr_factory_exits.py"
+         --binary $<TARGET_FILE:yr-native> --data-dir "${RA2_NATIVE_YR_DATA_DIR}"
+         --work "${CMAKE_CURRENT_BINARY_DIR}/yr-factory-exits")
+set_tests_properties(yr-native-factory-exits PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 300)
 
 # ctest yr-native-mirage (lane N4): a Mirage tank's camouflage draws as a tree in the tree's colours (Techno_Draw_Object's
 # disguise converter; yr/tests/yr_mirage.py)
