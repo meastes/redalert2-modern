@@ -24,12 +24,14 @@ stand-in path), the first digest that differs between the two runs, and the run'
 
   mission_soak.py --game ra2|yr --side allied|soviet --binary <ra2-native|yr-native> --data-dir <game folder>
                   [--game-exe <game.exe>] --work <dir> [--frames 4000] [--missions 1-12] [--jobs 3] [--twice]
-                  [--asan] [--reference <binary>]
+                  [--asan | --ubsan] [--reference <binary>]
 
 With --asan (lane P44; the binary built with RA2_NATIVE_ASAN=ON) AddressSanitizer's reports go to
 <work>/<run>/asan.<pid> (halt_on_error=0: the run goes on) and any report is a fault. With --reference <binary>
 (lane P44) the second run of each mission is that binary's (a release build beside an ASan one): the two builds'
 digests and trigger lines must be the same, so a read that depends on the build's memory layout shows as a desync.
+With --ubsan (lane P54; built with RA2_NATIVE_UBSAN_FLOAT=ON) UBSan's float-cast-overflow reports go to
+<work>/<run>/ubsan.<pid> and each is a fault.
 
 Fails on a fault, a mission that did not start, or (--twice, --reference) a desync. A mission lost early is recorded, not a
 failure (scripted orders are not tactics). Skipped (77) without the installed game, and for a Windows build.
@@ -99,6 +101,8 @@ def run_one(a, n, attempt):
         binary = a.reference
     elif a.asan:
         env['ASAN_OPTIONS'] = 'halt_on_error=0:detect_leaks=0:detect_odr_violation=0:log_path=' + os.path.join(work, 'asan')
+    elif a.ubsan:
+        env['UBSAN_OPTIONS'] = 'print_stacktrace=1:halt_on_error=0:log_path=' + os.path.join(work, 'ubsan')
     for k in ('RA2_NATIVE_TRAP_CONTINUE', 'RA2_NATIVE_FORCE_END', 'RA2_NATIVE_SOAK_DUMP'):
         env.pop(k, None)
     if n > 1:
@@ -119,6 +123,10 @@ def run_one(a, n, attempt):
         with open(rep, errors='replace') as f:
             summary = [l for l in f.read().splitlines() if l.startswith('SUMMARY: AddressSanitizer')]
         r['faults'].append('AddressSanitizer: %s (%s)' % (summary[0][27:160] if summary else 'a report', rep))
+    for rep in sorted(glob.glob(os.path.join(work, 'ubsan.*'))):
+        with open(rep, errors='replace') as f:
+            errs = [l for l in f.read().splitlines() if 'runtime error:' in l]
+        r['faults'].extend('UBSan: %s (%s)' % (e[:200], rep) for e in errs)
     return r
 
 
@@ -197,6 +205,7 @@ def main():
     ap.add_argument('--jobs', type=int, default=3)
     ap.add_argument('--twice', action='store_true', help='play each mission twice and compare (desync)')
     ap.add_argument('--asan', action='store_true', help='an AddressSanitizer build: any report is a fault (lane P44)')
+    ap.add_argument('--ubsan', action='store_true', help='a float-cast-overflow build: any report is a fault (lane P54)')
     ap.add_argument('--reference', default='', help='a second binary (a release build) whose runs must match (lane P44)')
     ap.add_argument('--orders', default='', help='RA2_NATIVE_ORDERS instead of the default soak orders')
     a = ap.parse_args()

@@ -138,7 +138,7 @@ campaign missions, skirmish set-ups, order scripts, saves both ways; `ra2/tests/
 the user's own bug reports checked here: `docs/regressions.md`. `ra2-campaign-won` replays campaign missions won through the step server (the game paused and advanced by ticks for a
 scripted or agent player, `ra2/tools/ra2_step.py`, `ra2/glue/stepserver_native.inc`): the recorded inputs and ticks in
 `ra2/tests/campaign/`, the win and score screen as the pass. An AddressSanitizer build (`-DRA2_NATIVE_ASAN=ON`, in its own build folder) adds `ra2-asan`: two of those replays,
-which must also run with no AddressSanitizer report. Yuri's Revenge and the combined app (configure with `-DRA2_NATIVE_YR=ON -DRA2_NATIVE_COMBINED=ON`, as `./build.sh mac-one`
+which must also run with no AddressSanitizer report. A float-cast-overflow build (`-DRA2_NATIVE_UBSAN_FLOAT=ON`, its own folder) adds `ra2-ubsan` (every won replay) and `yr-ubsan` (the YR mission soaks and won replays), which must run with no out-of-range floating-to-integer conversion reported. Yuri's Revenge and the combined app (configure with `-DRA2_NATIVE_YR=ON -DRA2_NATIVE_COMBINED=ON`, as `./build.sh mac-one`
 does) add `yr-native-*` (YR alone, all automated runs rather than played: skirmishes, saves in gamemd.exe's format, the start of both campaigns, the enhancements, LAN) and
 `one-game-*` (the toggle both ways, saves after a swap, the menus' backdrop); `-DRA2_ONE_IOS_SIM=ON` adds `one-game-ios-*`
 (label `one-ios`: the iOS app in the "RA2 Duo Validation" Simulator; any Simulator name works). They read the same installation, which needs

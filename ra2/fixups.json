@@ -2193,6 +2193,13 @@
    "old": "\t\tvoid operator() (int datum);\n",
    "new": "\t\tvoid operator() (int datum);\n#ifdef __MINGW32__\n\t\tvoid operator() (long datum) { (*this)((int)datum); }   // native: lane P13, the Windows build's RA2_LONG (long, 32 bits as VC6's)\n#endif\n",
    "why": "Lane P13 (the x86_64 Windows build): the port rewrites spell VC6's long as RA2_LONG, which yr_prelude.h makes long on Windows (LLP64: 32 bits, the C library's and the MS intrinsics' type) and int on the Mac. CRCEngine has no long overload, so every crc((RA2_LONG)x) of techtype, scenario, animtype and the rest was ambiguous there. The long datum is submitted as the dword it is (the int overload), as VC6 did with its 32-bit long. Mac and iOS: not compiled."
+  },
+  {
+   "file": "src/queue.cpp",
+   "old": "obj->Speed = (infp|unitp|aircraftp)->Speed \\* 256\\.0;",
+   "regex": true,
+   "new": "obj->Speed = (char)(int)(\\1->Speed * 256.0); /* native: the original's _ftol int, then the low byte (lane P54) */",
+   "why": "Lane P54 (the float-cast-overflow audit; clang -Wfloat-conversion over the compiled units, not reached by a replay: ExtraSyncInfo only): Fill_Sync_State (0x0062CF40) stores each infantry's, unit's and aircraft's Speed (a double, 0 to 1) times 256 into the sync log's char Speed (+0x67). At a half speed and above the product is outside char's range, so clang's direct double-to-char conversion is undefined. The original loads the speed, multiplies by 256.0 (fmul qword [0x0079A700]), calls _ftol (0x0077F110) and stores al (0x0062D26C, 0x0062D45C, 0x0062D6AF): the int's low byte. The product never leaves int's range, and clang's int-to-char conversion keeps the low byte, so the row gives the original's byte (1.0 is 0, 0.5 is -128)."
   }
  ]
 }

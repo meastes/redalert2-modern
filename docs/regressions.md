@@ -278,3 +278,36 @@ is played by both and must match).
 | RLE_Blit's flat z-shape _temp_buf (256 bytes) read past its end (lane P35's row; yr-native-skirmish-long, an animation) | lines wider than 256 pixels took depths from the next .bss bytes | **fixed**: 64 KB of zeros, as Red Alert 2 |
 | Decoding the host's scenario name in a LAN game's options read a byte past the text (heap-buffer-overflow, Bit_Unstuff_String) | the Windows heap's next byte in the original, unrecoverable | **fixed**: decoded from a copy followed by zeros |
 | The mission soak's digest hashed Random2Class's three padding bytes | builds whose generators were in step showed different digests | **fixed** (yr/glue/yr_harness.cpp): the padding is left out |
+
+## Floating-to-integer conversions out of range (lane P54, 2026-11-27)
+
+Lane P44's DirType::From_Radian (a double converted straight to short, undefined out of short's range, so the facing
+west of south depended on the optimiser) prompted an audit of every such conversion in both trees: float or double to
+short, char, unsigned short, unsigned char or bool, double to int or unsigned beyond 2^31, and negative doubles to
+unsigned. VC6's x87 code converts through _ftol (fistp to a 64-bit integer, the low 32 bits kept; a narrow store keeps
+the low 8 or 16), so every one of them has a defined result in the original. Method: a new build option,
+RA2_NATIVE_UBSAN_FLOAT=ON (clang's -fsanitize=float-cast-overflow, recoverable; build/ubsan-fc), under which every out-of-range
+conversion the game reaches is reported; and clang's -Wfloat-conversion over every compiled unit of both trees, plus a
+grep of the explicit casts (facing, coordinates, voxels, lighting, colours, sound volume). A positive control (the
+generated face.h put back to the pre-P44 line) made the Soviet 1 soak report From_Radian at once (37650.2, 41082.5 and
+49150.4 outside short), so the check and the harnesses' report collection work.
+
+Under the check, with the P9 and P44 rows in place, nothing was reported in: the 24 Red Alert 2 campaign-won replays (all
+won at their recorded ticks), the ra2-quick, ra2-main, ra2-resaves and ra2-campaign groups (50 tests), the YR mission soak
+of all 14 campaign missions (the same digests as a release build in every mission, --reference), and the 36 yr-native tests
+(the LAN pair under Wine not run). The only failures were not the check's: yr-native-planning's view and units fall where an unseeded start puts them,
+so it fails in the release build too on some runs; ra2-main-hd-vehicles-3x saw a flicker frame once under load and passed alone; and
+yr-native-campaign-won-all01 (lane P50's recording) is lost at tick 78,258 in the release build at main as well, since
+lane P44's facing change (recorded before it; for lane P52 to re-record, not changed here). Audio runs with -noaudio in every test, so
+the volume conversions were read rather than run: VocClass's (unsigned)(volume * 16384) is reached only with volume in
+0..1 (Volume_At's results are tested > 0 first; the INI volumes are clamped), so it stays in range.
+
+| Found | Effect | Status |
+| --- | --- | --- |
+| The sync log's Speed byte (RA2 Fill_Sync_State, 0x0062CF40; -Wfloat-conversion, not reached by a replay: only with ExtraSyncInfo) | each infantry's, unit's and aircraft's Speed (0 to 1) times 256 stored in a char: at half speed and above outside char's range, undefined in clang; the original's fmul, _ftol and `mov [esi+0x67], al` keep the int's low byte | **fixed**: a ra2/fixups.json row converts through int and keeps the low byte (src/queue.cpp) |
+| The float-cast-overflow build of yr-native failed to link (lane P54) | ld64: arm64_lo12 fixup error, LogicClass::AI's 32-bit load of CELL_NONE (geometry.h defines it in every unit; clang raised its own copy's alignment to 4, the one tools/weaken_duplicates.py kept, astar.cpp's, sat on a 2-byte boundary). The release build linked by where that copy happened to fall | **fixed**: a yr/fixups.json row declares every copy alignas(4) (hdr/geometry.h); value and layout unchanged |
+| Conversions read and found in range in practice (no report in any run) | voxlib's TransformMatrix shorts (corner offsets times 256), WaveClass's sine and radius tables, RadBeam's colour bytes (Scale at most 1), HouseClass's laser colour (normalised), the score screen's efficiency, the random map generator's unsigned draws, the dropship cameo alpha | unchanged; any report under ra2-ubsan / yr-ubsan names the site |
+
+**Scripted**: ra2-native-ubsan-<mission> for every won replay (label ra2-ubsan), yr-native-ubsan-soak-allied / -soviet
+and yr-native-ubsan-<mission> for the YR won replays (label yr-ubsan); only in an RA2_NATIVE_UBSAN_FLOAT build
+(ra2_campaign.py and tests/mission_soak.py --ubsan fail on any report).

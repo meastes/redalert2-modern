@@ -2009,6 +2009,12 @@
    "old": "\t\t\tFacing = short((rad - M_PI / 2) / -DEG_TO_RAD(360.0 / 65534.0));",
    "new": "\t\t\tFacing = short((int)((rad - M_PI / 2) * (1.0 / -DEG_TO_RAD(360.0 / 65534.0)))); /* native: gamemd.exe's product by -10430.06, through _ftol's int then the low 16 bits (lane P44; Red Alert 2's lane P9 row) */",
    "why": "Lane P44 (found as a release/ASan difference, not a report: the YR mission soak's digests parted at frame 2 of Soviet 1, a Guardian GI one lepton off; lldb on both builds traced it to WalkLocomotionClass::Movement_AI's Move_Coord angle, -1.7689 in the release build and 4.5145 under ASan). DirType::From_Radian converts the radian angle straight to short, and the value reaches 49150 (west of south), outside short's range: undefined in C++, so clang's release build kept the 32-bit fcvtzs result (34833) where the ASan build stored and reloaded the short (-30703): the facing, and with it every walk step, sin/cos lookup and turn west of south, depended on the optimiser. gamemd.exe multiplies by -10430.060040584269 (0x007E2818, 79 references in the code; the quotient's divisor at 0x007E2810 is not what it uses) and converts through _ftol's int, keeping the low 16 bits on the store. Red Alert 2's ra2/fixups.json row (lane P9) does the same for its tree. (1.0 / -DEG_TO_RAD(...)) folds to the same constant at compile time."
+  },
+  {
+   "file": "hdr/geometry.h",
+   "old": "const Cell CELL_NONE(0, 0);",
+   "new": "alignas(4) const Cell CELL_NONE(0, 0);   /* native (lane P54): every unit's copy 4-byte aligned */",
+   "why": "Lane P54 (the float-cast-overflow build's link): geometry.h defines CELL_NONE (a Cell, two shorts, 2-byte aligned) in every unit that includes it, and tools/weaken_duplicates.py keeps one definition (astar.cpp's). clang may raise the alignment of a unit's own copy to 4 and load the Cell with one 32-bit LDR (logic.cpp's LogicClass::AI under -fsanitize=float-cast-overflow), which ld64 refuses when the kept copy lands on a 2-byte boundary (arm64_lo12 fixup error); the release build linked by where the kept copy happened to fall. With every copy declared 4-byte aligned the kept one is too. The value and the layout of Cell are unchanged."
   }
  ]
 }

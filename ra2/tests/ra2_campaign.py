@@ -10,7 +10,8 @@ the view moved through the trackpad pan's hook, the periodic saves written. The 
 with the gate's fixed seed, and only scripted input reaches it, as when it was recorded.
 
 With --asan (lane P35; the binary built with RA2_NATIVE_ASAN=ON, ctest label ra2-asan) AddressSanitizer's reports go
-to <work>/asan.<pid> and any report fails the run, as a fault does.
+to <work>/asan.<pid> and any report fails the run, as a fault does. With --ubsan (lane P54; built with
+RA2_NATIVE_UBSAN_FLOAT=ON, ctest label ra2-ubsan) the same for UBSan's float-cast-overflow reports (<work>/ubsan.<pid>).
 
 Pass: the mission's own triggers end it in a win (step-replay: game over ... (win), game-over: player wins), at the tick
 the recording ended (a different tick means the replay went another way: reported), the mission's score screen shown
@@ -18,7 +19,7 @@ the recording ended (a different tick means the replay went another way: reporte
 installed game.
 
   ra2_campaign.py --replay ra2/tests/campaign/all01.replay --side allied --mission 1 --binary <ra2-native>
-                  --data-dir <game folder> [--game-exe <game.exe>] --work <dir> [--seconds 900] [--keep] [--asan]
+                  --data-dir <game folder> [--game-exe <game.exe>] --work <dir> [--seconds 900] [--keep] [--asan] [--ubsan]
 
 --game yr (lane P50; ctests yr-native-campaign-won-<mission>, yr/yr.cmake): Yuri's Revenge's (yr-native, its step server
 yr/glue/yr_stepserver.cpp; replays in yr/tests/campaign/), skipped without gamemd.exe in --data-dir. --soak <n> adds the
@@ -56,6 +57,7 @@ def main():
     ap.add_argument('--seconds', type=int, default=900)
     ap.add_argument('--keep', action='store_true', help='keep the write folder (saves) after a pass')
     ap.add_argument('--asan', action='store_true', help='an AddressSanitizer build: any report fails (lane P35)')
+    ap.add_argument('--ubsan', action='store_true', help='a float-cast-overflow build: any report fails (lane P54)')
     ap.add_argument('--game', default='ra2', choices=['ra2', 'yr'], help='the game (lane P50): ra2-native or yr-native')
     ap.add_argument('--soak', type=int, default=0, help='the mission soak\'s digests every n game frames (diagnostics)')
     a = ap.parse_args()
@@ -87,6 +89,9 @@ def main():
     if a.asan:
         # halt_on_error=0 with the build's -fsanitize-recover=address: every report is written, the run goes on.
         env['ASAN_OPTIONS'] = 'halt_on_error=0:detect_leaks=0:detect_odr_violation=0:log_path=' + os.path.join(work, 'asan')
+    if a.ubsan:
+        # The build's -fsanitize-recover=float-cast-overflow: each site is reported once, the run goes on.
+        env['UBSAN_OPTIONS'] = 'print_stacktrace=1:halt_on_error=0:log_path=' + os.path.join(work, 'ubsan')
     cmd = [a.binary, '--data-dir', a.data_dir, '--run-to=never', '--run-seconds=%d' % a.seconds, '--write-dir=' + write,
            '--input-script=' + script, '--game-args=-noaudio -CD.']
     log = os.path.join(work, 'run.log')
@@ -126,6 +131,12 @@ def main():
             with open(rep, errors='replace') as f:
                 summary = [l for l in f.read().splitlines() if l.startswith('SUMMARY: AddressSanitizer')]
             bad.append('AddressSanitizer: %s (%s)' % (summary[0][27:200] if summary else 'a report', rep))
+    if a.ubsan:
+        for rep in sorted(glob.glob(os.path.join(work, 'ubsan.*'))):
+            with open(rep, errors='replace') as f:
+                errs = [l for l in f.read().splitlines() if 'runtime error:' in l]
+            for e in errs:
+                bad.append('UBSan: %s (%s)' % (e[:240], rep))
     for s in saves:
         if not os.path.isfile(os.path.join(write, s)):
             bad.append('save point %s not written' % s)
