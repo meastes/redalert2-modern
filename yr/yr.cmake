@@ -550,8 +550,8 @@ endforeach()
 # P61's gamemd fixes; on the new pin none wins (no fault). They are parked here, not run, until a campaign lane
 # re-records them from their own commands; each moves back to yr_won_all once a rerun wins at its tick.
 # Lane P68 re-recorded Allied 1 (won at 33,374).
-set(yr_won_pending "all03|allied|3" "all05|allied|5" "sov02|soviet|2" "sov03|soviet|3")
-set(yr_won_all "all01|allied|1")
+set(yr_won_pending "all03|allied|3" "all05|allied|5" "sov03|soviet|3")
+set(yr_won_all "all01|allied|1" "sov02|soviet|2")
 if(NOT WIN32)
   foreach(yr_won IN LISTS yr_won_all)
     string(REPLACE "|" ";" yr_won_parts "${yr_won}")

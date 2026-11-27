@@ -2359,3 +2359,13 @@ locomotor for the trip out. rulesmd.ini's own comment on ChronoHarvTooFarDistanc
 far back") says the same. Do_MISSION_HARVEST's LOOKING state is the same in the draft and upstream. Verdict: gamemd's
 behaviour, not a port fault. Nothing changed in fixups or glue; the Allied 5 recording must be re-recorded (P68). The
 Soviet missions' miners are not Chrono Miners, so this does not explain Soviet 2 or Soviet 3.
+
+## Lane P70 (2026-11-27): YR campaign wins on the ac45ee9e pin continued
+
+The pending re-records first, from P68's saves and next steps, then the not-won missions with the best notes; cap 3
+lane-hours a mission in all (a re-record counted fresh at 1.5 h on the new pin). Recordings and scripts in
+private/campaign_saves/yr/<mission>/p70 and scripts/p70.
+
+| Mission | Result | Lane-hours | Notes |
+| --- | --- | --- | --- |
+| Soviet 2 (SOV02UMD) | won at tick 9,464; a rerun (ra2_campaign.py --game yr) wins at the same tick | 0.4 (1.9 on the new pin) | P68's try7 preloaded to 7,031 (the army at 93,123 on its way to 93,145, four V3s alive), then at once the four V3s to 108,161 and the tanks to 106,158 to guard (s2c.py: AT=7031 NCH=2): two V3s at the Chronosphere, two at Einstein's lab, any V3 out of its attack mission ordered again. Each V3 lands a rocket about every 480 ticks (the Chronosphere takes 158 a hit, the lab 315). Lab gone at 8,784, the Chronosphere at 9,224, before its transfer to BadGuy2 (9,354). What made P68's tries and P70's first two fail: BadGuy2 builds a Patriot (NASAM) at 108,173 at about 9,200, after which every V3 rocket is shot down (the Chronosphere is repaired from 215 to 750 while two V3s keep their attack mission). Patriots engaging V3 rockets is the game's design (rulesmd: the V3 rocket is an air target), so this is taken as gamemd's behaviour, not a port fault; P68's "V3s doing poorly against a second target" matches it (not checked against gamemd's code). yr/tests/campaign/sov02.replay replaced; sov02 back in yr_won_all |
