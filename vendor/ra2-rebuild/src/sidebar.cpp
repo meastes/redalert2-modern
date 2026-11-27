@@ -1265,7 +1265,7 @@ void SidebarClass::Recalc(void)
  * HISTORY:                                                                                    *
  *   12/09/1994 JLB : Created.                                                                 *
  *=============================================================================================*/
-#ifdef RA2_NON_MATCHING // not exact: 58 bytes differ against the image-derived bound 0067e210 (1067 B): three instructions in the else arm's expanded Remove_Buttons (the side's extra subtracted before StripTop, StripTop in a scratch register). The order follows the number of locals the function holds, its expanded members' locals included: exact with eight to twelve more locals in the function, or three to six more in Max_Visible (dead `int p = 0;` probes, never a landing form); ra2-decomp's written-out loops with `Max_Visible() * 2` move the window the other way (lane F48, 2026-11-23); main: best 99.04
+#ifdef RA2_NON_MATCHING // not exact: 58 bytes differ against the image-derived bound 0067e210 (1067 B): three instructions in the else arm's expanded Remove_Buttons (the side's extra subtracted before StripTop, StripTop in a scratch register). The order follows the number of locals the function holds, its expanded members' locals included: exact with seven to ten more referenced locals in the function now that the uncalled Activate_Tab is called here (its parameter is one unit; lane F72), and seven is the only count that leaves SelectClass::Action exact; or three to six more in Max_Visible (probes, never a landing form); ra2-decomp's written-out loops with `Max_Visible() * 2` move the window the other way (lane F48, 2026-11-23); main: best 99.04
 bool SidebarClass::Activate(int control)
 {
 	bool old = IsSidebarActive;
@@ -1324,9 +1324,7 @@ bool SidebarClass::Activate(int control)
 					TabButton[index].Enable();
 				}
 			}
-			TabButton[ActiveTabIndex].Turn_On();
-			Column[ActiveTabIndex].Activate();
-			Update_Build_Buttons();
+			Activate_Tab(ActiveTabIndex); // RA2: Activate_Tab 0x67D7E0 has no caller in the image; its three statements stand here and the store of ActiveTabIndex to itself folds away
 		} else {
 			Stop_Ingame_Movie();
 			Remove_A_Button(Repair);
@@ -2110,7 +2108,7 @@ int SidebarClass::StripClass::Get_Progress(int index)
  *   12/31/1994 JLB : Created.                                                                 *
  *   08/06/1995 JLB : Handles multi factory tracking in same strip.                            *
  *=============================================================================================*/
-#ifdef RA2_NON_MATCHING // not exact: 6 bytes differ (outline pixel channel shifts: the image packs Blue, Red, Green from the by-value copy, ours Blue, Green, Red; the text colour below is the image's. ra2-decomp's matched twin (2e5b2c1) measured, lane F62, 2026-11-25: its named print styles change nothing here (in Yuri's Revenge they meet a count for the observer rows, which RA2 lacks), its colour copy with the three-value call turns the text colour instead (48); neither pixel follows the local count, and distinct live globals turn them only to orders the image does not have)
+#ifdef RA2_NON_MATCHING // not exact: 6 bytes differ (outline pixel channel shifts: the image packs Blue, Red, Green from the by-value copy, ours Blue, Green, Red; the text colour below is the image's. ra2-decomp's matched twin (2e5b2c1) measured, lane F62, 2026-11-25: its named print styles change nothing here (in Yuri's Revenge they meet a count for the observer rows, which RA2 lacks), its colour copy with the three-value call turns the text colour instead (48); neither pixel follows the local count, and distinct live globals turn them only to orders the image does not have) (lane F100, 2026-11-27: the outline's order is a count of this function's own referenced locals, but only while the pixel is written as Draw_Rect's argument beside the Rect temporary; with a named pixel or a named Rect it is the draft's order at every count. With the pixel as the argument, ra2-decomp's four named print styles (two units each) and two more locals (any two simple conditions held in bools) the function is exact, and Reposition_Sidebar 0x6819A0 then turns by 6 B (its six named ints are a window of the unit's count, and this function's locals move it; exact again only with ten more of its own). With Activate's draft compiled ahead all rows of the unit are exact with that form, so the three parked functions and the two count rows are one set: not landed. Patch: private/dossiers/fable/f100_tools/sidebar_draw_it_candidate.patch)
 void SidebarClass::StripClass::Draw_It(bool complete)
 {
 	if (AllowedToDraw && (IsToRedraw || complete)) { // RA2: only an active strip is drawn
@@ -2170,7 +2168,7 @@ void SidebarClass::StripClass::Draw_It(bool complete)
 				**	slot. This shape pointer is used to draw the underlying graphic there.
 				*/
 				if (index < BuildableCount) {
-					hover = button->IsHovered && !IgnoreInput; // RA2: the mouse is over the button and input is on (Is_Hovered, 0x681690, is a separate function)
+					hover = button->Is_Hovered(); // RA2: the mouse is over the button and input is on (Is_Hovered 0x681690: nothing in the image calls it, so it is expanded here; same code)
 
 					if (Buildables[index].BuildableType != RTTI_SPECIAL) {
 

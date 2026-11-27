@@ -177,6 +177,8 @@
 #include "techtype.h"
 #include "capmgr.h" // RA2: BuildingClass::Receive_Message reads the controlled unit of an infantry's capture manager
 #include "temporal.h" // RA2: BuildingClass::AI runs the temporal weapon aimed at the building
+#include "airctype.h" // RA2: BuildingClass::Exit_Object reads the aircraft type's IsAirportBound
+#include "targetcell.h" // RA2: Target_Cell, as ra2-decomp's building.cpp has it
 #include "tiberium.h"
 #include "tracker.h"
 #include "unit.h"
@@ -218,29 +220,44 @@ enum SAMState {
 /// place it is ordered to go; never for the player's allies. The tactical display asks before it draws an
 /// enemy's action line.
 /// </summary>
-#ifdef RA2_NON_MATCHING // not exact: 792 bytes differ by position against the image-derived bound 004386f0 (865 B; ours 800 B, frame 0xD8 against 0x100): the four range tests are BuildingClass::Is_In_Psychic_Range and Is_Cell_In_Psychic_Range expanded, as in the image, but the image calls the Coord constructor 0x41B630 in all four and expands Length only in the third, where ours expands the constructor in the last two and Length in the last (the nested shares of the root budget); main: best 82.58
-bool __fastcall Building_Player_Detector_Covers_Target(FootClass * object) // RA2: 0x004386F0
+static inline bool Is_Cell(AbstractClass const * target) // RA2: ra2-decomp's file-local test (src/building.cpp:135 at b20f510)
 {
-	if (PlayerPtr->Is_Ally(object->House)) return(false);
+	if (target == NULL) return(false);
+	RTTIType rtti = target->RTTI;
+	return(rtti == RTTI_CELL);
+}
+
+
+bool __fastcall Building_Player_Detector_Covers_Target(FootClass * object) // RA2: 0x004386F0; ra2-decomp's matched twin text (FUN_0043B150, b20f510)
+{
+	HouseClass * owner = object->House;
+	if (PlayerPtr->Is_Ally(owner)) return(false);
 	int count = PlayerPtr->PsychicDetectionBuildings.Count();
 	for (int index = 0; index < count; index++) {
 		BuildingClass * detector = PlayerPtr->PsychicDetectionBuildings[index];
 		if (detector->IsPowerOnline()) {
 			AbstractClass * target = object->TarCom;
-			if (target != NULL) {
-				if (target->Is_Techno()) {
-					if (detector->Is_In_Psychic_Range(target)) return(true);
-				} else if (target->Fetch_RTTI() == RTTI_CELL) {
-					if (detector->Is_Cell_In_Psychic_Range((CellClass *)target)) return(true);
-				}
+			if (As_Techno(target) != NULL) {
+				bool in_range = detector->Is_In_Psychic_Range(As_Techno(target));
+				if (in_range) return(in_range);
+			} else if (Is_Cell(target)) {
+				bool in_range = detector->Is_Cell_In_Psychic_Range((CellClass *)target);
+				if (in_range) return(in_range);
 			}
 			if (object->Is_Foot()) {
-				AbstractClass * nav = object->NavQueue.Count() == 0 ? object->NavCom : object->NavQueue[object->NavQueue.Count() - 1];
+				AbstractClass * nav;
+				if (object->RouteQueue.Count() == 0) {
+					nav = object->NavCom;
+				} else {
+					nav = object->RouteQueue[object->RouteQueue.Count() - 1];
+				}
 				if (nav != NULL) {
-					if (nav->Fetch_RTTI() == RTTI_CELL) {
-						if (detector->Is_Cell_In_Psychic_Range((CellClass *)nav)) return(true);
-					} else if (nav->Is_Techno()) {
-						if (detector->Is_In_Psychic_Range(nav)) return(true);
+					if (Is_Cell(nav)) {
+						bool in_range = detector->Is_Cell_In_Psychic_Range((CellClass *)nav);
+						if (in_range) return(in_range);
+					} else if (nav->AbstractFlags & 1) {
+						bool in_range = detector->Is_In_Psychic_Range(nav);
+						if (in_range) return(in_range);
 					}
 				}
 			}
@@ -248,7 +265,6 @@ bool __fastcall Building_Player_Detector_Covers_Target(FootClass * object) // RA
 	}
 	return(false);
 }
-#endif
 
 
 /// <summary>
@@ -2573,7 +2589,18 @@ void BuildingClass::Leave_Rubble(void) // RA2: not in TibSun, at 0x43EBA0
  *   11/22/1994 JLB : Shares base damage handler for techno objects.                           *
  *   07/15/1995 JLB : Power ratio gets adjusted.                                               *
  *=============================================================================================*/
-#ifdef RA2_NON_MATCHING // not exact: 1309 bytes differ by position with BuildingRunAwayOnDamage bound at 0x007CF670 (was 1318; Distance_To(contact) tested directly at the radio-link comparison, as the TibSun and Yuri's Revenge ObjectClass accessors are used, no single-use local): at the run-away loop the image expands Length (the square root 0x4BA410 called) and calls it (0x41B780) at the destroyed-contacts loop; this calls it at both. The loop is Red Alert 2's own (ra2-decomp's Yuri's Revenge twin has none), and the twin's forms after it (PositionCoord at the sound, the animation pointer inside the sparky block) give the same bytes
+/// <summary>
+/// The distance between two objects' centres, its terms summed Y, Z, X (Length_YZX).
+/// Adopted from RobinDigitalPro/ra2-1001-decomp (src/m85/src/building.cpp at 7e84ed4), whose text places the
+/// distance of the run-away test in this inline helper; the image expands it there one level deeper than the
+/// destroyed-contacts test's Distance_To.
+/// </summary>
+inline int Center_Distance_YZX(ObjectClass const * object, ObjectClass const * other)
+{
+	return(object->Center_Coord().Distance_YZX(other->Center_Coord()));
+}
+
+
 ResultType BuildingClass::Take_Damage(int & damage, int distance, WarheadTypeClass const * warhead, TechnoClass * source, bool forced, bool no_crew)
 {
 	ResultType res = RESULT_NONE;
@@ -2671,7 +2698,7 @@ ResultType BuildingClass::Take_Damage(int & damage, int distance, WarheadTypeCla
 						for (int index = 0; index < RadioLinks.Length(); index++) {
 							TechnoClass * contact = Radio_Link(index);
 							if (contact) {
-								if (Distance_To(contact) < 2 * CELL_LEPTON && !Class->IsHelipad) {
+								if (Center_Distance_YZX(this, contact) < 2 * CELL_LEPTON && !Class->IsHelipad) { // RA2: the distance through the helper, as RobinDigitalPro's ra2-1001-decomp has it (Distance_YZX written here directly: 1,825 B off)
 									Transmit_Message(RADIO_RUN_AWAY, contact);
 									contact->QueueUpToEnter = NULL;
 								}
@@ -2688,7 +2715,10 @@ ResultType BuildingClass::Take_Damage(int & damage, int distance, WarheadTypeCla
 
 						AnimClass * anim = NULL;
 
-						Coord coord(cell);
+						Coord coord; // RA2: the cell's centre built member by member, the height cleared first, as RobinDigitalPro's ra2-1001-decomp has it (Coord(cell): 1,079 B off)
+						coord.Z = 0;
+						coord.X = cell.X * CELL_LEPTON_W + CELL_LEPTON_W / 2;
+						coord.Y = cell.Y * CELL_LEPTON_H + CELL_LEPTON_H / 2;
 						coord.Z = Map.Get_Height_GL(coord);
 						/*
 						**	Show pieces of fire to indicate that a significant change in
@@ -2793,7 +2823,6 @@ ResultType BuildingClass::Take_Damage(int & damage, int distance, WarheadTypeCla
 
 	return(res);
 }
-#endif
 
 
 
@@ -3140,9 +3169,6 @@ void BuildingClass::Assign_Target(AbstractClass * target)
  *   04/10/1995 JLB : Handles building production by computer.                                 *
  *   06/17/1995 JLB : Handles refinery exit.                                                   *
  *=============================================================================================*/
-#ifdef RA2_NON_MATCHING // not exact: no row yet (image-derived bound 00440520-00441eab, 6539+5, in image_bounds.csv); 3380 bytes differ against it (was 4469; the two exit directions as TibSun building.cpp builds them, a temporary Coord in the first branch, a stored exitcellcoord in the second; the water exit facing through the DirType Direction member as ra2-decomp's banked form banks/0x00443C60_exit.cpp (11df85d) has it; the bank's exit paths adapted to RA2, keeping RA2's one-argument exits, native mission paths and the cloning-vat loop calling the image's own Exit_New_Object (0x4538D0) for each vat); all 146 calls in order (3569 and frame 0x12c only with copy locals in inline.h Direction(Cell, Cell), refused: variation_candidates.csv); main: best 92.27, tried 12 times (frame, register, inline)
-#include "airctype.h"
-#include "targetcell.h"
 int BuildingClass::Exit_Object(TechnoClass * base)
 {
 	if (!base) return(0);
@@ -3267,7 +3293,27 @@ int BuildingClass::Exit_Object(TechnoClass * base)
 				}
 			}
 
-			if (!Class->IsRefinery && !Class->IsWeeder) {
+			if (Class->IsRefinery || Class->IsWeeder) {
+
+				/*
+				 * A unit exits a refinery to the south west corner and heads off to
+				 * harvest. Infantry just scatters out.
+				 */
+				if (base->Fetch_RTTI() == RTTI_UNIT) {
+
+					cell = Adjacent_Cell(Center_Coord().As_Cell(), FACING_SW);
+
+					ScenarioInit++;
+					if (base->Unlimbo(Coord(Adjacent_Cell(cell, FACING_S), 0), DIR_SW)) {
+						base->PrimaryFacing.Set(DirType(DIR_S));
+						base->QueueMission(MISSION_HARVEST, false);
+					}
+
+				} else {
+					base->Scatter(COORD_NONE, true, false);
+					return(0);
+				}
+			} else {
 
 				if (Class->IsWeaponsFactory) {
 
@@ -3306,7 +3352,7 @@ int BuildingClass::Exit_Object(TechnoClass * base)
 						return(2);
 					}
 
-					base->ArchiveTarget = ArchiveTarget;
+					base->Assign_Archive_Target(ArchiveTarget);
 
 					if (Mission == MISSION_UNLOAD) {
 						int count = House->Buildings.Count();
@@ -3339,7 +3385,7 @@ int BuildingClass::Exit_Object(TechnoClass * base)
 
 				} else if (Class->ToBuild == RTTI_INFANTRYTYPE || Class->IsHospital || Class->IsArmory || Class->Cloning) {
 
-					base->ArchiveTarget = ArchiveTarget;
+					base->Assign_Archive_Target(ArchiveTarget);
 
 					cell = Find_Exit_Cell(base);
 					if (cell == CELL_NONE) {
@@ -3355,7 +3401,8 @@ int BuildingClass::Exit_Object(TechnoClass * base)
 						}
 					}
 
-					Dir256 dir = ::Direction(Center_Coord(), Coord(cell)).As_Dir256();
+					Coord exitcellcoord(cell);
+					Dir256 dir = ::Direction(Center_Coord(), exitcellcoord).As_Dir256();
 
 					Cell to = cell;
 					Cell here = Get_Cell();
@@ -3389,9 +3436,10 @@ int BuildingClass::Exit_Object(TechnoClass * base)
 					ScenarioInit++;
 					if (base->Unlimbo(exitcoord, dir)) {
 
-						if (((FootClass *)base)->NavCom != NULL && !base->TClass->JumpJet && !base->TClass->Teleporter) {
-							if (((FootClass *)base)->NavCom != NULL) {
-								base->ArchiveTarget = ((FootClass *)base)->NavCom;
+						FootClass * foot = (FootClass *)base;
+						if (foot->NavCom != NULL && !base->TClass->JumpJet && !base->TClass->Teleporter) {
+							if (foot->NavCom != NULL) {
+								base->ArchiveTarget = foot->NavCom;
 							}
 							base->QueueMission(MISSION_MOVE, false);
 							base->Assign_Destination(&Map[cell]);
@@ -3425,7 +3473,6 @@ int BuildingClass::Exit_Object(TechnoClass * base)
 					}
 				} else {
 
-					Coord exitcoord;
 					cell = Find_Exit_Cell(base);
 					if (cell == CELL_NONE) {
 						return(0);
@@ -3449,14 +3496,14 @@ int BuildingClass::Exit_Object(TechnoClass * base)
 						to.Y += 1;
 					}
 
-					exitcoord = to.As_Coord();
+					Coord exitcoord = Coord(to, 0);
 					/*
 					 * The barracks types have a special exit door location that the
 					 * exiting object should be placed at.
 					 */
 					if (Class->IsGDIBarracks) {
 						if (cell.X == x + 1 && cell.Y == y + 2) {
-							exitcoord = exitcoord + Class->ExitCoordinate;
+							exitcoord = Coord(exitcoord.X + Class->ExitCoordinate.X, exitcoord.Y + Class->ExitCoordinate.Y, exitcoord.Z + Class->ExitCoordinate.Z);
 						}
 					}
 					if (Class->IsNODBarracks && cell.X == x + 2 && cell.Y == y + 2) {
@@ -3491,26 +3538,6 @@ int BuildingClass::Exit_Object(TechnoClass * base)
 
 				}
 
-			} else {
-
-				/*
-				 * A unit exits a refinery to the south west corner and heads off to
-				 * harvest. Infantry just scatters out.
-				 */
-				if (base->Fetch_RTTI() == RTTI_UNIT) {
-
-					cell = Adjacent_Cell(Center_Coord().As_Cell(), FACING_SW);
-
-					ScenarioInit++;
-					if (base->Unlimbo(Coord(Adjacent_Cell(cell, FACING_S), 0), DIR_SW)) {
-						base->PrimaryFacing.Set(DirType(DIR_S));
-						base->QueueMission(MISSION_HARVEST, false);
-					}
-
-				} else {
-					base->Scatter(COORD_NONE, true, false);
-					return(0);
-				}
 			}
 			ScenarioInit--;
 			break;
@@ -3661,7 +3688,6 @@ int BuildingClass::Exit_Object(TechnoClass * base)
 	*/
 	return(0);
 }
-#endif
 
 
 /***********************************************************************************************
@@ -5939,15 +5965,6 @@ int BuildingClass::Do_MISSION_HARVEST(void)
 	}
 	#endif
 	return(BASECLASS::Do_MISSION_HARVEST());
-}
-
-
-/// <summary>
-/// RA2
-/// </summary>
-static inline Cell Target_Cell(AbstractClass * target)
-{
-	return(target->Center_Coord().As_Cell());
 }
 
 
@@ -9039,7 +9056,8 @@ bool BuildingClass::Is_In_Psychic_Range(AbstractClass const * target) // RA2: no
 {
 	Coord a = Center_Coord();
 	Coord b = target->Center_Coord();
-	return(a.Distance_To(b) <= Class->PsychicDetectionRadius << 8);
+	int distance = Coord(a - b).Length();
+	return(distance <= Class->PsychicDetectionRadius << 8);
 }
 
 
@@ -9050,7 +9068,8 @@ bool BuildingClass::Is_Cell_In_Psychic_Range(CellClass const * cell) // RA2: not
 {
 	Coord a = Center_Coord();
 	Coord b = cell->Cell_Coord();
-	return(a.Distance_To(b) <= Class->PsychicDetectionRadius << 8);
+	int distance = Coord(a - b).Length();
+	return(distance <= Class->PsychicDetectionRadius << 8);
 }
 
 

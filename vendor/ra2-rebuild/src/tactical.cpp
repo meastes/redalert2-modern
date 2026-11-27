@@ -1023,7 +1023,6 @@ void Tactical::Render_Terrain(Rect const & xpanrect, Rect const & ypanrect, bool
 /// <param name="surface">The composite surface the foreground objects are drawn onto.</param>
 /// <param name="fullredraw">Redraw the whole view rather than just the scrolled strips?</param>
 /// <param name="drawpass">Which rendering pass to perform. See DrawPassType.</param>
-#ifdef RA2_NON_MATCHING // not exact: against the image bound (3,288 B) 2645 bytes differ (was 2,722 against main's function-map extent; Surface pointer parameter as the image's symbol has it); main: best 64.69, tried 13 times (register, layout, frame)
 #include "beacon.h"
 #include "capmgr.h"
 #include "ebolt.h"
@@ -1072,177 +1071,152 @@ void Tactical::Render(Surface * surface, bool fullredraw, int drawpass)
 		}
 	}
 
-	/*
-	 * Either the whole view, or just the strips the pan exposed.
-	 */
 	if (fullredraw) {
 		xoffset = 0;
 		yoffset = 0;
 	}
 
-	/*
-	 * The composite surface to draw the foreground objects onto. This tracks the front buffer
-	 * across the surface swap performed during the pan pass.
-	 */
-	Surface * composite = surface;
-
-	/*
-	 * Decide whether the cached layers actually need to be rebuilt this pass. A pending redraw,
-	 * selectable buildings, dirty areas or a pixel pan all force a rebuild; but once the first
-	 * frame has been rendered, a pan is only honoured if the world coordinate also changed. The
-	 * foreground pass never rebuilds the cached layers.
-	 */
-	bool render;
-	if (drawpass == DRAW_PASS_FOREGROUND) {
-		render = false;
-	} else if (fullredraw) {
-		render = true;
-	} else {
-		int dirty_count = DirtyAreas.Count();
-		if (IsFirstRender) {
-			if (has_selectable_buildings) {
+	if (drawpass != DRAW_PASS_FOREGROUND) {
+		bool render = fullredraw;
+		bool moved = true;
+		if (!render) {
+			if (IsFirstRender) {
+				render = has_selectable_buildings;
+			} else if (has_selectable_buildings) {
 				render = true;
-			} else {
-				render = IsToRedraw || dirty_count != 0 || TacPixelX != LastTacPixelX || TacPixelY != LastTacPixelY;
+			} else if (DirtyAreas.Count() == 0) {
+				if (IsToRedraw) {
+					render = true;
+				} else {
+					moved = TacticalCoord.X != LastTacticalCoord.X || TacticalCoord.Y != LastTacticalCoord.Y;
+				}
 			}
-		} else if (has_selectable_buildings) {
-			render = true;
-		} else if (dirty_count == 0 && IsToRedraw) {
-			render = true;
-		} else if (dirty_count == 0 && TacticalCoord.X == LastTacticalCoord.X && TacticalCoord.Y == LastTacticalCoord.Y) {
-			render = false;
-		} else {
-			render = IsToRedraw || dirty_count != 0 || TacPixelX != LastTacPixelX || TacPixelY != LastTacPixelY;
+			if (!render && moved) {
+				render = IsToRedraw || DirtyAreas.Count() != 0 || TacPixelX != LastTacPixelX || TacPixelY != LastTacPixelY;
+			}
 		}
-	}
 
-	if (render) {
-
-		/*
+		if (render) {
+			/*
 		 * The magnitude of the pan, and the source/destination rectangles for shifting the
 		 * still-valid portion of the cached surface across by that amount.
 		 */
 		unsigned panwidth = abs(xoffset);
-		unsigned panheight = abs(yoffset);
-		int height = TacticalDimensions.Height - panheight;
-		int width = TacticalDimensions.Width - panwidth;
-		int xstart = (xoffset < 0) ? -xoffset : 0;
-		int ystart = (yoffset < 0) ? -yoffset : 0;
+			int width = TacticalDimensions.Width - panwidth;
+			unsigned panheight = abs(yoffset);
+			int height = TacticalDimensions.Height - panheight;
 
-		Rect sourcerect(TacticalDimensions.X + xstart, TacticalDimensions.Y + ystart,
-			width, height);
-		Rect destrect(TacticalDimensions.X + ((xoffset <= 0) ? 0 : xoffset),
-					TacticalDimensions.Y + ((yoffset <= 0) ? 0 : yoffset),
-			width, height);
+			Rect sourcerect(TacticalDimensions.X + ((xoffset < 0) ? -xoffset : 0), TacticalDimensions.Y + ((yoffset < 0) ? -yoffset : 0), width, height);
+			Rect destrect(TacticalDimensions.X + ((xoffset <= 0) ? 0 : xoffset), TacticalDimensions.Y + ((yoffset <= 0) ? 0 : yoffset), width, height);
 
-		if (xoffset != 0 || yoffset != 0) {
-			if (drawpass == DRAW_PASS_PAN || drawpass == DRAW_PASS_FULL) {
-				CompositeSurface->Blit_From(destrect, *TileSurface, sourcerect);
-			}
-			if (drawpass == DRAW_PASS_PAN || drawpass == DRAW_PASS_FULL) {
-				DepthBuffer->Pan(-xoffset, -yoffset, 0xFFFFu);
-			}
-			if (drawpass == DRAW_PASS_PAN || drawpass == DRAW_PASS_FULL) {
-				AlphaBuffer->Pan(-xoffset, -yoffset, 0x7Fu);
-			}
-			if (drawpass == DRAW_PASS_PAN || drawpass == DRAW_PASS_FULL) {
-
-				/*
-				 * Swap the composite and tile surfaces so the freshly-panned image becomes the
+			if (xoffset != 0 || yoffset != 0) {
+				if (drawpass == DRAW_PASS_PAN || drawpass == DRAW_PASS_FULL) {
+					CompositeSurface->Blit_From(destrect, *TileSurface, sourcerect);
+				}
+				if (drawpass == DRAW_PASS_PAN || drawpass == DRAW_PASS_FULL) {
+					DepthBuffer->Pan(-xoffset, -yoffset, 0xFFFF);
+				}
+				if (drawpass == DRAW_PASS_PAN || drawpass == DRAW_PASS_FULL) {
+					AlphaBuffer->Pan(-xoffset, -yoffset, 0x7F);
+				}
+				if (drawpass == DRAW_PASS_PAN || drawpass == DRAW_PASS_FULL) {
+					/*
+				 * Swap the surface and tile surfaces so the freshly-panned image becomes the
 				 * render target.
 				 */
 				Surface * oldcomp = CompositeSurface;
-				Surface * oldtile = TileSurface;
-				CompositeSurface = oldtile;
-				TileSurface = oldcomp;
-				composite = oldtile;
-				LogicalSurface = oldtile;
+					CompositeSurface = TileSurface;
+					TileSurface = oldcomp;
+					surface = CompositeSurface;
+					LogicalSurface = surface;
+				}
+			} else {
+				if (fullredraw && (drawpass == DRAW_PASS_PAN || drawpass == DRAW_PASS_FULL)) {
+					DepthBuffer->Fill(0xFFFF);
+					AlphaBuffer->Fill(0x7F);
+				}
 			}
-		} else {
-			if (fullredraw && (drawpass == DRAW_PASS_PAN || drawpass == DRAW_PASS_FULL)) {
-				DepthBuffer->Fill(0xFFFFu);
-				AlphaBuffer->Fill(127u);
+
+			if (drawpass == DRAW_PASS_PAN) {
+				return;
 			}
-		}
 
-		if (drawpass == DRAW_PASS_PAN) {
-			return;
-		}
+			if (!Debug_Map) {
+				Register_Dirty_Buildings(Rect(TacticalRect.X - 64, TacticalRect.Y - 64, TacticalRect.Width + 128, TacticalRect.Height + 128));
+			}
 
-		if (!Debug_Map) {
-			Register_Dirty_Buildings(Rect(TacticalRect.X - 64, TacticalRect.Y - 64, TacticalRect.Width + 128, TacticalRect.Height + 128));
-		}
+			Surface * prevlogical = LogicalSurface;
+			LogicalSurface = TileSurface;
+			TileSurface->Lock();
 
-		Surface * prevlogical = LogicalSurface;
-		LogicalSurface = TileSurface;
-		LogicalSurface->Lock();
-
-		if (drawpass == DRAW_PASS_BACKGROUND || drawpass == DRAW_PASS_FULL) {
-
-			/*
+			if (drawpass == DRAW_PASS_BACKGROUND || drawpass == DRAW_PASS_FULL) {
+				/*
 			 * Build the two redraw strips that the pan exposed. 'xpanrect' is the full-height strip
 			 * revealed by horizontal scrolling (left edge if scrolled right, right edge if scrolled
 			 * left), 'ypanrect' the strip revealed by vertical scrolling. 'bounds' is the region
 			 * that the blit above preserved, used to clip the depth wipe and shroud.
 			 */
 			bool scrolled_left = LastTacPixelX > TacPixelX;
-			bool scrolled_right = LastTacPixelX < TacPixelX;
-			bool scrolled_up = LastTacPixelY > TacPixelY;
-			bool scrolled_down = LastTacPixelY < TacPixelY;
+				bool scrolled_right = LastTacPixelX < TacPixelX;
+				bool scrolled_up = LastTacPixelY > TacPixelY;
+				bool scrolled_down = LastTacPixelY < TacPixelY;
 
-			Rect leftstrip(TacticalRect.X, TacticalRect.Y, panwidth, TacticalRect.Height);
-			Rect rightstrip(TacticalRect.X + TacticalRect.Width - panwidth, TacticalRect.Y, panwidth, TacticalRect.Height);
-			Rect leftclip = Intersect(leftstrip, TacticalRect);
-			Rect rightclip = Intersect(rightstrip, TacticalRect);
+				Rect leftstrip(TacticalRect.X, TacticalRect.Y, panwidth, TacticalRect.Height);
+				Rect rightstrip(TacticalRect.X + TacticalRect.Width - panwidth, TacticalRect.Y, panwidth, TacticalRect.Height);
+				Rect leftclip = Intersect(leftstrip, TacticalRect);
+				Rect rightclip = Intersect(rightstrip, TacticalRect);
 
-			Rect topstrip;
-			Rect bottomstrip;
-			if (scrolled_left) {
-				topstrip = Rect(TacticalRect.X + panwidth, TacticalRect.Y, TacticalRect.Width - panwidth, panheight);
-				bottomstrip = Rect(TacticalRect.X + panwidth, TacticalRect.Y + TacticalRect.Height - panheight, TacticalRect.Width - panwidth, panheight);
-			} else if (scrolled_right) {
-				topstrip = Rect(TacticalRect.X, TacticalRect.Y, TacticalRect.Width - panwidth, panheight);
-				bottomstrip = Rect(TacticalRect.X, TacticalRect.Y + TacticalRect.Height - panheight, TacticalRect.Width - panwidth, panheight);
-			} else {
-				topstrip = Rect(TacticalRect.X, TacticalRect.Y, TacticalRect.Width, panheight);
-				bottomstrip = Rect(TacticalRect.X, TacticalRect.Y + TacticalRect.Height - panheight, TacticalRect.Width, panheight);
-			}
-			Rect topclip = Intersect(topstrip, TacticalRect);
-			Rect bottomclip = Intersect(bottomstrip, TacticalRect);
+				Rect topstrip;
+				Rect bottomstrip;
+				if (scrolled_left) {
+					topstrip = Rect(TacticalRect.X + panwidth, TacticalRect.Y, TacticalRect.Width - panwidth, panheight);
+					bottomstrip = Rect(TacticalRect.X + panwidth, TacticalRect.Y + TacticalRect.Height - panheight, TacticalRect.Width - panwidth, panheight);
+				} else if (scrolled_right) {
+					topstrip = Rect(TacticalRect.X, TacticalRect.Y, TacticalRect.Width - panwidth, panheight);
+					bottomstrip = Rect(TacticalRect.X, TacticalRect.Y + TacticalRect.Height - panheight, TacticalRect.Width - panwidth, panheight);
+				} else {
+					topstrip = Rect(TacticalRect.X, TacticalRect.Y, TacticalRect.Width, panheight);
+					bottomstrip = Rect(TacticalRect.X, TacticalRect.Y + TacticalRect.Height - panheight, TacticalRect.Width, panheight);
+				}
+				Rect topclip = Intersect(topstrip, TacticalRect);
+				Rect bottomclip = Intersect(bottomstrip, TacticalRect);
 
-			Rect bounds(TacticalRect.X + (scrolled_left ? panwidth : 0),
-					TacticalRect.Y + (scrolled_up ? panheight : 0),
+				Point2D offset;
+				offset.Y = scrolled_up ? panheight : 0;
+				offset.X = scrolled_left ? panwidth : 0;
+				Rect bounds(TacticalRect.X + offset.X, TacticalRect.Y + offset.Y,
 					TacticalRect.Width - panwidth, TacticalRect.Height - panheight);
 
-			Rect xpanrect(0, 0, 0, 0);
-			Rect ypanrect(0, 0, 0, 0);
-			if (scrolled_left) {
-				xpanrect = leftclip;
-			} else if (scrolled_right) {
-				xpanrect = rightclip;
-			}
-			if (scrolled_up) {
-				ypanrect = topclip;
-			} else if (scrolled_down) {
-				ypanrect = bottomclip;
-			}
+				Rect xpanrect(0, 0, 0, 0);
+				Rect ypanrect(0, 0, 0, 0);
+				if (scrolled_left) {
+					xpanrect = leftclip;
+				} else if (scrolled_right) {
+					xpanrect = rightclip;
+				}
+				if (scrolled_up) {
+					ypanrect = topclip;
+				} else if (scrolled_down) {
+					ypanrect = bottomclip;
+				}
 
-			Wipe_Depth(fullredraw, xoffset, yoffset, bounds);
-			Render_Shroud(xpanrect, ypanrect, bounds, fullredraw);
-			Render_Tiles(xpanrect, ypanrect, fullredraw);
-			Render_Fogged_Objects(xpanrect, ypanrect, fullredraw);
-			Render_Overlays(xpanrect, ypanrect, fullredraw);
-			Render_Terrain(xpanrect, ypanrect, fullredraw);
-			Render_Tile_Shadows(xpanrect, ypanrect, fullredraw);
-			Render_Buildings(xpanrect, ypanrect, fullredraw);
+				Wipe_Depth(fullredraw, xoffset, yoffset, bounds);
+				Render_Shroud(xpanrect, ypanrect, bounds, fullredraw);
+				Render_Tiles(xpanrect, ypanrect, fullredraw);
+				Render_Fogged_Objects(xpanrect, ypanrect, fullredraw);
+				Render_Overlays(xpanrect, ypanrect, fullredraw);
+				Render_Terrain(xpanrect, ypanrect, fullredraw);
+				Render_Tile_Shadows(xpanrect, ypanrect, fullredraw);
+				Render_Buildings(xpanrect, ypanrect, fullredraw);
 
-			for (int index = DirtyAreas.Count() - 1; index >= 0; index--) {
-				DirtyAreas.Delete_Index(index);
+				for (int index = DirtyAreas.Count() - 1; index >= 0; index--) {
+					DirtyAreas.Delete_Index(index);
+				}
+
+				LogicalSurface->Unlock();
+				LogicalSurface = prevlogical;
+				CellRedrawCount = 0;
 			}
-
-			LogicalSurface->Unlock();
-			LogicalSurface = prevlogical;
-			CellRedrawCount = 0;
 		}
 	}
 
@@ -1256,15 +1230,18 @@ void Tactical::Render(Surface * surface, bool fullredraw, int drawpass)
 
 	if (drawpass == DRAW_PASS_BACKGROUND || drawpass == DRAW_PASS_FULL) {
 		LogicalSurface->Blit_From(TacticalRect, *TileSurface, TacticalRect);
+		if (drawpass == DRAW_PASS_BACKGROUND) {
+			return;
+		}
 	}
 
 	if (drawpass == DRAW_PASS_FOREGROUND || drawpass == DRAW_PASS_FULL) {
 		int i;
 
 		Add_Buildings_To_Selectable(TacticalRect);
-		composite->Lock();
+		surface->Lock();
 		Surface * savedlogical = LogicalSurface;
-		LogicalSurface = composite;
+		LogicalSurface = surface;
 		Draw_Waypoints(false);
 		Draw_Rally_Points(false);
 		Draw_Placement(false);
@@ -1310,23 +1287,34 @@ void Tactical::Render(Surface * surface, bool fullredraw, int drawpass)
 		if (planning) Planning_Draw_Remembered();
 		Draw_Pixel_Effects(TacticalRect, TacticalRect);
 		LogicalSurface = savedlogical;
-		composite->Unlock();
-		int line = 0;
+		surface->Unlock();
+		int shown = 0;
 		if (Scen->MissionTimer.Is_Active()) {
 			Draw_Timer(0, ColorSchemes[PlayerPtr->Scheme], Scen->MissionTimer.Value() / TICKS_PER_SECOND, Scen->MissionTimerTextCSF, NULL, NULL);
-			line = 1;
+			shown = 1;
 		}
-		count = TimedSuperWeapons.Count();
-		for (i = 0; i < count; i++) {
-			SuperClass * super = TimedSuperWeapons[i];
-			if (!super->IsSuspended || Session.Type != GAME_NORMAL || super->Control.Value() != super->Class->RechargeTime) {
-				Draw_Timer(line, ColorSchemes[super->House->Scheme], super->Control.Value() / TICKS_PER_SECOND, super->Class->UIName,
-					(unsigned __int64 *)&super->BlinkInfo.Data0, &super->BlinkInfo.State);
-				line++;
+		int index = shown;
+
+		int supers = TimedSuperWeapons.Count();
+		for (i = 0; i < supers; i++) {
+			/*
+			 * RA2: the image reads the flag through a pointer of its own (0x6A50F0, copied at
+			 * 0x6A5103) and fetches the element again for the draw: an inline accessor's `this`
+			 * (RobinDigitalPro/ra2-1001-decomp b5dc31d has SuperClass::Is_Suspended() here). A
+			 * member added to super.h moves WinMain 0x68E280 and Reposition_Sidebar 0x6819A0 by
+			 * declaration count, so the flag is read into a named condition instead.
+			 */
+			bool suspended = TimedSuperWeapons[i]->IsSuspended;
+			if (!suspended || Session.Type != GAME_NORMAL || TimedSuperWeapons[i]->Control.Value() != TimedSuperWeapons[i]->Class->RechargeTime) {
+				Draw_Timer(index, ColorSchemes[TimedSuperWeapons[i]->House->Scheme], TimedSuperWeapons[i]->Control.Value() / TICKS_PER_SECOND, TimedSuperWeapons[i]->Class->UIName,
+					(unsigned __int64 *)&TimedSuperWeapons[i]->BlinkInfo.Data0, &TimedSuperWeapons[i]->BlinkInfo.State);
+				index++;
 			}
 		}
-		count = Houses.Count();
-		for (i = 0; i < count; i++) {
+
+		int line = index;
+		int houses = Houses.Count();
+		for (i = 0; i < houses; i++) {
 			int time = Houses[i]->PowerBlackoutTimer.Value();
 			if (time > 0) {
 				Draw_Timer(line, ColorSchemes[Houses[i]->Scheme], time / TICKS_PER_SECOND,
@@ -1340,7 +1328,6 @@ void Tactical::Render(Surface * surface, bool fullredraw, int drawpass)
 		IsToRedraw = false;
 	}
 }
-#endif
 
 
 
@@ -2519,12 +2506,13 @@ void Tactical::Draw_Tile_Shadows(Rect const & area, Rect const & cliprect)
 /// </summary>
 /// <param name="cell">The cell whose tile needs refreshing.</param>
 /// <param name="cliprect">Not referenced; the tiles clip to the tactical rectangle.</param>
-#ifdef RA2_NON_MATCHING // not exact: 535 bytes differ against the image-derived bound 006a8560 (824 body bytes, 8 padding) (was 923; the two projected pixel positions and the shared last-subtile bound as ra2-decomp's banked form banks/0x006D7F20_tact.cpp (11df85d) has them, RA2's elevation test kept; 10 of 10 calls in order, frame 0x48 against 0x44); main: best 63.04, tried 7 times (inline, frame, register)
+#ifdef RA2_NON_MATCHING // not exact: 11 bytes differ against the image-derived bound 006a8560 (824 body bytes, 8 padding; ours 824 B, the frame 0x44, 10 of 10 calls and 255 = 255 instructions) (lane F87, 2026-11-26: ra2-decomp's refreshed bank for the Yuri's Revenge twin 0x6D7F20 taken whole (branch banked-forms 41d009df, banks/0x006D7F20.cpp; flag reference-borne if it lands): the coordinate declared and then assigned from Coord_Whole(Tile_Center(cell)), the tests written draw == false, the outer columns tested height < level, the record tests apart with draw set after them. Left, as the bank records for the twin: the outer-column test is cmp edx, eax here where the image tests the difference (test ecx, ecx at 0x6A86D6), and the result pointer of Rectangular_To_Isometric at the second projection is in ecx for edx (0x6A87EA), which lets cdq go ahead of the load of Y. Written diff < 0 the difference has four uses and the block returns to the earlier allocation (frame 0x48, 542); with the middle column then on height + 1 <= level it is 12, on the written-out difference in either middle test 38 or 542, with no named difference 541; the second projection through Project_Tile_Left, a member-wise pixel, the screen point reused or Tile_Center gives 800 and up. Was 529: lane F76, 2026-11-26: the elevation test on the image's height difference, which the draft had one level off in both arms (RobinDigitalPro/ra2-1001-decomp 7e84ed4 reads 1.001 the same way); left there: the image reads Elevation from the cell three times and keeps height in edx and draw in al, ours holds Elevation in al, draw in cl and reads Height again for the level test; not moved by the declaration order of draw, overlap and height, overlap set from draw, or the difference written out at each use (526 B). Robin's whole text is 385 B by position at the image's size with more instructions off (its elevation local is not the image's) (was 535, 923; the two projected pixel positions and the shared last-subtile bound as ra2-decomp's banked form banks/0x006D7F20_tact.cpp (11df85d) has them, RA2's elevation test kept; 10 of 10 calls in order, frame 0x48 against 0x44); main: best 63.04, tried 7 times (inline, frame, register)
 void Tactical::Draw_Tiles(Cell const & cell, Rect const & cliprect)
 {
 	CellClass * basecell = &Map[cell];
 
-	Coord coord = Coord_Whole(Coord(cell));
+	Coord coord;
+	coord = Coord_Whole(Tile_Center(cell));
 	Point2D screen;
 	Coord_To_Pixel(coord, screen);
 	if (basecell->Height < 2) {
@@ -2544,38 +2532,28 @@ void Tactical::Draw_Tiles(Cell const & cell, Rect const & cliprect)
 				CellClass * cellptr = &Map[Cell(cx, cy)];
 				bool draw = false;
 				int height = cellptr->Height;
-				bool overlap = false;
 
 				if (col != 1) {
 					if (height == level + 1) {
 						draw = true;
-						overlap = true;
 					}
 				} else if (height > level && height < level + 4) {
 					draw = true;
-					overlap = true;
 				}
 
-				if (cellptr->Elevation > 0 && !draw) {
-					int diff = height - level - 1;
+				if (cellptr->Elevation > 0 && draw == false) {
+					int diff = height - level; // RA2: the image tests height - level in the outer columns and height - level + 1 in the middle one (0x6A86D4 to 0x6A8703)
 					if (col != 1) {
-						if (diff < 0 && cellptr->Elevation + diff >= 0) {
+						if (height < level && cellptr->Elevation + diff >= 0) {
 							draw = true;
-						} else {
-							draw = overlap;
 						}
-					} else if (height - level > 0) {
-						draw = overlap;
-					} else {
+					} else if (diff + 1 <= 0 && cellptr->Elevation + diff + 1 > 0) {
 						draw = true;
-						if (cellptr->Elevation + height - level <= 0) {
-							draw = overlap;
-						}
 					}
 				}
 
 				if (height == level) {
-					if (!draw) {
+					if (draw == false) {
 
 						/*
 						 * Same height and not already flagged for redraw: the tile only needs
@@ -2599,11 +2577,15 @@ void Tactical::Draw_Tiles(Cell const & cell, Rect const & cliprect)
 							subtile = last;
 						}
 						IsoTileRecord const * record = set->Fetch_Record_Pointer_Unsafe(subtile);
-						if (record == NULL || !record->IsHasExtraData) {
+						if (record == NULL) {
 							continue;
 						}
+						if (!record->IsHasExtraData) {
+							continue;
+						}
+						draw = true;
 					}
-				} else if (!draw) {
+				} else if (draw == false) {
 					continue;
 				}
 
@@ -4105,7 +4087,7 @@ static inline void World_To_View_Pixel(Tactical const & view, Coord const & coor
 /// This routine is used by the tactical map render pass to show the effect radius of any
 /// currently selected object whose type asks for one.
 /// </summary>
-#ifdef RA2_NON_MATCHING // not exact: 820 bytes differ by position against the image bound 006ac420 (893 body bytes, ours 893, same calls): the image keeps a zero in ebx from the top of the function to the first building loop and the cursor cell's height on the stack (frame 0x38); ours keeps the count in ebx, no zero register, frame 0x30. ra2-decomp's matched twin text (cfebfc7, less its super weapon branch) gives the frame and the same 820; main: best 78.52
+#ifdef RA2_NON_MATCHING // not exact: 820 bytes differ by position against the image bound 006ac420 (893 body bytes, ours 893, same calls): the image keeps a zero in ebx from the top of the function to the first building loop and the cursor cell's height on the stack (frame 0x38); ours keeps the count in ebx, no zero register, frame 0x30. ra2-decomp's matched twin text (cfebfc7, less its super weapon branch) gives the frame and the same 820; main: best 78.52 (lane F100, 2026-11-27: a cached zero is made here by double-word zero stores to memory only (two in a row, or one in a loop); byte stores, compares with memory, pushed zeros, index initialisers and dead struct stores make none, and a zero made that way does not serve the byte tests, which the image's does (cmp byte ptr [eax+0x208], bl). It takes ebx ahead of the count only with eight stores in the first loop. Same bytes: early returns for the two outer tests, the twin's constructor spellings of the static colour, explicit comparisons of the two flags, one index for the three loops)
 void Tactical::Draw_Radial_Indicators(void)
 {
 	int count = CurrentObject.Count(); // RA2: the count is read once, before the loop (0x6AC42B)

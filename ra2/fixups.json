@@ -191,6 +191,16 @@
    "why": "As map.cpp: the specialised constructor is vector.h's generic one word for word (the rebuild's own comment says so); natively the generic constructor provides it."
   },
   {
+   "file": "src/netshare.cpp",
+   "cut_function": "^template<>\\nDynamicVectorClass<MultiMission const \\*>::DynamicVectorClass\\(unsigned size, MultiMission const \\* const \\* array\\)\\n",
+   "why": "Lane P65 (re-pin to 782562d93c): as map.cpp: the scenario dialog's explicit specialisation of the DynamicVectorClass<MultiMission const *> constructor (the original kept it out of line) comes after the headers instantiated it, which ISO C++ refuses; its body is vector.h's generic constructor word for word, which natively provides it."
+  },
+  {
+   "file": "src/netshare.cpp",
+   "cut_function": "^template<>\\nbool DynamicVectorClass<MultiMission const \\*>::Add\\(MultiMission const \\* const & object\\)\\n",
+   "why": "Lane P65 (re-pin): as the constructor above: the specialised Add is vector.h's generic DynamicVectorClass<T>::Add word for word."
+  },
+  {
    "file": "src/conquer.cpp",
    "old": "\t__asm {\n\t\tmov ExceptionReturnStack, esp\n\t\tmov ExceptionReturnFrame, ebp\n\t\tlea eax, ret_addr\n\t\tmov ExceptionReturnAddress, eax\n\t}\n\nret_addr:\n",
    "new": "\t/* native: the x86 return stack and address the crash handler resumed at are not taken (native/rb/fixups.json) */\n",
@@ -211,7 +221,7 @@
    "file": "src/startup.cpp",
    "old": "\t\t\t__try {\n\n\t\t\t\tDebugString(\"Main_Game\\n\");\n\n\t\t\t\tMain_Game(argc, argv);\n\n\t\t\t} __except(Exception_Handler(GetExceptionCode(), GetExceptionInformation())) {};",
    "new": "\t\t\t/* native: no SEH on arm64 (main's port/fixups.json drops the same block); the host's crash trace reports faults */\n\t\t\tDebugString(\"Main_Game\\n\");\n\n\t\t\tMain_Game(argc, argv);",
-   "why": "clang has no __try/__except on arm64 macOS; main's port drops the same block around Main_Game in its WinMain (native/port/fixups.json, startup.cpp). Inside the parked draft only."
+   "why": "clang has no __try/__except on arm64 macOS; main's port drops the same block around Main_Game in its WinMain (native/port/fixups.json, startup.cpp). Lane P65: WinMain is the rebuild's exact text (no draft); the row is the same portability change on it."
   },
   {
    "file": "src/startup.cpp",
@@ -546,19 +556,6 @@
    "why": "Lane P2 (pointer width, as YR's lane Y3 for its twin): the unit reaches some WinData fields at their 32-bit offsets ((char *)data + 0x24, 0x30, 0x50, 0x1E8..0x1FC), others by name. Natively the record's pointers are 8 bytes, so a raw offset lands on another field (+0x24 inside Image: the skirmish dialog's teardown then hit a corrupted heap). Each raw offset is taken from the named field that holds it on VC6 (Reserved_24, IsAsciiOnly, Excluded, Reserved_1D8); the saved font handle stays a 32-bit word there (port GDI handles are small tokens), as the next word is the background mode."
   },
   {
-   "old": "*(int *)((char *)data + 0x50) = lparam;",
-   "new": "data->Excluded = (wchar_t const *)lparam; /* native: +0x50 at pointer width */",
-   "file": "src/ownrdraw.cpp",
-   "why": "Lane P2 (pointer width, as YR's lane Y3 for its twin): the unit reaches some WinData fields at their 32-bit offsets ((char *)data + 0x24, 0x30, 0x50, 0x1E8..0x1FC), others by name. Natively the record's pointers are 8 bytes, so a raw offset lands on another field (+0x24 inside Image: the skirmish dialog's teardown then hit a corrupted heap). Each raw offset is taken from the named field that holds it on VC6 (Reserved_24, IsAsciiOnly, Excluded, Reserved_1D8); the saved font handle stays a 32-bit word there (port GDI handles are small tokens), as the next word is the background mode."
-  },
-  {
-   "regex": true,
-   "old": "\\(char \\*\\)data \\+ 0x30\\)",
-   "new": "(char *)&data->IsAsciiOnly)",
-   "file": "src/ownrdraw.cpp",
-   "why": "Lane P2 (pointer width, as YR's lane Y3 for its twin): the unit reaches some WinData fields at their 32-bit offsets ((char *)data + 0x24, 0x30, 0x50, 0x1E8..0x1FC), others by name. Natively the record's pointers are 8 bytes, so a raw offset lands on another field (+0x24 inside Image: the skirmish dialog's teardown then hit a corrupted heap). Each raw offset is taken from the named field that holds it on VC6 (Reserved_24, IsAsciiOnly, Excluded, Reserved_1D8); the saved font handle stays a 32-bit word there (port GDI handles are small tokens), as the next word is the background mode."
-  },
-  {
    "file": "src/txtlabel2.cpp",
    "after_includes": "#define ScorePalette ScorePalette_ac1160 /* native: this unit's pointer (0x00AC1160), not _palette.cpp's PaletteClass object of the same name */",
    "why": "Lane P2: the rebuild defines two globals named ScorePalette, _palette.cpp's PaletteClass object and this unit's PaletteClass * (0x00AC1160, ASCORE.PAL or SSCORE.PAL). The rebuild compiles and compares units one at a time, so the clash never links; natively weaken_duplicates kept the 768-byte object and this unit stored its pointer into the object's first bytes and later deleted what it read back there (found by an AddressSanitizer run: _palette.cpp's initialiser wrote past the 8-byte copy). Natively this unit's pointer gets its own symbol. A rebuild finding to report: one name, two objects."
@@ -632,13 +629,16 @@
   },
   {
    "file": "src/alphashp.cpp",
-   "cut_function": "^void AlphaShapeClass::Draw_All\\(Rect const & cliprect\\)",
-   "why": "Lane P28 (re-pin to 66bccbbfdd): AlphaShapeClass::Draw_All 0x0041F5E0 is now the rebuild's own text, which the appended glue (alphashp_native.inc) already defines with the port's native changes (pointer-width wrap, harness counts or the Enhancements button); the rebuild's definition is cut so the re-pin keeps the played behaviour. Moving to the rebuild's text is a separate step."
+   "regex": true,
+   "old": "Wrap_Overflow\\(\\(unsigned\\)alphaptr\\)",
+   "new": "Wrap_Overflow((uintptr_t)alphaptr)",
+   "why": "Lane P65 (re-pin to 782562d93c; was in glue/alphashp_native.inc's draft since lane P2): AlphaShapeClass::Draw_All 0x0041F5E0 is the rebuild's exact text now; its alpha-buffer wrap passes the pointer through a 32-bit unsigned, which cuts it natively; pointer width (as the ABuffer rows)."
   },
   {
    "file": "src/alphashp.cpp",
-   "append": "alphashp_native.inc",
-   "why": "Lane P2: AlphaShapeClass::Draw_All (0x0041F5E0, unmatched in both trees) from main's native draft with the rebuild's names; the first skirmish frame's Tactical::Draw_Shroud trapped on it."
+   "old": "\t\t\t\t\tshape = AlphaShapes[i]->ImageData;\n\t\t\t\t}\n\t\t\t\tRect shape_rect = shape->Get_Rect(0);\n",
+   "new": "\t\t\t\t\tshape = AlphaShapes[i]->ImageData;\n\t\t\t\t}\n\t\t\t\tif (shape == NULL) continue;   /* native: no image in the type either (the original reads through null) */\n\t\t\t\tRect shape_rect = shape->Get_Rect(0);\n",
+   "why": "Lane P65 (as the row above; the draft's guard): a light whose owner's type has no alpha image either is skipped; the original reads its rectangle through a null pointer (a fault). Every shape with an image draws as the original."
   },
   {
    "file": "src/isotype.cpp",
@@ -675,11 +675,6 @@
    "file": "src/voxlib.cpp",
    "append": "voxlib_native.inc",
    "why": "Lane P2: the handwritten voxel drawers as the C++ drawers of the same table slot (main's behaviour_voxel.cpp rule); the first skirmish frame's unit draw trapped on Draw_Voxel_Regular_Lighting_Normals_ASM."
-  },
-  {
-   "file": "src/tactical.cpp",
-   "append": "tactical_native.inc",
-   "why": "Lane P2: Building_Player_Detector_Covers_Target (0x004386F0; main's parked draft with the rebuild's names); Tactical::Render trapped on it in the first skirmish frame."
   },
   {
    "file": "src/techno.cpp",
@@ -787,7 +782,7 @@
    "file": "src/loaddlg.cpp",
    "old": "\t\t\t\t\t\t\t\t\t\tShowWindow(dialog, SW_HIDE); // RA2: the dialog is hidden again after the message",
    "new": "\t\t\t\t\t\t\t\t\t\tShowWindow(dialog, SW_SHOW); // NATIVE (main's codex4 R684, C5): the list stays shown after the error",
-   "why": "Lane P12 (main's row at LoadOptionsClass's dialog loop, native/port/fixups.json row 437, codex4 R684; found by the parity audit): after TXT_ERROR_LOADING_GAME the original hides the load dialog again while its pending loop goes on, so after OK nothing of the dialog is left to click (Back hit no control). Natively the list is shown again, as in main's port. Not original behaviour."
+   "why": "Lane P12 (main's row at LoadOptionsClass's dialog loop, native/port/fixups.json row 437, codex4 R684; found by the parity audit): after TXT_ERROR_LOADING_GAME the original hides the load dialog again while its pending loop goes on, so after OK nothing of the dialog is left to click (Back hit no control). Natively the list is shown again, as in main's port. Not original behaviour. Lane P65 (the review of behaviour rows on exact code): LoadOptionsClass::Dialog is exact, so this changes the original's own behaviour; kept on purpose as the fix of the user's P12-loaderr (docs/regressions.md), not a portability row."
   },
   {
    "file": "src/savever.cpp",
@@ -1123,13 +1118,20 @@
   },
   {
    "file": "src/mainopt.cpp",
-   "cut_function": "^BOOL CALLBACK Main_Options_Dialog_Proc\\([^)]*\\)[ \\t]*//",
-   "why": "Lane P28 (re-pin to 66bccbbfdd): Main_Options_Dialog_Proc 0x00542590 is now the rebuild's own text, which the appended glue (mainopt_native.inc) already defines with the port's native changes (pointer-width wrap, harness counts or the Enhancements button); the rebuild's definition is cut so the re-pin keeps the played behaviour. Moving to the rebuild's text is a separate step."
+   "append": "mainopt_native.inc",
+   "why": "Lane P8: Main_Options_Dialog_Proc (0x00542590; the rebuild keeps its text under #if 0, a link-closure trap: the main menu's Options aborted), that text compiled natively and checked against main's behaviour row (link/behaviour_m22_options.cpp), with the native Enhancements button (0x7F80) and page (main's link/native_enhancements.cpp, lanes C3/C7). Lane P65 (re-pin to 782562d93c): Main_Options_Dialog_Proc is the rebuild's exact text now (lane P28's cut row and the glue's draft removed); the glue keeps the Enhancements page, and the two rows on the exact text below open it and label its button."
   },
   {
    "file": "src/mainopt.cpp",
-   "append": "mainopt_native.inc",
-   "why": "Lane P8: Main_Options_Dialog_Proc (0x00542590; the rebuild keeps its text under #if 0, a link-closure trap: the main menu's Options aborted), that text compiled natively and checked against main's behaviour row (link/behaviour_m22_options.cpp), with the native Enhancements button (0x7F80) and page (main's link/native_enhancements.cpp, lanes C3/C7)."
+   "old": "\t\t\t\t\tcase 0x6ED:\n\t\t\t\t\t\tif (HIWORD(wparam) == CBN_SELCHANGE) {\n",
+   "new": "\t\t\t\t\tcase 0x7F80:\t// NATIVE (lanes C3/C7): ENHANCEMENTS\n\t\t\t\t\t\tif (HIWORD(wparam) == 0) {\n\t\t\t\t\t\t\tRB_Run_Enhancements(window);\n\t\t\t\t\t\t}\n\t\t\t\t\t\tbreak;\n\t\t\t\t\tcase 0x6ED:\n\t\t\t\t\t\tif (HIWORD(wparam) == CBN_SELCHANGE) {\n",
+   "why": "Lane P65 (re-pin to 782562d93c; was in glue/mainopt_native.inc's draft since lane P8): the Options dialog's Enhancements button (id 0x7F80, appended to template 0xD5 by port/src/native_dialogs.cpp; no original control has it) opens the Enhancements page (glue/mainopt_native.inc RB_Run_Enhancements). Native addition, not original behaviour: without the button nothing changes."
+  },
+  {
+   "file": "src/mainopt.cpp",
+   "old": "\t\t\tcase OD_SUBCLASSED: {\n\t\t\t\t_initialized = false;\n",
+   "new": "\t\t\tcase OD_SUBCLASSED: {\n\t\t\t\tRB_Enhancements_Button_Text(window);\t// NATIVE (lanes C3/C7): the ENHANCEMENTS button's label\n\t\t\t\t_initialized = false;\n",
+   "why": "Lane P65 (as the row above): the Enhancements button's label is set when the Options dialog is subclassed, as the draft did."
   },
   {
    "file": "src/mainloop.cpp",
@@ -1274,8 +1276,8 @@
   },
   {
    "file": "src/mainopt.cpp",
-   "after_includes": "Rect RB_Map_View(Rect const & rect);   /* native: glue/zoom_native.inc */\nint RB_Sidebar_X(int view_right);\nint RB_Sidebar_Bottom(int view_bottom);\nint RB_Sidebar_Height(int screen_height);\nint RB_Command_Bar_Top(void);\nint RB_Command_Bar_Right(int width, int column_x);\nvoid RB_Tooltip_Zoom(bool map_side, int * x, int * y, int width, int height);\nvoid RB_Map_Zoom_Load(void);\nvoid RB_Map_Zoom_Leave(void);\nvoid RB_Map_Zoom_Start(void);\nvoid RB_Map_Zoom_End(void);\nvoid RB_View_Asked(int x, int y);\nvoid RB_Render_Size(int * w, int * h);\nvoid RB_Dialog_Screen(bool on);",
-   "why": "Lane P8 (the feature audit): declarations of glue/zoom_native.inc's answers for this unit's hooks."
+   "after_includes": "Rect RB_Map_View(Rect const & rect);   /* native: glue/zoom_native.inc */\nint RB_Sidebar_X(int view_right);\nint RB_Sidebar_Bottom(int view_bottom);\nint RB_Sidebar_Height(int screen_height);\nint RB_Command_Bar_Top(void);\nint RB_Command_Bar_Right(int width, int column_x);\nvoid RB_Tooltip_Zoom(bool map_side, int * x, int * y, int width, int height);\nvoid RB_Map_Zoom_Load(void);\nvoid RB_Map_Zoom_Leave(void);\nvoid RB_Map_Zoom_Start(void);\nvoid RB_Map_Zoom_End(void);\nvoid RB_View_Asked(int x, int y);\nvoid RB_Render_Size(int * w, int * h);\nvoid RB_Dialog_Screen(bool on);\nvoid RB_Run_Enhancements(HWND options);   /* native: glue/mainopt_native.inc */\nvoid RB_Enhancements_Button_Text(HWND options);",
+   "why": "Lane P8 (the feature audit): declarations of glue/zoom_native.inc's answers for this unit's hooks. Lane P65: and of glue/mainopt_native.inc's Enhancements page, which the exact Main_Options_Dialog_Proc calls (the rows below)."
   },
   {
    "file": "src/startup.cpp",
@@ -1550,14 +1552,14 @@
   },
   {
    "file": "src/ownrdraw.cpp",
-   "old": "\t\tcase WM_USER + 228: { // RA2: plays the named movie\n\t\t\tStop_Static_Movie(window, data);\n",
-   "new": "\t\tcase WM_USER + 228: { // RA2: plays the named movie\n\t\t\tStop_Static_Movie(window, data);\n\t\t\tRB_Static_Movie_Name(window, (char const *)lparam);   /* native (lane Y8): kept for the widescreen mode change */\n",
-   "why": "Lane P8, Mac widescreen (main's lane Y8 native_widescreen.cpp with behaviour_m14_ownerdraw.cpp's Native_Static_Movies_Stop/Restart): a static's named movie (the main menu's animated backdrop) is recorded when it starts, so the widescreen mode change can stop it and start it again on the new surfaces. Recording only."
+   "old": "\t\tcase WM_USER + 228: { // RA2: plays the named movie\n\t\t\tPlay_Static_Movie(data, window, (char const *)lparam);\n",
+   "new": "\t\tcase WM_USER + 228: { // RA2: plays the named movie\n\t\t\tPlay_Static_Movie(data, window, (char const *)lparam);\n\t\t\tRB_Static_Movie_Name(window, (char const *)lparam);   /* native (lane Y8): kept for the widescreen mode change */\n",
+   "why": "Lane P8, Mac widescreen (main's lane Y8 native_widescreen.cpp with behaviour_m14_ownerdraw.cpp's Native_Static_Movies_Stop/Restart): a static's named movie (the main menu's animated backdrop) is recorded when it starts, so the widescreen mode change can stop it and start it again on the new surfaces. Recording only. Lane P65 (re-pin to 782562d93c): the case now plays through Play_Static_Movie(data, window, name); the name is recorded after it."
   },
   {
    "file": "src/ownrdraw.cpp",
-   "old": "\t\tcase WM_USER + 226: // RA2: stops the movie\n\t\t\tStop_Static_Movie(window, data);\n",
-   "new": "\t\tcase WM_USER + 226: // RA2: stops the movie\n\t\t\tStop_Static_Movie(window, data);\n\t\t\tRB_Static_Movie_Name(window, NULL);   /* native (lane Y8) */\n",
+   "old": "\t\tcase WM_USER + 226: { // RA2: stops the movie\n\t\t\tStop_Static_Movie(data, window);\n",
+   "new": "\t\tcase WM_USER + 226: { // RA2: stops the movie\n\t\t\tStop_Static_Movie(data, window);\n\t\t\tRB_Static_Movie_Name(window, NULL);   /* native (lane Y8) */\n",
    "why": "Lane P8, Mac widescreen: a static's movie stopped by the game is no longer started again."
   },
   {
@@ -1688,9 +1690,9 @@
   },
   {
    "file": "src/ownrdraw.cpp",
-   "old": "\t\t\tif ((data->PictureMode == 1 && data->IsPlaying) || data->PictureMode == 4) KillTimer(window, 0);\n\t\t\tStop_Static_Movie(window, data);\n\t\t\t// RA2: destruction continues through the previous window procedure.",
-   "new": "\t\t\tif ((data->PictureMode == 1 && data->IsPlaying) || data->PictureMode == 4) KillTimer(window, 0);\n\t\t\tStop_Static_Movie(window, data);\n\t\t\tRB_Static_Movie_Name(window, NULL);   /* native (lane Y8): the static is gone */\n\t\t\t// RA2: destruction continues through the previous window procedure.",
-   "why": "Lane P8, Mac widescreen: a destroyed static's movie name is dropped (the port has no IsWindow to test a recorded handle with)."
+   "old": "\t\t\tKillTimer(movie_window, 0x65);\n",
+   "new": "\t\t\tKillTimer(movie_window, 0x65);\n\t\t\tRB_Static_Movie_Name(window, NULL);   /* native (lane Y8): the static is gone */\n",
+   "why": "Lane P8, Mac widescreen: a destroyed static's movie name is dropped (the port has no IsWindow to test a recorded handle with). Lane P65 (re-pin): WM_DESTROY now stops the movie inline (delete, KillTimer(movie_window, 0x65)); the name is dropped there."
   },
   {
    "file": "src/ownrdraw.cpp",
@@ -1739,9 +1741,9 @@
   {
    "file": "src/netshare.cpp",
    "regex": true,
-   "old": "\\(int\\)(entry|open|closed|choice|node|LobbyEntries\\[[0-9]\\])(?=[),])",
+   "old": "\\(int\\)(entry|open|closed|choice|node|LobbyEntries\\[[0-9]\\]|Lobby[A-Za-z]+Entry)(?=[),])",
    "new": "(intptr_t)\\1",
-   "why": "Lane P8 (the width sweep, item 5: main's width rows checked one by one against the rebuild text): Pointer width: the slot entries passed to Change_Slot_Type/Select_Combo_By_Data and compared with CB_GETITEMDATA at full width. Lane P28 (re-pin): the parked Change_Slot_Type draft now passes its NodeNameType * node."
+   "why": "Lane P8 (the width sweep, item 5: main's width rows checked one by one against the rebuild text): Pointer width: the slot entries passed to Change_Slot_Type/Select_Combo_By_Data and compared with CB_GETITEMDATA at full width. Lane P28 (re-pin): the parked Change_Slot_Type draft now passes its NodeNameType * node. Lane P65 (re-pin): the entries are named globals now (LobbyClosedEntry etc.)."
   },
   {
    "file": "src/netshare.cpp",
@@ -1777,9 +1779,9 @@
   },
   {
    "file": "src/gdlgsupp.cpp",
-   "old": "data == (int)LobbyEntries[6]",
-   "new": "data == (intptr_t)LobbyEntries[6]",
-   "why": "Lane P8 (the width sweep, item 5: main's width rows checked one by one against the rebuild text): As above."
+   "old": "data == (int)LobbyObserverEntry",
+   "new": "data == (intptr_t)LobbyObserverEntry",
+   "why": "Lane P8 (the width sweep, item 5: main's width rows checked one by one against the rebuild text): As above. Lane P65 (re-pin): LobbyEntries[7] is now seven named globals (LobbyObserverEntry is entry 6)."
   },
   {
    "file": "*",
@@ -1874,27 +1876,39 @@
   },
   {
    "file": "src/ownrdraw.cpp",
-   "old": "\t\t\t\t\tControl_Table.remove((unsigned int)dropdown);\n\t\t\t\t\tdata->IsEditFocus = 0;\n\t\t\t\t}\n\t\t\t\treturn 1;",
-   "new": "\t\t\t\t\tControl_Table.remove((unsigned int)dropdown);\n\t\t\t\t\tdata->IsEditFocus = 0;\n\t\t\t\t\tCallWindowProcA(previous, window, CB_SHOWDROPDOWN, FALSE, 0);   /* NATIVE (lane P12): see the row */\n\t\t\t\t\tInvalidateRect(GetParent(window), NULL, FALSE);\n\t\t\t\t}\n\t\t\t\treturn 1;",
-   "why": "Lane P12 (the user's Duo report 2026-11-24, the Enhancements menu; main's behaviour row native/link/behaviour_m14_ownerdraw.cpp case 0x14F): Combo_Proc is a parked draft in the rebuild (not exact). When its drop list closed, nothing repainted the dialog under it, so the list's rows stayed on the screen over the rows below (an Enhancements dropdown left '1.25x' over Map zoom), and the box's own Win32 state stayed dropped, so its arrow kept the dropped look. Main closes it the same way and repaints the parent (InvalidateRect, behaviour; the original's trigger is not identified) and tells the box's previous procedure (the port's combo state, which answers CB_GETDROPPEDSTATE for the paint's arrow)."
+   "old": "\t\t\t\t\tRemove_Entry(::Control_Table, dropdown_window);\n\t\t\t\t\tdata->IsEditFocus = 0;\n\t\t\t\t}\n\t\t\t\tbreak;\n",
+   "new": "\t\t\t\t\tRemove_Entry(::Control_Table, dropdown_window);\n\t\t\t\t\tdata->IsEditFocus = 0;\n\t\t\t\t\tCallWindowProcA(proc, window, CB_SHOWDROPDOWN, FALSE, 0);   /* NATIVE (lane P12): see the row */\n\t\t\t\t\tInvalidateRect(GetParent(window), NULL, FALSE);\n\t\t\t\t}\n\t\t\t\tbreak;\n",
+   "why": "Lane P12 (the user's Duo report 2026-11-24, the Enhancements menu; main's behaviour row native/link/behaviour_m14_ownerdraw.cpp case 0x14F): Combo_Proc is a parked draft in the rebuild (not exact). When its drop list closed, nothing repainted the dialog under it, so the list's rows stayed on the screen over the rows below (an Enhancements dropdown left '1.25x' over Map zoom), and the box's own Win32 state stayed dropped, so its arrow kept the dropped look. Main closes it the same way and repaints the parent (InvalidateRect, behaviour; the original's trigger is not identified) and tells the box's previous procedure (the port's combo state, which answers CB_GETDROPPEDSTATE for the paint's arrow). Lane P65 (re-pin): the draft's close path now ends in Remove_Entry and break; its previous procedure is proc."
   },
   {
    "file": "src/ownrdraw.cpp",
-   "old": "\t\t\tShowWindow(dropdown, SW_SHOWNORMAL);\n\t\t\tdata->IsEditFocus = (int)dropdown;\n\t\t\treturn 1;",
-   "new": "\t\t\tShowWindow(dropdown, SW_SHOWNORMAL);\n\t\t\tdata->IsEditFocus = (int)dropdown;\n\t\t\tCallWindowProcA(previous, window, CB_SHOWDROPDOWN, TRUE, 0);   /* NATIVE (lane P12): see the row */\n\t\t\tInvalidateRect(dropdown, NULL, FALSE);\n\t\t\tInvalidateRect(GetParent(window), NULL, FALSE);\n\t\t\treturn 1;",
+   "old": "\t\t\tShowWindow(dropdown_window, SW_SHOWNORMAL);\n\n\t\t\tdata->IsEditFocus = (int)dropdown_window;\n\t\t\tbreak;\n",
+   "new": "\t\t\tShowWindow(dropdown_window, SW_SHOWNORMAL);\n\n\t\t\tdata->IsEditFocus = (int)dropdown_window;\n\t\t\tCallWindowProcA(proc, window, CB_SHOWDROPDOWN, TRUE, 0);   /* NATIVE (lane P12): see the row */\n\t\t\tInvalidateRect(dropdown_window, NULL, FALSE);\n\t\t\tInvalidateRect(GetParent(window), NULL, FALSE);\n\t\t\tbreak;\n",
    "why": "Lane P12 (as the row above, main's case 0x14F open path): the drop list's frame is drawn one pixel outside its own rectangle (0x005EAD20) and reaches the screen only through the dialog's repaint (0x005EE460 paints a dialog, then its ComboDropWin children last); without it this port's open list had no frame and no backing, its rows drawn over the page's rows. Main invalidates the list and the parent after showing it and sets the box's Win32 dropped state, so the paint draws the arrow pressed (Draw_Arrow's dropped argument)."
   },
   {
-   "file": "src/ownrdraw.cpp",
-   "old": "\t\tcase WM_LBUTTONDBLCLK:\n\t\t\tVocClass::PlayGlobal(Rule->GenericClick, 1.0f, 0x2000, NULL);\n\t\t\tif (LOWORD(lparam) > client.right - 20) {",
-   "new": "\t\tcase WM_LBUTTONDBLCLK:\n\t\t\tVocClass::PlayGlobal(Rule->GUIComboOpenSound, 1.0f, 0x2000, NULL);   /* NATIVE (lane P12): the original's Rules +0x19C */\n\t\t\tif (LOWORD(lparam) > client.right - 20) {",
-   "why": "Lane P12: the box's click plays the original's sound: Combo_Proc's WM_LBUTTONDOWN reads Rules +0x19C (0x005F5DF2: mov ecx,[0x839848]; mov ecx,[ecx+0x19C]; call 0x713DB0), GUIComboOpenSound, as main's behaviour row plays it; the parked draft played GenericClick."
+   "file": "hdr/ownrdraw.h",
+   "old": "\t\tint IsEditFocus;",
+   "new": "\t\tintptr_t IsEditFocus;",
+   "why": "Lane P67 (pointer width, the re-pin to b106008ae4; found by ra2-main-shell-options, ra2-native-skirmish and ra2-main-zoom-menu: signal 11 in Combo_Proc, fault address 0xffffffffabe4d310): the parked Combo_Proc draft (rewritten from ra2-decomp's bank at the 782562d93c pin) keeps the open drop list's window in WinData's IsEditFocus (+0xF4, an int: on VC6 an HWND is 4 bytes) and reads it back as an HWND to close and destroy it; natively the handle was cut to 32 bits and sign-extended. Kept at pointer width, as lane P7's ItemState/RangeMax/HadTabStop row; its other uses (a focus flag 0/1, a list box's last index or -1) are unchanged."
   },
   {
    "file": "src/ownrdraw.cpp",
-   "old": "\t\t\t\tint color = data->IsAlternateColors ? Highlight_Text_Color : Text_Color;\n\t\t\t\tif (disabled) color = data->IsAlternateColors ? Light_Grey_Color : Disabled_Text_Color;",
-   "new": "\t\t\t\tint color = data->IsAlternateColors ? Highlight_Text_Color : Text_Color;\n\t\t\t\tif (disabled) color = Light_Grey_Color;   /* NATIVE (lane P12): main's port's grey; see the row */",
-   "why": "Lane P12 (the user's Duo report 2026-11-24, owner: match the old port): a disabled drop list's selected text (the Enhancements page's Fullscreen 'Automatic' on a touch host) is drawn in Light_Grey_Color (0x00A7363C, 0x8F8F8F), as main's behaviour row native/link/behaviour_m14_ownerdraw.cpp draws it; the parked draft drew Disabled_Text_Color (0x9F, dark red), unreadable on the page. NOT the original's choice: the original's paint (0x005F5389-0x005F53A7) takes Light_Grey only with the alternate colours (+0xCD) and Disabled_Text_Color (0x00A737EC) otherwise; this is the old port's look, kept by the owner's ruling, reversible by dropping the row."
+   "old": "data->IsEditFocus = (int)dropdown_window;",
+   "new": "data->IsEditFocus = (intptr_t)dropdown_window;",
+   "why": "Lane P67 (pointer width): as the ownrdraw.h IsEditFocus row, the store of the drop list's window."
+  },
+  {
+   "file": "src/ownrdraw.cpp",
+   "old": "\t\t\t\tint item = CallWindowProcA(item_proc, owner, 0x199, sel, 0);",
+   "new": "\t\t\t\tLRESULT item = CallWindowProcA(item_proc, owner, 0x199, sel, 0);",
+   "why": "Lane P67 (pointer width; found by ra2-main-shell-options, ra2-native-skirmish and ra2-main-zoom-menu: signal 11 at Combo_Proc+3796): the parked Combo_Proc draft's paint of a drop-down list's selection keeps CB_GETITEMDATA's answer (a TextNode pointer) in an int, as Get_Item_Text did (lane P8's row above) and YR's ComboDropWindowHandler (lane P66); natively the pointer was cut to 32 bits and sign-extended. Kept at pointer width (LRESULT); the -1 and 0 tests compare the same."
+  },
+  {
+   "file": "src/ownrdraw.cpp",
+   "old": "\t\t\t\t} else if (style & WS_DISABLED) {\n\t\t\t\t\ttext_color = Disabled_Text_Color;\n\t\t\t\t}\n\n\t\t\t\tif (data->IsItemFilled && sel >= 0",
+   "new": "\t\t\t\t} else if (style & WS_DISABLED) {\n\t\t\t\t\ttext_color = Light_Grey_Color;   /* NATIVE (lane P12): main's port's grey; see the row */\n\t\t\t\t}\n\n\t\t\t\tif (data->IsItemFilled && sel >= 0",
+   "why": "Lane P12 (the user's Duo report 2026-11-24, owner: match the old port): a disabled drop list's selected text (the Enhancements page's Fullscreen 'Automatic' on a touch host) is drawn in Light_Grey_Color (0x00A7363C, 0x8F8F8F), as main's behaviour row native/link/behaviour_m14_ownerdraw.cpp draws it; the parked draft drew Disabled_Text_Color (0x9F, dark red), unreadable on the page. NOT the original's choice: the original's paint (0x005F5389-0x005F53A7) takes Light_Grey only with the alternate colours (+0xCD) and Disabled_Text_Color (0x00A737EC) otherwise; this is the old port's look, kept by the owner's ruling, reversible by dropping the row. Lane P65 (re-pin): the draft's paint now has the alternate-colours branch as the original's; this row changes only the plain disabled colour."
   },
   {
    "file": "src/ownrdraw.cpp",
@@ -2159,12 +2173,6 @@
    "why": "Lane P11 (P10's field-alias sweep: every catalog-bound name against the i686 extent of every class-typed global): the rebuild declares these as globals of their own at addresses that lie inside Map (0x008324E0, MouseClass, i686 sizeof 0x4F3C) or Ipx (0x00A40978); the original reaches the same storage by the global's address and as the member. Natively they were separate storage (the data binder gave each undefined name zero storage of its own), so a write through one never reached the other. Each global is a reference to its member natively, as lane P9's rows. the headers the Map references' declarations live in."
   },
   {
-   "file": "src/coord.cpp",
-   "old": "\tif (lock) {\n\t\tnewcoord = Coord_Snap(newcoord);\n\t}",
-   "new": "\tif (lock) {\n\t\tnewcoord.X = newcoord.X - (newcoord.X & 255) + 128; /* native: lane P11, main's exact text (rounds down) */\n\t\tnewcoord.Y = newcoord.Y - (newcoord.Y & 255) + 128;\n\t}",
-   "why": "Lane P11 (the overlay: behaviour of the rebuild's parked Coord_Scatter draft against main's exact 0x00491750): the lock snap. The draft's Coord_Snap divides (X / 256 * 256 + 128, rounding toward zero); main's exact text, and so the original, subtracts the low byte (X - (X & 255) + 128, rounding down). They differ for a negative X or Y, which the bounds test lets through for -255..-1 (X / 256 is 0) and the fallback to the anchor can carry: X = -100 snaps to +128 in the draft and to -128 in the original, a locked scatter at the map's top or left edge landing a cell off. Main's form carried; Z untouched as in main."
-  },
-  {
    "file": "src/ownrdraw.cpp",
    "old": "\t\tif (Is_Campaign_Button((unsigned int)parent, window)) {\n\t\t\trecord->ButtonKind = 1;\n",
    "new": "        // NATIVE (lane C23, Y11; lane P13): the combined app's toggle (port/src/user32.cpp, id 0x7F5E) is a main-menu sidebar button.\n        if (Is_Campaign_Button((unsigned int)parent, window) || GetDlgCtrlID(window) == 0x7F5E) {\n            record->ButtonKind = 1;\n",
@@ -2181,6 +2189,22 @@
    "old": "\tint state = data->ItemState;\n\tLONG style = GetWindowLongA(window, GWL_STYLE);\n\n",
    "new": "\tint state = data->ItemState | ((CallWindowProcA(previous, window, BM_GETSTATE, 0, 0) & BST_PUSHED) ? 1 : 0); // native: lane P13, the button's BST_PUSHED too\n\tLONG style = GetWindowLongA(window, GWL_STYLE);\n\n",
    "why": "Lane P13, main's port behaviour (redalert2-decomp native/link/behaviour_m14_ownerdraw.cpp, Paint_Button for 0x005F0320): Owner_Button_Proc draws a button pressed from the owner-draw state the dialog's WM_DRAWITEM stores in WinData +0xE8 (ItemState, ODS_SELECTED); the port's Win32 layer sends no WM_DRAWITEM, so no push button (main menu, dialogs, the combined app's toggle) ever drew its pressed frame. Main's port also takes the button's own BST_PUSHED (BM_GETSTATE, which port/src/user32.cpp answers from its press tracking); carried. Found by one-game-toggle (\"the toggle shows no press\")."
+  },
+  {
+   "file": "src/ownrdraw.cpp",
+   "old": "if (changed && data->PictureMode == 1 && data->IsPlaying) {\n\t\t\t\t\t\tKillTimer(window, 0);\n\t\t\t\t\t\tdata->IsPlaying = false;",
+   "new": "if (changed && data->PictureMode == 1 && ((OwnerDraw::ControlAnimationState *)data->Animation)->IsPlaying) {   /* native: see the row */\n\t\t\t\t\t\tKillTimer(window, 0);\n\t\t\t\t\t\t((OwnerDraw::ControlAnimationState *)data->Animation)->IsPlaying = false;",
+   "why": "Lane P65 (re-pin to 782562d93c): the parked Control_Proc draft's text-change case reads and clears IsPlaying (+0xA8) on the WinData record, which declares no such member (the draft does not compile as written). The byte is the animation run's IsPlaying (ControlAnimationState over WinData::Animation at +0x78, as Init_Control_Animation reaches it; the static_assert of the StaticRecord row checks the two views agree natively)."
+  },
+  {
+   "file": "src/ownrdraw.cpp",
+   "cut_function": "^template<>\\nchar Dictionary<OwnerDraw::MessageKey, bool>::remove\\(OwnerDraw::MessageKey const & key, bool & value\\)",
+   "why": "Lane P65 (re-pin): as map.cpp's constructor: the explicit specialisation of the control-message dictionary's remove comes after its instantiation, which ISO C++ refuses; its body is dict.h's generic Dictionary<K,V>::remove word for word, which natively provides it."
+  },
+  {
+   "file": "src/ownrdraw.cpp",
+   "cut_function": "^template<>\\nvoid ArrayList<OwnerDraw::CellData>::clear\\(void\\)\\n",
+   "why": "Lane P65 (re-pin): as above: the specialised ArrayList<CellData>::clear is arraylist.h's generic clear word for word."
   },
   {
    "file": "hdr/crc.h",

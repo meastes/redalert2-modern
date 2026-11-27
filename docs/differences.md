@@ -53,8 +53,7 @@ the one that follows the original game.
 ### Combat
 
 - `TechnoClass::Fire_At` (flak scatter length summed in double, as the original: lane P11 carried the played
-  port's form), `Explosion_Damage`, `BulletClass::AI` and `Shrapnel`, `Coord_Scatter` (the old port's snap at
-  the map's top and left edge, carried), `Projectile_Motion`, the building turret charge
+  port's form), `Explosion_Damage`, `BulletClass::AI` and `Shrapnel`, `Projectile_Motion`, the building turret charge
   (`Charge_Turret`, `Charging_AI`, `Discharge_Turret`, Prism towers), `BuildingClass::Take_Damage`,
   `UnitClass::EMPulse_Blast`, `Reload_AI`, `Get_Max_Speed`, `TechnoTypeClass::In_Range`: the rebuild's drafts.
 - Movement steps: `WalkLocomotionClass::Movement_AI` (infantry) and `MechLocomotionClass::Movement_AI` are drafts
@@ -72,8 +71,10 @@ the one that follows the original game.
   fixed toward the old port in lane P12.
 - The command bar's icons follow UI.INI's order (Deploy, Guard, ...); before lane N33 the old port showed the
   beacon and attack-move icons in those slots.
-- Options and the Enhancements page (`Main_Options_Dialog_Proc`) are the old port's behaviour text compiled
-  under the rebuild's names (`glue/mainopt_native.inc`).
+- Options (`Main_Options_Dialog_Proc`) is the rebuild's exact text since lane P65, with two fixups.json rows for the
+  Enhancements button (no original control has its id); the Enhancements page is glue (`glue/mainopt_native.inc`).
+- After a load error the load dialog is shown again (the user's P12-loaderr): the original hides it while its loop goes
+  on, so nothing is left to click. A behaviour row on exact code, kept on purpose (lane P65 review).
 - Fullscreen "Automatic" is light grey, as the old port (an owner ruling: the original draws it dark red).
 - iOS starts with Pinch zoom on (the old app has it on only because the user turned it on).
 - The Westwood Online (Internet) code is not built in either port; the button is disabled.
@@ -118,7 +119,8 @@ the one that follows the original game.
 
 - Assembly routines the rebuild does not carry as C are the old port's behaviour bodies
   (`glue/rb_asm_draw.cpp`: voxel drawers, spotlight brighteners; `glue/rb_vqa.cpp`: VQA/LCW codecs), and
-  `XSurface::Draw_Ellipse`, `DSurface::Draw_Depth_Antialiased_Line`, `AlphaShapeClass::Draw_All` likewise.
+  `XSurface::Draw_Ellipse`, `DSurface::Draw_Depth_Antialiased_Line` likewise (`AlphaShapeClass::Draw_All` is the
+  rebuild's exact text since lane P65, with its pointer-width and missing-image rows).
   `Tactical::Draw_Tiles`, `Draw_Radial_Indicators`, `CellClass::Draw_Shroud_Or_Fog_Shape`, `XSurface::Plot_Line`,
   the ship and drive `Draw_Matrix` are the rebuild's drafts. HD vehicles are `glue/unit/hd_vehicles.cpp`.
 
@@ -126,13 +128,13 @@ the one that follows the original game.
 
 | Kind | Count | Where |
 | --- | ---: | --- |
-| Rebuild drafts compiled (`RA2_NON_MATCHING`, not exact) | 119 draft blocks in 42 units at the 66bccbbfdd pin (lane P28; 145 blocks, 183 functions, in 50 units at b873d2b3c6; wonline's and the WDT and ice ones not reached) | `vendor/ra2-rebuild/src`, marked in place |
-| Played-port text carried as glue (append rows) | 24 `.inc` files + `rb_behaviour.cpp`, `rb_asm_draw.cpp`, `rb_vqa.cpp`, `unit/hd_vehicles.cpp` | `ra2/glue` |
+| Rebuild drafts compiled (`RA2_NON_MATCHING`, not exact) | 91 draft blocks in 33 units at the 782562d93c pin (lane P65); 119 in 42 at 66bccbbfdd (lane P28; 145 blocks, 183 functions, in 50 units at b873d2b3c6; wonline's and the WDT and ice ones not reached) | `vendor/ra2-rebuild/src`, marked in place |
+| Played-port text carried as glue (append rows) | 23 `.inc` files (lane P65) + `rb_behaviour.cpp`, `rb_asm_draw.cpp`, `rb_vqa.cpp`, `unit/hd_vehicles.cpp` | `ra2/glue` |
 | Of which test scaffolding only (never in play) | `harness_native.inc`, `harness_input_native.inc` | `ra2/glue` |
 | Exact in this port, draft in the old port | 45 functions | listed above (Campaign) |
-| `fixups.json` rows | 353 over 102 files | pointer width 158, port features (zoom, touch, interface size, HD) 55, declarations 37, compiler spelling 26, saves 19, glue appends 24, floating point 2, other 31 |
-| Rows that change behaviour against the original on purpose | the 55 port-feature rows (off unless the Enhancements setting is on), Light_Grey "Automatic", Internet disabled, the 16 ms frame floor at game speed 0, LAN pacing, UniqueID, C17's Draw_Char guard, C23's mouse mutex, Restore_Check while inactive | each row's `why` names the old port's row |
-| Rows that change behaviour toward the original | Coord_Scatter, Fire_At (the old port's forms, which are the original's), `-fno-rounding-math` with the fastmath and `DirType` rows, the divisions the original makes products | lane P9, P11 |
+| `fixups.json` rows | 370 over 104 files (lane P65; the split below was counted at 353) | pointer width 158, port features (zoom, touch, interface size, HD) 55, declarations 37, compiler spelling 26, saves 19, glue appends 24, floating point 2, other 31 |
+| Rows that change behaviour against the original on purpose | the 55 port-feature rows (off unless the Enhancements setting is on), Light_Grey "Automatic", Internet disabled, the 16 ms frame floor at game speed 0, LAN pacing, UniqueID, C17's Draw_Char guard, C23's mouse mutex, Restore_Check while inactive, the load dialog shown again after a load error | each row's `why` names the old port's row |
+| Rows that change behaviour toward the original | Fire_At (the old port's form, which is the original's; Coord_Scatter's row went with lane P65, the rebuild's text is now exact), `-fno-rounding-math` with the fastmath and `DirType` rows, the divisions the original makes products | lane P9, P11 |
 
 **Start-up order.** The old port runs the original's `_initterm` table order through explicit marks
 (`native_units.py initterm_order`, `ra2port_initterm_mark`). This port links the 438 units in the order of each

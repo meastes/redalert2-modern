@@ -154,6 +154,19 @@ int RB_Thumb_Point(int * x, int * y)
 	return 1;
 }
 
+// A map point ("@=X,Y", "@ID[+dx,dy]") is clicked only where the tactical view shows it (lane P65, as Yuri's Revenge's step
+// server since lane P56). Tactical::Coord_To_Pixel answers true up to EDGE_ZONE_H pixels past the view's bottom (and
+// EDGE_ZONE_W beside it), so a cell by the map's edge, which the view cannot be centred on, resolved to a pixel on the
+// sidebar, the tab bar or the command bar (in YR's Allied 5 it pressed the bar's Planning Mode button). Outside the view
+// there is no point (the host drops the event and logs "no point").
+static bool RB_Point_In_View(Point2D const & pixel, char const * spec)
+{
+	if (pixel.X >= 0 && pixel.Y >= 0 && pixel.X < TacticalRect.Width && pixel.Y < TacticalRect.Height) return true;
+	fprintf(stderr, "step: @%s is at %d,%d, outside the tactical view (%dx%d): not clicked\n", spec, pixel.X, pixel.Y,
+		TacticalRect.Width, TacticalRect.Height);
+	return false;
+}
+
 int RB_Resolve(char const * spec, int * x, int * y)
 {
 	HouseClass * player = PlayerPtr;
@@ -169,7 +182,7 @@ int RB_Resolve(char const * spec, int * x, int * y)
 		cell.Y = (short)RB_Read_Int(p);
 		Coord coord = Map[cell].Center_Coord();
 		Point2D pixel;
-		if (!TacticalMap->Coord_To_Pixel(coord, pixel)) return 0;
+		if (!TacticalMap->Coord_To_Pixel(coord, pixel) || !RB_Point_In_View(pixel, spec)) return 0;
 		*x = pixel.X;
 		*y = pixel.Y;
 		return 1;
@@ -220,7 +233,7 @@ int RB_Resolve(char const * spec, int * x, int * y)
 			coord.X += dx * 256;
 			coord.Y += dy * 256;
 			Point2D pixel;
-			TacticalMap->Coord_To_Pixel(coord, pixel);
+			if (!TacticalMap->Coord_To_Pixel(coord, pixel) || !RB_Point_In_View(pixel, spec - (other ? 1 : 0))) return 0;
 			*x = pixel.X;
 			*y = pixel.Y;
 			return 1;

@@ -368,6 +368,14 @@ if(NOT WIN32)
            --binary $<TARGET_FILE:ra2-native> --data-dir "${RB_DATA_DIR}" --game-exe "${RB_GAME_EXE}"
            --work "${CMAKE_CURRENT_BINARY_DIR}/tests/walls")
   set_tests_properties(ra2-native-walls PROPERTIES SKIP_RETURN_CODE 77 RUN_SERIAL TRUE TIMEOUT 600 LABELS ra2-campaign-won)
+  # Lane P65 (as Yuri's Revenge's yr-native-planning-click, lane P56): the step server clicks map points only inside the
+  # tactical view (Tactical::Coord_To_Pixel answers true up to 180 px below it and 360 beside it: the command bar's
+  # Planning Mode button, the sidebar); planning mode holds a move and releases it when it ends; the unit answers orders
+  # (Allied 1 by the step server; ra2/tests/ra2_planning_click.py).
+  add_test(NAME ra2-native-planning-click COMMAND "${RB_PYTHON3}" -B "${RB_DIR}/tests/ra2_planning_click.py"
+           --binary $<TARGET_FILE:ra2-native> --data-dir "${RB_DATA_DIR}" --game-exe "${RB_GAME_EXE}"
+           --work "${CMAKE_CURRENT_BINARY_DIR}/tests/planning-click")
+  set_tests_properties(ra2-native-planning-click PROPERTIES SKIP_RETURN_CODE 77 RUN_SERIAL TRUE TIMEOUT 900 LABELS ra2-step)
   # Lane P33: the step server's frame clock (16 ms of the game's clock a loop frame, whatever the machine's speed):
   # Allied 1 twice, once slowed 5 ms a frame; the clock advances 600 over 600 ticks in both (ra2/tests/ra2_frame_clock.py).
   add_test(NAME ra2-native-frame-clock COMMAND "${RB_PYTHON3}" -B "${RB_DIR}/tests/ra2_frame_clock.py"

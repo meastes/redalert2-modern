@@ -66,6 +66,7 @@
 #include "wonlinestringcontrol.h"
 #include "creategamecontrol.h"
 #include "wdtnet.h"
+#include "wdtcampaign.h"
 #include "wolopt.h"
 #include "wsproto.h"
 #include "wspudp.h"
@@ -2733,66 +2734,77 @@ class CChatEventSink : public CComObjectRoot, public IChatEvent
 
 			return(S_OK);
 		}
-#ifdef RA2_NON_MATCHING // not exact: 17 bytes differ in 16 instructions, one byte shorter (1871 by position); ra2-decomp's twin text (Yuri's Revenge 0x007A5890, matched there) in this tree's names with RA2's statements; calls, frame and every other instruction equal. In the expanded ArrayList<User>::add the memmove source is formed in place (add ecx, edx) where the executable takes a new register (lea eax, [edx + ecx]), and three scratch registers after it follow. The order moves with the number of memory references in the function (scratch probes: 29 to 33 more load-and-store statements after the insertion give every instruction of the executable); no reference form found for them
 		STDMETHOD(OnChannelJoin)(HRESULT result, Channel * channel, User * user) // RA2: somebody (the player included) joined a channel, or a join failed (ra2-decomp's twin text, Yuri's Revenge 0x007A5890, in this tree's names)
 		{
-			if (result == 0x8004006C) {
+			bool still_joining = result == 0x8004006C;
+			if (still_joining) {
 				return(S_OK);
 			}
 			int i;
 			int players;
 			wchar_t joinname[64];
 			joinname[0] = 0;
-			if (channel) {
+			bool has_channel = channel != NULL;
+			if (has_channel) {
 				Char_To_Wide(joinname, (char *)channel->name, -1);
-				if (strncmp((char *)channel->name, "Lob_33_", 7) == 0) {
+				bool lobby_name = strncmp((char *)channel->name, "Lob_33_", 7) == 0;
+				if (lobby_name) {
 					int lobby = atol((char *)channel->name + strlen("Lob_33_"));
 					int d = lobby / 8;
 					int m = lobby % 8;
-					if (d == 0) {
+					bool first_page = d == 0;
+					if (first_page) {
 						swprintf(joinname, L"%s", g_Lobbies[m]);
 					} else {
 						swprintf(joinname, L"%s %d", g_Lobbies[m], d + 1);
 					}
 				}
 			}
-			if (result < 0) {
-				if (result == 0x80040070) {
+			bool failed = result < 0;
+			if (failed) {
+				bool channel_gone = result == 0x80040070;
+				if (channel_gone) {
 					Channel * chan = NULL;
 					for (i = 0; i < g_UserChannels.length(); i++) {
 						g_UserChannels.getPointer(&chan, i);
-						if (strcmp((char *)g_PendingChannel.name, (char *)chan->name) == 0) {
+						bool same_channel = strcmp((char *)g_PendingChannel.name, (char *)chan->name) == 0;
+						if (same_channel) {
 							g_UserChannels.remove(i);
 							break;
 						}
 					}
 					for (i = 0; i < g_GameChannelList.length(); i++) {
 						g_GameChannelList.getPointer(&chan, i);
-						if (strcmp((char *)g_PendingChannel.name, (char *)chan->name) == 0) {
+						bool same_channel = strcmp((char *)g_PendingChannel.name, (char *)chan->name) == 0;
+						if (same_channel) {
 							g_GameChannelList.remove(i);
 							break;
 						}
 					}
-					if (Is_Tournament_Session()) {
+					bool tournament = Is_Tournament_Session();
+					if (tournament) {
 						Lobby_Chat_Printf(ColorSystem, StringTable::LoadString("TXT_GAME_CLOSED", NULL, "D:\\Ra2\\wonline.cpp", 0x128A));
 						SetEvent(g_WaitEventHandles[5]);
 					} else {
 						ODMessageBox(StringTable::LoadString("TXT_GAME_CLOSED", NULL, "D:\\Ra2\\wonline.cpp", 0x128D), 0, Wait_Callback_Thunk, false);
 					}
 				} else if (result == 0x80040071) {
-					if (Is_Tournament_Session()) {
+					bool tournament = Is_Tournament_Session();
+					if (tournament) {
 						Lobby_Chat_Printf(ColorSystem, StringTable::LoadString("TXT_BADPASS", NULL, "D:\\Ra2\\wonline.cpp", 0x1294));
 						SetEvent(g_WaitEventHandles[5]);
 					} else {
 						ODMessageBox(StringTable::LoadString("TXT_BADPASS", NULL, "D:\\Ra2\\wonline.cpp", 0x1297), 0, Wait_Callback_Thunk, false);
 					}
 				} else if (result == 0x8004006E) {
-					if (Is_Tournament_Session()) {
+					bool tournament = Is_Tournament_Session();
+					if (tournament) {
 						Lobby_Chat_Printf(ColorSystem, StringTable::LoadString("TXT_CHANNEL_FULL", NULL, "D:\\Ra2\\wonline.cpp", 0x129E));
 						SetEvent(g_WaitEventHandles[5]);
 					} else {
 						ODMessageBox(StringTable::LoadString("TXT_CHANNEL_FULL", NULL, "D:\\Ra2\\wonline.cpp", 0x12A1), 0, Wait_Callback_Thunk, false);
-						if (g_PendingChannel.type == 0) {
+						bool was_lobby = g_PendingChannel.type == 0;
+						if (was_lobby) {
 							SetEvent(g_WaitEventHandles[5]);
 						}
 					}
@@ -2814,7 +2826,8 @@ class CChatEventSink : public CComObjectRoot, public IChatEvent
 				Draw_Player_List(0, false);
 				SetEvent(g_WaitEventHandles[10]);
 				HWND main = WS_Find_Dialog(0x113);
-				if (main) {
+				bool found_main = main != NULL;
+				if (found_main) {
 					ShowWindow(main, SW_SHOW);
 					OwnerDraw::Set_Paint_Disabled(main, 0);
 				}
@@ -2828,19 +2841,23 @@ class CChatEventSink : public CComObjectRoot, public IChatEvent
 				Close_Wait_Window(2);
 				g_ChannelCount++;
 				DebugString("Joined Channel\n");
-				if (!Is_Tournament_Session()) {
+				bool not_tournament = !Is_Tournament_Session();
+				if (not_tournament) {
 					Lobby_Chat_Printf(ColorSystem, StringTable::LoadString("TXT_JOINED_S", NULL, "D:\\Ra2\\wonline.cpp", 0x12E1), joinname);
 				}
-				if (channel->type == 0) {
+				bool joined_lobby = channel->type == 0;
+				if (joined_lobby) {
 					g_LobbyNumber = atol((char *)channel->name + strlen("Lob_33_"));
 					HWND main = WS_Find_Dialog(0x113);
-					if (main) {
+					bool found_main = main != NULL;
+					if (found_main) {
 						EnableWindow(GetDlgItem(main, 0x53D), TRUE);
 						bool join = false;
 						bool observe = false;
 						HWND list = GetDlgItem(main, 0x6EE);
 						int index = SendMessage(list, LB_GETCURSEL, 0, 0);
-						if (index != LB_ERR) {
+						bool has_selection = index != LB_ERR;
+						if (has_selection) {
 							index = SendMessage(list, LB_GETITEMDATA, index, 0);
 							if (index >= 0 && index < g_GameChannelList.length()) {
 								Channel choice;
@@ -2860,11 +2877,13 @@ class CChatEventSink : public CComObjectRoot, public IChatEvent
 						SetFocus(GetDlgItem(main, 0x540));
 					}
 				}
-				if (channel->type == 33) {
+				bool joined_game = channel->type == 33;
+				if (joined_game) {
 					Session.MPGameMode = First_Game_Mode();
 					Session.ScenarioMaxPlayers = 8;
 					LobbyObserverSlot = 7;
-					if (Session.MPGameMode) {
+					bool has_mode = Session.MPGameMode != NULL;
+					if (has_mode) {
 						Session.MPGameMode->vt_entry_24();
 					}
 					Clear_Vector(&Session.Players);
@@ -2882,12 +2901,14 @@ class CChatEventSink : public CComObjectRoot, public IChatEvent
 					}
 					Session.Players.Add(node);
 					Session.GameName[0] = 0;
-					if (!Is_Tournament_Session()) {
+					bool not_tournament_game = !Is_Tournament_Session();
+					if (not_tournament_game) {
 						Darken_Surface(NULL, true);
 						HWND dlg = WS_Create_Dialog(ProgramInstance, 0xC9, MainWindow, WOL_Guest_Dialog_Proc, FALSE);
 						Show_Dialog(dlg, 0xC9);
 						HWND main = WS_Find_Dialog(0x113);
-						if (main) {
+						bool found_main = main != NULL;
+						if (found_main) {
 							ShowWindow(main, SW_HIDE);
 							OwnerDraw::Set_Paint_Disabled(main, 0);
 						}
@@ -2901,7 +2922,8 @@ class CChatEventSink : public CComObjectRoot, public IChatEvent
 					}
 				}
 			} else {
-				if (g_CurrentChannel.type == 33) {
+				bool in_game_channel = g_CurrentChannel.type == 33;
+				if (in_game_channel) {
 					VocClass::PlayGlobal(Rule->PlayerJoined, 1.0f, 0x2000, 0);
 				}
 				if (channel->type != 0 && (g_GameStartRequested || WolOptionsLocked != 0 || g_StartGameReceived)) {
@@ -2921,39 +2943,47 @@ class CChatEventSink : public CComObjectRoot, public IChatEvent
 						bool found = false;
 						for (i = 0; i < g_WDTTeamLookupQueue.length(); i++) {
 							g_WDTTeamLookupQueue.get(name, i);
-							if (name == ladder_name) {
+							bool queued = name == ladder_name;
+							if (queued) {
 								found = true;
 								break;
 							}
 						}
-						if (!found) {
+						bool missing = !found;
+						if (missing) {
 							g_WDTTeamLookupQueue.addHead(ladder_name);
 						}
 					}
-					if (!g_UserLocales.contains(ladder_name)) {
+					bool locale_unknown = !g_UserLocales.contains(ladder_name);
+					if (locale_unknown) {
 						Wstring name;
 						bool found = false;
 						for (i = 0; i < g_UserLocaleLookupQueue.length(); i++) {
 							g_UserLocaleLookupQueue.get(name, i);
-							if (name == ladder_name) {
+							bool queued = name == ladder_name;
+							if (queued) {
 								found = true;
 								break;
 							}
 						}
-						if (!found) {
+						bool missing = !found;
+						if (missing) {
 							g_UserLocaleLookupQueue.addHead(ladder_name);
 						}
 					}
-					if (!g_ActiveLadder->contains(ladder_name)) {
+					bool ladder_unknown = !g_ActiveLadder->contains(ladder_name);
+					if (ladder_unknown) {
 						g_pNetUtil->RequestLadderList(g_LadderAddress, g_LadderPort, ladder_name.get(), g_GameSKU & 0xFFFF00, -1, 0, 0);
 					}
 				}
-				if (channel->type != 0) {
+				bool game_channel = channel->type != 0;
+				if (game_channel) {
 					for (i = 1; i < sizeof(g_UserInfo) / sizeof(ChannelUserInfo); i++) {
 						g_UserInfo[i].accepted = 0;
 						EnableWindow(GetDlgItem(GameoptWindow(), 0x59F), TRUE);
 					}
-					if (!g_IsChannelCreator) {
+					bool guest = !g_IsChannelCreator;
+					if (guest) {
 						HWND dialog = WS_Find_Dialog(0xC9);
 						Enable_Player_Combos(dialog, true);
 					}
@@ -2965,7 +2995,8 @@ class CChatEventSink : public CComObjectRoot, public IChatEvent
 			User temp_user;
 			for (i = 0; i < g_UserList.length(); i++) {
 				g_UserList.get(temp_user, i);
-				if (Compare_Users(user, &temp_user) < 0) {
+				bool sorts_before = Compare_Users(user, &temp_user) < 0;
+				if (sorts_before) {
 					index = i;
 					break;
 				}
@@ -2976,13 +3007,15 @@ class CChatEventSink : public CComObjectRoot, public IChatEvent
 			if (!(user->flags & 0x8000) && channel->type == 0 && Is_Tournament_Session()) {
 				Wstring name((char *)user->name);
 				g_PingQueue.addTail(name);
-				if (g_PingsPending.length() == 0) {
+				bool none_pending = g_PingsPending.length() == 0;
+				if (none_pending) {
 					Service_Pending_Player_Pings();
 				}
 			}
 			players = g_UserList.length();
 			int userinfoindex = 0;
-			if (channel->type != 0) {
+			bool game_channel = channel->type != 0;
+			if (game_channel) {
 				{
 					Wstring name((char *)user->name);
 					userinfoindex = Player_Name_To_Index(name);
@@ -2990,8 +3023,10 @@ class CChatEventSink : public CComObjectRoot, public IChatEvent
 				memmove(&g_UserInfo[userinfoindex + 1], g_UserInfo + userinfoindex, sizeof(ChannelUserInfo) * (15 - userinfoindex));
 				memset(&g_UserInfo[userinfoindex], 0, sizeof(ChannelUserInfo));
 				strcpy(g_UserInfo[userinfoindex].name, (char *)user->name);
-				if (g_IsChannelCreator == 1) {
-					if (!Is_Tournament_Session()) {
+				bool hosting = g_IsChannelCreator == 1;
+				if (hosting) {
+					bool not_tournament = !Is_Tournament_Session();
+					if (not_tournament) {
 						Update_Channel_Player_Limit();
 					}
 					if (Is_All_Slots_Filled() && Is_Observer_Slot_Full()) {
@@ -3009,7 +3044,8 @@ class CChatEventSink : public CComObjectRoot, public IChatEvent
 									taken = 1;
 								}
 							}
-							if (taken == 0) {
+							bool color_free = taken == 0;
+							if (color_free) {
 								break;
 							}
 						}
@@ -3017,7 +3053,8 @@ class CChatEventSink : public CComObjectRoot, public IChatEvent
 						memset(node, 0, sizeof(NodeNameType));
 						wcscpy(node->Name, Narrow_To_Wide((char *)user->name));
 						node->Address = User_To_IPX_Address(user);
-						if (Session.MPGameMode) {
+						bool has_mode = Session.MPGameMode != NULL;
+						if (has_mode) {
 							node->Set_Country(Session.MPGameMode->DefaultCountry());
 						} else {
 							node->Set_Country(-2);
@@ -3036,19 +3073,22 @@ class CChatEventSink : public CComObjectRoot, public IChatEvent
 						Session.Players.Add(node);
 						Assign_Slot(node);
 						if (Is_Tournament_Session() && channel->type != 0) {
-							if (Online_Session_State != 2) {
+							bool not_wdt = Online_Session_State != 2;
+							if (not_wdt) {
 								Net2DecodeGameopt(g_MatchStartText, NULL);
 							} else {
 								Apply_Endpoint_Map(strchr(g_MatchStartText, ':'));
 							}
 							for (i = 0; i < Session.Scenarios.Count(); i++) {
 								char const * filename = Session.Scenarios[i]->Get_Filename();
-								if (stricmp(Session.ScenarioFileName, filename) == 0) {
+								bool same_map = stricmp(Session.ScenarioFileName, filename) == 0;
+								if (same_map) {
 									Set_Scenario_Info_From_Index(i);
 									break;
 								}
 							}
-							if (i >= Session.Scenarios.Count()) {
+							bool map_not_found = i >= Session.Scenarios.Count();
+							if (map_not_found) {
 								Set_Scenario_Info_From_Index(0);
 							}
 						}
@@ -3062,7 +3102,8 @@ class CChatEventSink : public CComObjectRoot, public IChatEvent
 						g_pChat->RequestPublicGameOptions(options);
 						Send_Player_List();
 						Send_Lobby_Options(true, false);
-						if (Is_Host()) {
+						bool host = Is_Host();
+						if (host) {
 							Send_User_Pings();
 							Request_All_User_Pings();
 						}
@@ -3084,9 +3125,6 @@ class CChatEventSink : public CComObjectRoot, public IChatEvent
 			Draw_Player_List(0, false);
 			return(S_OK);
 		}
-#else
-		STDMETHOD(OnChannelJoin)(HRESULT result, Channel * channel, User * user);
-#endif
 		STDMETHOD(OnChannelLeave)(HRESULT r, struct Channel *, struct User * user)
 		{
 			if (FAILED(r)) {
@@ -3544,7 +3582,7 @@ class CChatEventSink : public CComObjectRoot, public IChatEvent
 
 			if (WolOptionsLocked && options[0] != 'Z') return(S_OK); // RA2: the port messages still come once the options are locked
 
-			if (Is_Tournament_Session() && options[0] != 'Z') return(S_OK); // RA2: a tournament game has no options to ask for
+			if ((Session.TournamentState == 2 || Session.TournamentState == 1) && options[0] != 'Z') return(S_OK); // RA2: a tournament game has no options to ask for; the test of Is_Tournament_Session written out on the Session member (flagged spelling: with the helper's Online_Session_State the function holds one data symbol more and one lea turns)
 
 			int index = Player_Name_To_Index((char *)user->name);
 			if (index == -1) return(S_OK);
@@ -3648,7 +3686,7 @@ class CChatEventSink : public CComObjectRoot, public IChatEvent
 							host = Find_Owner_User();
 							if (host && stricmp((char *)host->name, g_NickName.text()) == 0) {
 								if (Is_All_Slots_Filled()) {
-									Change_Slot_Type(window, Get_Slot_Control_Id(row), LobbyEntries[6], 0);
+									Change_Slot_Type(window, Get_Slot_Control_Id(row), LobbyObserverEntry, 0);
 									changed = true;
 									Send_Player_List();
 									Send_Lobby_Options(true, false);
@@ -3656,7 +3694,7 @@ class CChatEventSink : public CComObjectRoot, public IChatEvent
 								} else {
 									player->Set_Country(-2);
 									player->Slot.SpectatorFlag = 0;
-									Change_Slot_Type(window, Get_Slot_Control_Id(LobbyObserverSlot), LobbyEntries[6], 0);
+									Change_Slot_Type(window, Get_Slot_Control_Id(LobbyObserverSlot), LobbyObserverEntry, 0);
 									index = Assign_Slot(player);
 									Change_Slot_Type(window, Get_Slot_Control_Id(index), player, 0);
 									Send_Player_List();
@@ -3668,12 +3706,12 @@ class CChatEventSink : public CComObjectRoot, public IChatEvent
 							host = Find_Owner_User();
 							if (host && stricmp((char *)host->name, g_NickName.text()) == 0) {
 								if (Is_Observer_Slot_Full()) {
-									Change_Slot_Type(window, Get_Slot_Control_Id(index), LobbyEntries[0], 0);
+									Change_Slot_Type(window, Get_Slot_Control_Id(index), LobbyOpenEntry, 0);
 									Send_Player_List();
 								} else {
 									player->Set_Country(-3);
 									player->Slot.SpectatorFlag = -1;
-									Change_Slot_Type(window, Get_Slot_Control_Id(index), LobbyEntries[0], 0);
+									Change_Slot_Type(window, Get_Slot_Control_Id(index), LobbyOpenEntry, 0);
 									Change_Slot_Type(window, Get_Slot_Control_Id(LobbyObserverSlot), player, 0);
 									Send_Player_List();
 									Fill_Observer_Combo(window, Player_Side_Combo_ID(LobbyObserverSlot));
@@ -6181,7 +6219,7 @@ bool __fastcall Join_Game_Channel(Channel const * channel, bool observer) // RA2
 }
 
 LRESULT CALLBACK Create_Game_Dialog_Proc(HWND window, UINT message, WPARAM wparam, LPARAM lparam); // RA2: 0x00748E10, the dialog proc of the create game dialog (0xC3); not yet defined
-BOOL CALLBACK Wonline_Game_Options_Dialog_Proc(HWND window, UINT message, WPARAM wparam, LPARAM lparam); // RA2: 0x0074A710, the dialog proc of the game options dialog (0xC2); not yet defined
+BOOL CALLBACK Wonline_Game_Options_Dialog_Proc(HWND window, UINT message, WPARAM wparam, LPARAM lparam); // RA2: 0x0074A710, the dialog proc of the game options dialog (0xC2); below
 void __fastcall Seat_First_Player(int slot); // RA2: 0x005C8CD0, defined in netshare.cpp
 void Clear_Vector(DynamicVectorClass<NodeNameType *> * vector); // RA2: 0x005A7480, defined in mplayer.cpp
 MultiplayerGameMode * First_Game_Mode(void); // RA2: 0x005B6EC0, defined in multiplayer.cpp
@@ -7588,7 +7626,7 @@ void Update_Channel_Player_Limit(void) // RA2: 0x00749F20, not in TibSun: tells 
 	int i = 1;
 	for (; i < limit; ++i) { // RA2: the slots the scenario has
 		NodeNameType * entry = Session.Slots[i];
-		if (entry != LobbyEntries[0] && entry != LobbyEntries[6]) {
+		if (entry != LobbyOpenEntry && entry != LobbyObserverEntry) {
 			if (Is_Real_Player_Entry(entry)) {
 				++fixed_slots;
 			} else if (Is_AI_Entry(entry)) {
@@ -7600,7 +7638,7 @@ void Update_Channel_Player_Limit(void) // RA2: 0x00749F20, not in TibSun: tells 
 	}
 	for (; i < 8; ++i) { // RA2: the slots beyond
 		NodeNameType * entry = Session.Slots[i];
-		if (entry == LobbyEntries[6]) {
+		if (entry == LobbyObserverEntry) {
 			++open_slots;
 		} else if (Is_Real_Player_Entry(entry)) {
 			++fixed_slots;
@@ -7788,7 +7826,6 @@ void __fastcall Select_Player_Side(HWND dialog, int player); // RA2: 0x004D1820,
 void __fastcall Select_Player_Color(HWND dialog, int player); // RA2: 0x004D23C0, defined in gdlgsupp.cpp
 void __fastcall Send_User_Pings(void); // RA2: 0x0075B1B0, below: sends the host's pings of the channel's users to them
 
-#ifdef RA2_NON_MATCHING // not exact: 386 bytes differ (main's text; in the start button's checks the slot sum keeps the AI count, so the later temporaries take other registers)
 BOOL CALLBACK Wonline_Game_Options_Dialog_Proc(HWND window,UINT message,WPARAM wparam,LPARAM lparam)
 {
     int i;
@@ -7909,9 +7946,11 @@ BOOL CALLBACK Wonline_Game_Options_Dialog_Proc(HWND window,UINT message,WPARAM w
         }
         case 0x540: {
             wchar_t nickname[16],primary_command[64],alternate_command[64];
-            WideWstring text=Limit_Name_Text((HWND)lparam);
-            if((unsigned short)(wparam>>16)==0x501) {
-                SendMessageA((HWND)lparam,0x4b2,0,(LPARAM)L"");
+			HWND input = (HWND)lparam;
+			int notify = (unsigned short)(wparam >> 16);
+			WideWstring text = Limit_Name_Text(input);
+			if (notify == 0x501) {
+				SendMessageA(input, 0x4b2, 0, (LPARAM)L"");
                 if(text.length()>0) {
                     int parsed=Parse_Page_Command(text.get());
                     if(parsed!=0) {
@@ -7979,7 +8018,8 @@ BOOL CALLBACK Wonline_Game_Options_Dialog_Proc(HWND window,UINT message,WPARAM w
             Send_Lobby_Options(true,false); Refresh_Slot_Settings(window,true);
             return 0;
         case 0x588: {
-            SetFocus(GetDlgItem(window,0x540));
+			HWND input = GetDlgItem(window, 0x540);
+			SetFocus(input);
             if(g_GameStartRequested==1) goto host_unhandled;
             Save_Lobby_Options(window,&Session.WOL);
             Session.Write_MultiPlayer_Settings();
@@ -7987,7 +8027,8 @@ BOOL CALLBACK Wonline_Game_Options_Dialog_Proc(HWND window,UINT message,WPARAM w
             int observers=0;
             for(i=0;i<Session.Players.Count();++i) if(Session.Players[i]->Slot.SpectatorFlag==-1) ++observers;
             if(g_UserList.length()-observers<2) { Lobby_Chat_Printf(-1,StringTable::LoadString("TXT_ONLY_ONE",0,"D:\\Ra2\\wonline.cpp",0x397c)); return 0; }
-            if(observers && Session.Options.AIPlayers) { Lobby_Chat_Printf(-1,StringTable::LoadString("TXT_NO_AI_OBSERVATION",0,"D:\\Ra2\\wonline.cpp",0x3987)); return 0; }
+			int ai_players = Session.Options.AIPlayers;
+			if (observers && ai_players) { Lobby_Chat_Printf(-1, StringTable::LoadString("TXT_NO_AI_OBSERVATION", 0, "D:\\Ra2\\wonline.cpp", 0x3987)); return 0; }
             bool missing=false;
             for(i=1;i<Session.Players.Count();++i) if(!Session.Players[i]->Slot.Unknown7F) {
                 Lobby_Chat_Printf(-1,StringTable::LoadString("GUI:HostNoMap",0,"D:\\Ra2\\wonline.cpp",0x3992),Session.Players[i],Session.Options.ScenarioDescription); missing=true;
@@ -7997,9 +8038,13 @@ BOOL CALLBACK Wonline_Game_Options_Dialog_Proc(HWND window,UINT message,WPARAM w
                 Dispatch_Game_Mode(); Lobby_Chat_Printf(-1,StringTable::LoadString("GUI:HostGameStartHost",0,"D:\\Ra2\\wonline.cpp",0x39a5)); return 0;
             }
             if(Session.Type==4 && Online_Session_State==2) {
-                if(g_UserList.length()<(int)g_CurrentChannel.maxUsers) { Lobby_Chat_Printf(-1,StringTable::LoadString("TXT_NEED_MORE_PLAYERS",0,"D:\\Ra2\\wonline.cpp",0x39af),g_CurrentChannel.maxUsers); return 0; }
+				int needed = g_CurrentChannel.maxUsers;
+				if (g_UserList.length() < needed) { Lobby_Chat_Printf(-1, StringTable::LoadString("TXT_NEED_MORE_PLAYERS", 0, "D:\\Ra2\\wonline.cpp", 0x39af), needed); return 0; }
                 int team1=0,team2=0;
-                for(i=0;i<g_UserList.length();++i) { if(g_UserInfo[i].house==0) ++team2; else ++team1; }
+				for (i = 0; i < g_UserList.length(); ++i) {
+					int house = g_UserInfo[i].house;
+					if (house == 0) ++team2; else ++team1;
+				}
                 if(team1!=team2) { Lobby_Chat_Printf(-1,StringTable::LoadString("TXT_NEED_EQUAL_TEAMS",0,"D:\\Ra2\\wonline.cpp",0x39be)); return 0; }
             }
             int limit=Get_Scenario_Slot_Limit(Session.Options.ScenarioIndex);
@@ -8234,7 +8279,6 @@ host_unhandled:
     }
     return 0;
 }
-#endif
 
 
 
@@ -8881,11 +8925,11 @@ void __fastcall Register_Connection_State(char const * sender, char const * rece
 	}
 	for (i = 0; i < Session.ConnectionResultCount; ++i) { // RA2: the pair is looked up
 		if (Session.PeerProbeData[i][0] == sender_slot && Session.PeerProbeData[i][1] == receiver_slot) {
-			Session.ConnectionResults[i][0] = state;
+			Session.ConnectionResults[i * 2] = state;
 			return;
 		}
 		if (Session.PeerProbeData[i][0] == receiver_slot && Session.PeerProbeData[i][1] == sender_slot) {
-			Session.ConnectionResults[i][1] = state;
+			Session.ConnectionResults[i * 2 + 1] = state;
 			return;
 		}
 	}
@@ -8958,7 +9002,6 @@ void __fastcall Queue_Peer_Timeout(int peer) // RA2: 0x0074E590, not in TibSun: 
 
 bool __fastcall Start_Talking_To(int player, int pair_slot, int retries); // RA2: 0x0074E5E0, the executable's debug text "Start_Talking_To player %d, retries = %d" names it: makes the connection to one peer by port probes, tries again up to the number of retries; true when it is made
 
-#ifdef RA2_NON_MATCHING // not exact: 2112 bytes differ against the image-derived bound 0074e5e0 (2,456 body bytes, 8 padding) (was 2261; the peer-name and firewall tests as ra2-decomp's banked form banks/0x00793D20_nat.cpp (11df85d) writes them, RA2's packet filtering, port storage and retries kept; all 66 calls in order)
 bool __fastcall Start_Talking_To(int player, int pair_slot, int retries)
 {
 	CDTimerClass<SystemTimerClass> timer;
@@ -8971,123 +9014,131 @@ bool __fastcall Start_Talking_To(int player, int pair_slot, int retries)
 
 	DebugString("Start_Talking_To player %d, retries = %d\n", player, retries);
 	int player_index = -1;
-	int i;
-	for (i = 0; i < Session.Players.Count(); ++i) {
+	for (int i = 0; i < Session.Players.Count(); i++) {
+		wchar_t const * slot_name = Session.Slots[player]->Name;
 		char const * name = Wide_To_Narrow(Session.Players[i]->Name);
-		if (!stricmp(name, Wide_To_Narrow(Session.Slots[player]->Name))) {
+		if (stricmp(name, Wide_To_Narrow(slot_name)) == 0) {
 			player_index = i;
 		}
 	}
-	if (player_index < 0) {
+	if (player_index == -1) {
 		Send_Public_Options(0, NULL);
 		return false;
 	}
 
-	for (i = 0; i < MAX_PLAYERS; i++) {
-		if (Session.NatPeerNames[i][0] == 0) {
-			break;
-		}
-		if (stricmp(Session.NatPeerNames[i], Wide_To_Narrow(Session.Slots[player]->Name)) == 0) {
+	for (int n = 0; n < MAX_PLAYERS && Session.NatPeerNames[n][0]; n++) {
+		if (stricmp(Session.NatPeerNames[n], Wide_To_Narrow(Session.Slots[player]->Name)) == 0) {
 			negotiate_port = false;
 			break;
 		}
 	}
 
 	int theirs = Session.WolPlayerState[player];
-	if (negotiate_port) {
-		if (theirs == 0 || (theirs & 1)) {
-			int mine = (unsigned short)FirewallHelper.Detected;
-			if (mine == 0 || (mine & 1)) {
-				negotiate_port = false;
-			}
-		}
+	if (negotiate_port && !FirewallHelper.Is_NAT(theirs) && !FirewallHelper.Is_NAT(FirewallHelper.Get_Raw_Firewall_Behavior())) {
+		negotiate_port = false;
 	}
 
 	int attempt = 0;
 	unsigned short previous_port = 0;
-	unsigned short source_port = 0;
+	unsigned short my_port = 0;
+	GlobalPacketType probe;
+	GlobalPacketType packet;
+	unsigned short product;
+
 	do {
 		Resend_Pending_Requests();
-		if (negotiate_port) {
-			source_port = 0;
-			if (!(FirewallHelper.Detected & 0x40)) {
+
+		if (!negotiate_port) {
+			Session.PeerPorts[player] = Session.PlayerPorts[player_index];
+		} else {
+			int behavior = FirewallHelper.Get_Raw_Firewall_Behavior();
+			unsigned short source_port = 0;
+
+			if ((behavior & 0x40) == 0) {
 				DebugString("No destination port delta - looking for earlier connections at the same address\n");
-				for (i = 0; i < Session.KeepAliveCount; ++i) {
-					int slot = Session.KeepAliveSlot[i];
+				for (int r = 0; r < Session.KeepAliveCount; r++) {
+					int slot = Session.KeepAliveSlot[r];
 					IPXAddressClass address = Session.Slots[slot]->Address;
 					if (address.Is_Same_Node(Session.Slots[player]->Address)) {
-						int port;
-						memcpy(&port, &Session.PeerAttemptBlock[3 + slot * sizeof(port)], sizeof(port));
-						source_port = port;
+						source_port = Session.PeerSourcePorts[slot];
 						DebugString("Found old connection port number to use - port number %d\n", source_port);
 					}
 				}
 			}
-			if (!source_port) {
-				for (i = 0; i < Session.Players.Count(); ++i) {
-					char const * name = Wide_To_Narrow(Session.Players[i]->Name);
-					if (!stricmp(name, g_NickName.get())) {
-						source_port = FirewallHelper.Get_Next_Mangled_Source_Port(Session.PlayerPorts[i]);
+
+			if (source_port == 0) {
+				for (int p = 0; p < Session.Players.Count(); p++) {
+					wchar_t const * player_name = Session.Players[p]->Name;
+					char const * name = Wide_To_Narrow(player_name);
+					if (stricmp(name, g_NickName.get()) == 0) {
+						unsigned short base_port = Session.PlayerPorts[p];
+						source_port = FirewallHelper.Get_Next_Mangled_Source_Port(base_port);
 						break;
 					}
 				}
 			}
+
 			Send_User_Port(Wide_To_Narrow(Session.Slots[player]->Name), source_port);
-		} else {
-			Session.PeerPorts[player] = Session.PlayerPorts[player_index];
+			my_port = source_port;
 		}
+
 		timer = CDTimerClass<SystemTimerClass>(360);
 		if (attempt > 0) {
 			timer = CDTimerClass<SystemTimerClass>(240);
 		}
-		while (timer && ((negotiate_port && Session.PeerPorts[player] == previous_port)
-			|| (!negotiate_port && Session.PeerPorts[player] == 0))) {
+		while (timer.Value() != 0 && ((negotiate_port == true && Session.PeerPorts[player] == previous_port) || (negotiate_port == false && Session.PeerPorts[player] == 0))) {
 			WOL_Wait_Callback();
 		}
+
 		previous_port = Session.PeerPorts[player];
-		if (previous_port) {
-			Session.PlayerPorts[player_index] = previous_port;
+		if (previous_port != 0) {
+			Session.PlayerPorts[player_index] = Session.PeerPorts[player];
 			Session.Players[player_index]->Address.Set_Port(Session.PeerPorts[player]);
 			Session.Slots[player]->Address.Set_Port(Session.PeerPorts[player]);
 
-			GlobalPacketType probe;
-			memset(&probe, 0, 0x2f);
+			memset(&probe, 0, 0x2F);
 			probe.Command = NET_PORT_PROBE;
 			strcpy(probe.Name, g_NickName.get());
+
 			if (FirewallHelper.Is_Netgear() && !FirewallHelper.Is_Netgear(Session.WolPlayerState[player])) {
 				DebugString("Doing the netgear sleep thing\n");
 				CDTimerClass<SystemTimerClass> delay(240);
-				while (delay) {
+				while (delay.Value() != 0) {
 					WOL_Wait_Callback();
 				}
 			}
-			DebugString("Sending NET_PORT_PROBE packet to %s at port %d\n", Wide_To_Narrow(Session.Slots[player]->Name), Session.PlayerPorts[player_index]);
+
+			wchar_t const * slot_name = Session.Slots[player]->Name;
+			char const * name = Wide_To_Narrow(slot_name);
+			DebugString("Sending NET_PORT_PROBE packet to %s at port %d\n", name, Session.PlayerPorts[player_index]);
 			timer = CDTimerClass<SystemTimerClass>(360);
 			resend = CDTimerClass<SystemTimerClass>(0);
+
 			do {
-				if (!resend) {
-					Ipx.Send_Global_Message_To_Name(&probe, 0x2f, 0, Session.Slots[player]->Name);
+				if (resend == 0) {
+					Ipx.Send_Global_Message_To_Name(&probe, 0x2F, 0, Session.Slots[player]->Name);
 					resend = CDTimerClass<SystemTimerClass>(30);
 				}
 				WOL_Wait_Callback();
+
 				if (!received) {
 					if (packet_index >= Ipx.Global_Num_Receive()) {
 						packet_index = 0;
 					}
-					GlobalPacketType packet;
-					unsigned short product;
 					if (Ipx.Peek_Global_Message(packet_index, &packet, &length, &sender, &product, NULL) && product == 0xaa03) {
 						switch (packet.Command) {
 							case NET_PORT_PROBE:
 								DebugString("Got NET_PORT_PROBE packet\n");
-								if (Session.Players[player_index]->Address.Is_Same_Node(sender) && !stricmp(Wide_To_Narrow(Session.Slots[player]->Name), packet.Name)) {
-									DebugString("Got NET_PORT_PROBE packet from %s\n", packet.Name);
-									Send_Public_Options(11, packet.Name);
-									Mark_Player_Checked(player_index);
-									Queue_Peer_Timeout(player);
-									received = true;
-									int port = source_port;
-									memcpy(&Session.PeerAttemptBlock[3 + player * sizeof(port)], &port, sizeof(port));
+								if (Session.Players[player_index]->Address.Is_Same_Node(sender)) {
+									wchar_t const * peer_name = Session.Slots[player]->Name;
+									if (stricmp(Wide_To_Narrow(peer_name), packet.Name) == 0) {
+										DebugString("Got NET_PORT_PROBE packet from %s\n", packet.Name);
+										Send_Public_Options(11, packet.Name);
+										Mark_Player_Checked(player_index);
+										Queue_Peer_Timeout(player);
+										received = true;
+										Session.PeerSourcePorts[player] = my_port;
+									}
 								}
 								// The probe has been handled and can leave the receive queue.
 							case NET_PING:
@@ -9097,38 +9148,44 @@ bool __fastcall Start_Talking_To(int player, int pair_slot, int retries)
 						}
 					}
 				}
-				if (received && Session.ConnectionResults[pair_slot >> 1][pair_slot & 1] == 11) {
+
+				if (received && Session.ConnectionResults[pair_slot] == 11) {
 					DebugString("Got connection result - my packet must have got through\n");
 					break;
 				}
-				int result = Session.ConnectionResults[pair_slot >> 1][pair_slot & 1];
-				if (result >= 1 && result < 11 && result - 1 > attempt) {
-					DebugString("Other player is trying again - their_try = %d\n", result - 1);
-					attempt = result - 2;
-					break;
+
+				int result = Session.ConnectionResults[pair_slot];
+				if (result >= 1 && result < 11) {
+					int their_try = result - 1;
+					if (their_try > attempt) {
+						DebugString("Other player is trying again - their_try = %d\n", their_try);
+						attempt = their_try - 1;
+						break;
+					}
 				}
-				++packet_index;
-			} while (timer);
+				packet_index++;
+			} while (timer.Value() != 0);
 		}
-		if (received && Session.ConnectionResults[pair_slot >> 1][pair_slot & 1] == 11) {
+
+		if (received && Session.ConnectionResults[pair_slot] == 11) {
 			break;
 		}
 		if (attempt >= retries) {
 			break;
 		}
-		++attempt;
+		attempt++;
 		Send_Public_Options(attempt + 1, Wide_To_Narrow(Session.Slots[player]->Name));
 		DebugString("Trying again - trying = %d\n", attempt);
 	} while (true);
+
 	return received;
 }
-#endif
 
 bool Connect_Player_Pairs(void) // RA2: 0x0074EF80, not in TibSun: makes the connections of the pairs of players Build_Connection_Pairs arranged: talks to the peer of each pair the local player is in (Start_Talking_To), waits for the others to connect among themselves; false when one of them fails
 {
 	CDTimerClass<SystemTimerClass> timer;
 	Session.KeepAliveCount = 0;
-	memset(&Session.PeerAttemptBlock[3], 0, 0x20); // RA2: the eight values at +0x2EF4 are cleared
+	memset(Session.PeerSourcePorts, 0, sizeof(Session.PeerSourcePorts));
 	int pair_slot = -1;
 	g_SuspendChatPump = 0; // RA2: the chat is pumped again
 	if (Session.ConnectionResultCount == 0) { // RA2: no pair to make
@@ -9157,13 +9214,13 @@ bool Connect_Player_Pairs(void) // RA2: 0x0074EF80, not in TibSun: makes the con
 		if (stricmp(name, g_NickName.get()) == 0) { // RA2: the local player is the first of the pair
 			peer = second;
 			pair_slot = pair * 2 + 1;
-			Session.ConnectionResults[pair][0] = 11;
+			Session.ConnectionResults[pair * 2] = 11;
 		}
 		name = Wide_To_Narrow(Session.Slots[second]->Name);
 		if (stricmp(name, g_NickName.get()) == 0) { // RA2: or the second
 			peer = first;
 			pair_slot = pair * 2;
-			Session.ConnectionResults[pair][1] = 11;
+			Session.ConnectionResults[pair * 2 + 1] = 11;
 		}
 		if (peer != -1) { // RA2: the local player is in the pair
 			int step; // RA2: the harder of the two connections decides how many retries
@@ -9183,8 +9240,8 @@ bool Connect_Player_Pairs(void) // RA2: 0x0074EF80, not in TibSun: makes the con
 				Sleep(5);
 				WOL_Wait_Callback();
 				Resend_Pending_Requests();
-				int first_status = Session.ConnectionResults[pair][0];
-				int second_status = Session.ConnectionResults[pair][1];
+				int first_status = Session.ConnectionResults[pair * 2];
+				int second_status = Session.ConnectionResults[pair * 2 + 1];
 				if ((first_status == 11 || first_status == 0) && (second_status == 11 || second_status == 0)) {
 					DebugString("Got both results - woohoo!\n");
 					break;
@@ -9201,10 +9258,10 @@ bool Connect_Player_Pairs(void) // RA2: 0x0074EF80, not in TibSun: makes the con
 				}
 			} while (timer.Value() != 0);
 		}
-		if (Session.ConnectionResults[pair][0] != 11) {
+		if (Session.ConnectionResults[pair * 2] != 11) {
 			return(false);
 		}
-		if (Session.ConnectionResults[pair][1] != 11) {
+		if (Session.ConnectionResults[pair * 2 + 1] != 11) {
 			return(false);
 		}
 		DebugString("Connection good, next pair\n");
@@ -12191,8 +12248,8 @@ bool __fastcall Find_Channel_By_Name(Wstring const & name, ArrayList<Channel> co
 }
 
 int __fastcall Run_Online_Menu(bool first_time); // RA2: the definition is not exact yet
-#ifdef RA2_NON_MATCHING // not exact: 2579 bytes differ (main's text with main's two single-caller helpers Request_Buddy_Game_List and Report_Disconnected written out at their sites and the event numbers named; 2391 with the helpers, held on variation_candidates.csv); the second lookup as the plain found test the original keeps
-int __fastcall Run_Online_Menu(bool first_time) // RA2: 0x00759370, the buddy list screen run from the online menu: hosts a game, joins a buddy's lobby or game, or leaves; 1 when a game starts, 2 for a skirmish, 0 otherwise (main's text)
+#ifdef RA2_NON_MATCHING // not exact: 2594 of 2687 bytes differ against the image-derived bound 00759370 (ra2-decomp's matched Yuri's Revenge buddy menu c19f107 whole, with RA2's globals, event values, UI calls, lobby number and string sites: 97 of 101 calls before the jump table in order, up from 94; position score 2594, was 2579 with main's text and its two single-caller helpers written out, 2391 with the helpers, held on variation_candidates.csv)
+int __fastcall Run_Online_Menu(bool first_time) // RA2: 0x00759370, the buddy list screen run from the online menu: hosts a game, joins a buddy's lobby or game, or leaves; 1 when a game starts, 2 for a skirmish, 0 otherwise
 {
 	g_PlayingNetGame = false;
 	WolOptionsLocked = 0;
@@ -12203,16 +12260,16 @@ int __fastcall Run_Online_Menu(bool first_time) // RA2: 0x00759370, the buddy li
 	}
 	Leave_Current_Channel(0x40, true);
 	g_BuddyChannels.clear();
-	for (;;) {
+
+	while (true) {
 		SimpleWonlineDialogControl control;
 		Reset_Wait_Events();
 		HWND dialog = OwnerDraw::Begin_Dialog(0x116, (DLGPROC)Buddy_Dialog_Proc, (LPARAM)&control);
 		OwnerDraw::Display_Dialog(dialog);
 		while (!control.Is_Done()) {
-			DWORD event = WaitForMultipleObjects(EV_COUNT, g_WaitEventHandles, FALSE, 100);
-			while (event == WAIT_TIMEOUT && !control.Is_Done()) {
+			DWORD event;
+			while ((event = WaitForMultipleObjects(EV_COUNT, g_WaitEventHandles, FALSE, 100)) == WAIT_TIMEOUT && !control.Is_Done()) {
 				WOL_Wait_Callback();
-				event = WaitForMultipleObjects(EV_COUNT, g_WaitEventHandles, FALSE, 100);
 			}
 			ResetEvent(g_WaitEventHandles[event]);
 			if (event == EV_ABORT) {
@@ -12232,157 +12289,161 @@ int __fastcall Run_Online_Menu(bool first_time) // RA2: 0x00759370, the buddy li
 			Title_Screen_Restore(false);
 		}
 		OwnerDraw::End_Dialog(dialog);
+
 		switch ((int)control.Get_Window()) {
 			case IDC_NEWCHAN:
 				Reset_Wait_Events();
-			if (!Host_Game()) {
+				if (!Host_Game()) {
 					DebugString("Buddy List Host Create Game failed\n");
-			} else {
+				} else {
 					g_JoinLobbyNow = 0;
-				do {
-					DWORD event;
 					do {
+						DWORD event;
+						do {
 							event = WaitForMultipleObjects(EV_COUNT, g_WaitEventHandles, FALSE, 20);
-						if (event == WAIT_TIMEOUT) {
+							if (event == WAIT_TIMEOUT) {
 								WOL_Wait_Callback();
-						}
-					} while (event == WAIT_TIMEOUT && !g_JoinLobbyNow);
+							}
+						} while (event == WAIT_TIMEOUT && !g_JoinLobbyNow);
 						ResetEvent(g_WaitEventHandles[event]);
 						if (event == EV_ABORT) {
 							DebugString("EV_ABORT from Buddy List Host\n");
 							g_JoinLobbyNow = 1;
-					}
-						if (event == EV_EXIT) {
+						} else if (event == EV_EXIT) {
 							DebugString("EV_EXIT from Buddy List Host\n");
 							g_JoinLobbyNow = 1;
-					}
-						if (event == EV_SKIRMISH) {
+						} else if (event == EV_SKIRMISH) {
 							DebugString("Skirmish from Buddy List\n");
 							g_GameStartRequested = false;
 							g_LastErrorMessage[0] = 0;
 							g_PlayingNetGame = false;
-						return(2);
+							return(2);
 						} else if (event == EV_STARTGAME) {
 							DebugString("Start Game from Buddy List Host\n");
 							g_GameStartRequested = false;
-						g_pChat->RequestChannelLeave(); // RA2: virtual 0x24
+							g_pChat->RequestChannelLeave(); // RA2: virtual 0x24
 							g_LastErrorMessage[0] = 0;
 							g_PlayingNetGame = true;
 							g_JoinLobbyNow = 0;
-						return(1);
-					}
-				} while (!g_JoinLobbyNow);
-				DebugString("Stop Buddy Host\n");
-				g_JoinLobbyNow = 0;
-			}
-			Close_Wait_Window(~0U);
-			Reset_Wait_Events();
-			if (g_LastErrorMessage[0]) {
-				ODMessageBox(g_LastErrorMessage, MB_OK, Wait_Callback_Thunk, false);
-			}
-			while (WS_Destroy_Dialog(NULL, 0)) {
-			}
-			g_PlayingNetGame = false;
-			break;
+							return(1);
+						}
+					} while (!g_JoinLobbyNow);
+					DebugString("Stop Buddy Host\n");
+					g_JoinLobbyNow = 0;
+				}
+				Close_Wait_Window(~0U);
+				Reset_Wait_Events();
+				if (g_LastErrorMessage[0]) {
+					ODMessageBox(g_LastErrorMessage, MB_OK, Wait_Callback_Thunk, false);
+				}
+				while (WS_Destroy_Dialog(NULL, 0)) {
+				}
+				g_PlayingNetGame = false;
+				break;
+
 			case IDC_JOINLEAVE: {
 				Channel channel;
 				memset(&channel, 0, sizeof(channel));
-			if (g_SelectedBuddy.length() > 0 && g_BuddyChannels.getValue(g_SelectedBuddy, channel)) {
-					unsigned int kind = 0;
-				if (g_BuddyStatus.getValue(g_SelectedBuddy, kind)) {
-					switch (kind) {
-					case 4: {
-								Channel lobby;
-								memset(&lobby, 0, sizeof(lobby));
-								Online_Session_Return = 3;
-						for (int i = 0; i < g_UserChannels.length(); i++) {
-									g_UserChannels.get(lobby, i);
-							if (!stricmp((char *)lobby.name, (char *)channel.name)) {
-										g_LobbyNumber = atol((char *)channel.name + strlen("Lob_33_"));
-										g_HasJoinedLobby = false;
-								return(0);
-							}
-						}
-						return(0);
-					}
-					case 5: {
-								Wstring name((char *)channel.name);
-								Channel game;
-								char found = Find_Channel_By_Name(name, g_GameChannelList, game);
-								if (!found) {
-									found = Request_Game_Channel_List(0, true);
-									if (!found) {
-										DebugString("Buddy List Guest Get Channel List failed\n");
-										SetEvent(g_WaitEventHandles[EV_ERROR]);
-									}
-									if (found) {
-										found = Find_Channel_By_Name(name, g_GameChannelList, game);
-									}
-							if (!found) {
-										DebugString("Buddy List Guest Find Channel by name failed\n");
-								break;
-							}
-						}
-						if (!Join_Game_Channel(&game, ObserverMode)) {
-							DebugString("Buddy List Guest Join_Game failed\n");
-						} else {
-							g_JoinLobbyNow = 0;
-							int timeout = 500;
-							do {
-								DWORD event = WaitForMultipleObjects(EV_COUNT, g_WaitEventHandles, FALSE, 20);
-								while (event == WAIT_TIMEOUT && !g_JoinLobbyNow) {
-									WOL_Wait_Callback();
-									event = WaitForMultipleObjects(EV_COUNT, g_WaitEventHandles, FALSE, 20);
-								}
-								ResetEvent(g_WaitEventHandles[event]);
-										if (event == EV_ABORT) {
-									DebugString("EV_ABORT from Buddy List Guest\n");
-									g_JoinLobbyNow = 1;
-								}
-										if (event == EV_EXIT) {
-											DebugString("EV_EXIT from Buddy List Guest\n");
-											g_JoinLobbyNow = 1;
-								}
-										if (event == EV_ERROR) {
-											DebugString("EV_ERROR from Buddy List Guest\n");
-											g_JoinLobbyNow = 1;
-								}
-										if (event == EV_CHAN_JOIN_FAIL) {
-											DebugString("EV_CHAN_JOIN_FAIL from Buddy List Guest\n");
-											g_JoinLobbyNow = 1;
-								}
-										if (event == EV_STARTGAME) {
-											DebugString("EV_STARTGAME from Buddy List Guest\n");
-											g_GameStartRequested = false;
-									g_pChat->RequestChannelLeave(); // RA2: virtual 0x24
-											g_LastErrorMessage[0] = 0;
-											g_PlayingNetGame = true;
-											g_JoinLobbyNow = 0;
-									return(1);
-								}
-								if (timeout-- < 0) {
-									DebugString("Timeout from Buddy List Guest\n");
-									break;
-								}
-							} while (!g_JoinLobbyNow);
-							g_JoinLobbyNow = 0;
-							DebugString("Exit from BuddyList Guest\n");
-						}
+				if (g_SelectedBuddy.length() > 0) {
+					bool known = g_BuddyChannels.getValue(g_SelectedBuddy, channel);
+					if (!known) {
 						break;
 					}
+					unsigned int state = 0;
+					if (!g_BuddyStatus.getValue(g_SelectedBuddy, state)) {
+						break;
+					}
+					switch (state) {
+						case 4: {
+							Channel other;
+							memset(&other, 0, sizeof(other));
+							Online_Session_Return = 3;
+							for (int j = 0; j < g_UserChannels.length(); j++) {
+								g_UserChannels.get(other, j);
+								if (stricmp((char *)other.name, (char *)channel.name) == 0) {
+									g_LobbyNumber = atol((char *)channel.name + strlen("Lob_33_"));
+									g_HasJoinedLobby = false;
+									break;
+								}
+							}
+							return(0);
+						}
+
+						case 5: {
+							Wstring name((char *)channel.name);
+							Channel other;
+							bool found = Find_Channel_By_Name(name, g_GameChannelList, other);
+							if (!found) {
+								bool refreshed = Request_Game_Channel_List(0, true);
+								if (!refreshed) {
+									DebugString("Buddy List Guest Get Channel List failed\n");
+									SetEvent(g_WaitEventHandles[EV_ERROR]);
+								}
+								found = refreshed ? Find_Channel_By_Name(name, g_GameChannelList, other) : false;
+							}
+							if (!found) {
+								DebugString("Buddy List Guest Find Channel by name failed\n");
+							} else if (!Join_Game_Channel(&other, ObserverMode)) {
+								DebugString("Buddy List Guest Join_Game failed\n");
+							} else {
+								g_JoinLobbyNow = 0;
+								int timeout = 500;
+								while (true) {
+									DWORD event;
+									while ((event = WaitForMultipleObjects(EV_COUNT, g_WaitEventHandles, FALSE, 20)) == WAIT_TIMEOUT && !g_JoinLobbyNow) {
+										WOL_Wait_Callback();
+									}
+									ResetEvent(g_WaitEventHandles[event]);
+									if (event == EV_ABORT) {
+										DebugString("EV_ABORT from Buddy List Guest\n");
+										g_JoinLobbyNow = 1;
+									}
+									else if (event == EV_EXIT) {
+										DebugString("EV_EXIT from Buddy List Guest\n");
+										g_JoinLobbyNow = 1;
+									}
+									else if (event == EV_ERROR) {
+										DebugString("EV_ERROR from Buddy List Guest\n");
+										g_JoinLobbyNow = 1;
+									}
+									else if (event == EV_CHAN_JOIN_FAIL) {
+										DebugString("EV_CHAN_JOIN_FAIL from Buddy List Guest\n");
+										g_JoinLobbyNow = 1;
+									}
+									if (event == EV_STARTGAME) {
+										DebugString("EV_STARTGAME from Buddy List Guest\n");
+										g_GameStartRequested = false;
+										g_pChat->RequestChannelLeave(); // RA2: virtual 0x24
+										g_LastErrorMessage[0] = 0;
+										g_PlayingNetGame = true;
+										g_JoinLobbyNow = 0;
+										return(1);
+									}
+									if (timeout-- < 0) {
+										DebugString("Timeout from Buddy List Guest\n");
+										break;
+									}
+									if (g_JoinLobbyNow) {
+										break;
+									}
+								}
+								g_JoinLobbyNow = 0;
+								DebugString("Exit from BuddyList Guest\n");
+							}
+							break;
+						}
 					}
 				}
+				break;
 			}
-			break;
-		}
+
 			case IDC_CANCEL:
-		case 0x686:
-			if (Online_Session_Return == 3) {
-				g_HasJoinedLobby = false;
-			}
-			return(0);
-		default:
-			break;
+			case 0x686:
+				if (Online_Session_Return == 3) {
+					g_HasJoinedLobby = false;
+					return(0);
+				}
+				return(0);
 		}
 	}
 }
@@ -12397,7 +12458,6 @@ void __fastcall Set_Match_State(int state, int timeout, int result) // RA2: 0x00
 }
 
 int __fastcall Start_Quick_Match(void); // RA2: the definition is not exact yet
-#ifdef RA2_NON_MATCHING // not exact: 1350 bytes differ (main and ra2-decomp channel-list request; the original calls Reset_Wait_Events here)
 void __fastcall Collect_Remote_Player_Names(void); // RA2: 0x0075A6C0, below
 bool __fastcall Start_Match(void); // RA2: 0x0075BE10, below
 BOOL CALLBACK Wonline_Waiting_Dialog_Proc(HWND window, UINT message, WPARAM wparam, LPARAM lparam); // RA2: 0x0075C350, below
@@ -12438,11 +12498,13 @@ int __fastcall Start_Quick_Match(void) // RA2: 0x00759E20, the quick or tour mat
 	}
 	Channel channel;
 	memset(&channel, 0, sizeof(channel));
-	char const * prefix = (Session.Type == GAME_INTERNET && Online_Session_State == 2) ? "Lob_35_" : "Lob_38_";
+	bool tour = Session.Type == GAME_INTERNET && Online_Session_State == 2;
+	char const * prefix = tour ? "Lob_35_" : "Lob_38_";
 	int i;
 	for (i = 0; i < g_UserChannels.length(); i++) {
 		g_UserChannels.get(channel, i);
-		if (_strnicmp((char *)channel.name, prefix, strlen(prefix)) == 0) break;
+		int length = strlen(prefix);
+		if (_strnicmp((char *)channel.name, prefix, length) == 0) break;
 	}
 	if (i >= g_UserChannels.length()) {
 		Show_Match_Message("WOL:MatchingServerUnavailable", 25870);
@@ -12469,7 +12531,8 @@ int __fastcall Start_Quick_Match(void) // RA2: 0x00759E20, the quick or tour mat
 			}
 			Set_Match_State(3, 20, 0);
 		}
-		if (g_MatchState == 3 && g_UserList.length() > 1 && strcmp((char *)channel.name, (char *)g_CurrentChannel.name) == 0) Request_Match();
+		int users = g_UserList.length();
+		if (g_MatchState == 3 && users > 1 && strcmp((char *)channel.name, (char *)g_CurrentChannel.name) == 0) Request_Match();
 		DWORD event;
 		while ((event = WaitForMultipleObjects(18, g_WaitEventHandles, FALSE, 20)) == WAIT_TIMEOUT) WOL_Wait_Callback();
 		ResetEvent(g_WaitEventHandles[event]);
@@ -12518,7 +12581,6 @@ int __fastcall Start_Quick_Match(void) // RA2: 0x00759E20, the quick or tour mat
 	}
 	return(result);
 }
-#endif
 
 void __fastcall Collect_Remote_Player_Names(void) // RA2: 0x0075A6C0, queues a ping request for every user of the channel but its operator and the player (main's text)
 {
@@ -13327,4 +13389,79 @@ BOOL CALLBACK Add_Match_Buddy_Dialog_Proc(HWND window, UINT message, WPARAM wpar
 		return(FALSE);
 	}
 	return(FALSE);
+}
+
+// ra2-decomp Dictionary member bodies for the native unsigned buddy lookup.
+template<>
+unsigned int Dictionary<Wstring, unsigned int>::keyHash(Wstring const & key) // RA2: keys by const reference
+{
+	unsigned int retval = hashFunc((Wstring &)key); // RA2: the hash function still takes Wstring &
+	retval &= ((1 << tableBits) - 1);
+	assert(retval < getSize());
+	return(retval);
+}
+
+template<>
+char Dictionary<Wstring, unsigned int>::getPointer(Wstring const & key, unsigned int ** valptr) // RA2: keys by const reference
+{
+	int offset;
+	DNode<Wstring, unsigned int> * node;
+
+	if (entries == 0)
+		return(FALSE);
+
+	offset = keyHash(key);
+
+	node = table[offset];
+
+	if (node == NULL)
+		return(FALSE);
+
+#ifdef KEY_MEM_OPS
+	while ((node != NULL) && (memcmp(&(node->key), &key, sizeof(Wstring))))
+#else
+	while ((node != NULL) && (!((node->key) == key)))
+#endif
+	{ node = node->hashNext; }
+
+	if (node == NULL)
+	{ return(FALSE); }
+
+	*valptr = &(node->value);
+
+	return(TRUE);
+}
+
+
+
+// ra2-decomp Dictionary member body for the native channel lookup.
+template<>
+char Dictionary<Wstring, Channel>::getPointer(Wstring const & key, Channel ** valptr) // RA2: keys by const reference
+{
+	int offset;
+	DNode<Wstring, Channel> * node;
+
+	if (entries == 0)
+		return(FALSE);
+
+	offset = keyHash(key);
+
+	node = table[offset];
+
+	if (node == NULL)
+		return(FALSE);
+
+#ifdef KEY_MEM_OPS
+	while ((node != NULL) && (memcmp(&(node->key), &key, sizeof(Wstring))))
+#else
+	while ((node != NULL) && (!((node->key) == key)))
+#endif
+	{ node = node->hashNext; }
+
+	if (node == NULL)
+	{ return(FALSE); }
+
+	*valptr = &(node->value);
+
+	return(TRUE);
 }

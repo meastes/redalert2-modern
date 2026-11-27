@@ -2,7 +2,11 @@
 # Soviet 11 (SOV11S, Red Revolution) won by lane P25 through the step server (ra2/tools/ra2_step.py,
 # ra2/tools/ra2_commander.py): the two starting Kirovs flown round the map's south-west and north-west edges, clear of
 # the flak belts, onto the Kremlin (800 strength), force-fired by its cell; the base left to itself.
+# Re-recorded by lane P67 with the frame clock after lane P65's rule (map points only inside the tactical view): the
+# third waypoint, @=22,82, clicked 120 pixels left of the view, is @=27,82, the nearest in view; the other commands are
+# the same, won at tick 35,900.
 # SOV11S.MAP: ticks are loop frames from the scenario's first
+# frame clock: the game's clock advances 16 ms a loop frame
 360 input move 428 368
 360 input +2 rdown 428 368
 360 input +6 rup 428 368
@@ -41,9 +45,9 @@
 9056 input +6 lup @=38,112
 17066 input key 9
 17068 look 22 82
-17071 input move @=22,82
-17071 input +2 ldown @=22,82
-17071 input +6 lup @=22,82
+17071 input move @=27,82
+17071 input +2 ldown @=27,82
+17071 input +6 lup @=27,82
 25081 input key 9
 25083 look 13 62
 25086 input move @=13,62
