@@ -190,11 +190,11 @@ final check.
 | Allied 4 (ALL04U, lane P23): rocketeers on the grand cannons, the MCV landed and guarded, ten destroyers up the river, the amplifier force-fired | won at tick 32,994 | ra2-native-campaign-won-all04 |
 | Allied 5 (ALL05S, lane P23): Tanya and spies, coils by barrels and C4 during spy power outages, the battle lab spied, both silos C4'd | won at tick 22,647 | ra2-native-campaign-won-all05 |
 | Allied 8 (ALL08U, lane P24): Tanya and the GIs along the elevated highway, the compound's barrels, Tanya's C4 on its reactors and the beacon, a base by the arch, prism tanks by short sieges | won at tick 106,268 | ra2-native-campaign-won-all08 |
-| Soviet 6 (SOV06T, lane P24): base with two tesla coils against the Grizzly landings, submarines and scorpions, the Korean fleet sunk off the base, twenty submarines into Pearl Harbor | won at tick 30,200 | ra2-native-campaign-won-sov06 |
+| Soviet 6 (SOV06T, lane P24): base with two tesla coils against the Grizzly landings, submarines and scorpions, the Korean fleet sunk off the base, twenty submarines into Pearl Harbor | won at tick 30,688 (re-recorded by lane P59 with the frame clock, the same commands, after the radial fan went back to pi/segments; 30,200 before) | ra2-native-campaign-won-sov06 |
 | Allied 10 (ALL10S, lane P25): the MCV by Einstein's lab, refineries, a battle lab and a second war factory on legal origins, prism tanks by short sieges on the three Soviet bases in turn | won at tick 42,660 | ra2-native-campaign-won-all10 |
 | Soviet 9 (SOV09U, lane P25): psi troopers on a GI, the engineers (barracks and battle lab), the sniper and the Grizzly in the Light Blue compound; the sniper on the west gate's seals and dogs, a spy into a power plant, the psi trooper on the President | won at tick 27,285 | ra2-native-campaign-won-sov09 |
 | Soviet 11 (SOV11S, lane P25): the two starting Kirovs round the map's south-west and north-west edges onto the Kremlin | won at tick 35,900 | ra2-native-campaign-won-sov11 |
-| Soviet 12 (SOV12S, lane P26): two refineries and tesla coils against the scripted chrono attacks (Rhinos on the seals' landing craft), a battle lab, eight Kirovs round the south coast to a stage out of the patriots' reach, the Iron Curtain on them eleven cells out, the chronosphere bombed | won at tick 64,411 | ra2-native-campaign-won-sov12 |
+| Soviet 12 (SOV12S, lane P26): two refineries and tesla coils against the scripted chrono attacks (Rhinos on the seals' landing craft), a battle lab, eight Kirovs round the south coast to a stage out of the patriots' reach, the Iron Curtain on them eleven cells out, the chronosphere bombed | won at tick 64,413 (re-recorded by lane P59 with the frame clock, the same commands, after the radial fan went back to pi/segments; 64,411 before) | ra2-native-campaign-won-sov12 |
 | Soviet 2 (SOV02T, lanes P22 and P27): the German refineries by their barrels, a base with two sentry guns by the ore, both derricks taken (the alligators shot first), the Allied base razed by Rhinos (its fire sale ends it), the land mopped up, a naval yard as bait: the last four destroyers came into the bay and died to submarines and Rhinos on the shore | won at tick 46,156 | ra2-native-campaign-won-sov02 |
 | Soviet 5 (SOV05U, lanes P22 and P27): conscripts and the starting tesla troopers along the west road, the barrel clusters by the Allied posts shot from four cells, the derrick taken, tesla troopers bought (each becomes Other3's, a house the player commands) and walked round the GI nests, Ivans' bombs on the tower's pillbox, a home guard of conscripts, the tesla troopers into the Paris Tower, which then kills every Allied unit | won at tick 51,032 | ra2-native-campaign-won-sov05 |
 | Soviet 7 (SOV07S, lanes P23 and P27): refinery, radar, coils, a war factory and Apocalypse tanks; the six prism tanks met before they reach the construction yard, flak round the lab, sixteen tanks parked round the lab against engineers and spies through the last wave, then a hunt | won at tick 42,844 | ra2-native-campaign-won-sov07 |
@@ -240,6 +240,21 @@ Other platforms (lane P21): the replays are Mac rows only for now. One try of al
 hung for seven minutes and, once ended, the game wrote nothing past MoltenVK's start lines, so whether the replay is
 deterministic there is not known yet. The iOS Simulator was not tried (the replay needs no socket, so both rows are a
 matter of running `ra2/tests/ra2_campaign.py` with ra2_wine.sh or ra2_ios_sim.sh as the binary once those start).
+
+## Lane P59: Fire_At's radial fan is pi/segments, as the original (2026-11-27)
+
+TechnoClass::Fire_At (0x006CA890) spaces a RadialFireSegments weapon's shots by `pi / segments`: its `fdivr` at
+0x006CB22E divides the double at 0x0079D158, which holds 3.141592653589793 (the owner read it from the target
+game.exe; the installed build's bytes there agree). src-final's exact text named that constant `unknown_tau_79d158`,
+and lane P28 read the name: its fixups.json row turned the rebuild's (correct) pi into 2*pi and the redalert2-decomp
+draft was changed likewise (decomp lane F93 put pi back). The row is gone, so the port runs the rebuild's
+`M_PI / segments`. Two campaign wins had been recorded under 2*pi and ran another way under pi, each still a win:
+Soviet 6 (30,200 to 30,688) and Soviet 12 (64,411 to 64,413). Both were re-recorded with the frame clock from their own
+commands (a preload of the whole recording, then advanced to the win; no command changed) and each rerun wins at the
+new tick; the other 22 and ra2-native-walls hold at their recorded ticks. Yuri's Revenge's native Fire_At draft
+(yr/glue/fire_at_native.inc) had 2*pi too; gamemd.exe's Fire_At (0x006FDD50) divides the double at 0x007E44D0 (`fdivr`
+at 0x006FEAD4), also pi, so its draft now uses pi; yr-native-campaign-won-all01 and -all03 and
+yr-native-campaign-crash-all05 still pass under it.
 
 ## Lane P50: Yuri's Revenge missions played to a real win through its step server (2026-11-27)
 

@@ -1,4 +1,8 @@
+# Soviet 12 (SOV12S, Polar Storm) won by lane P26 through the step server; re-recorded by lane P59 with the frame clock after
+# Fire_At's radial fan went back to the original's pi/segments (game.exe 0x0079D158 holds pi): the same commands, won at
+# tick 64,413 (64,411 under the port's former 2*pi).
 # SOV12S.MAP: ticks are loop frames from the scenario's first
+# frame clock: the game's clock advances 16 ms a loop frame
 0 input move @tab=0
 0 input +2 ldown @tab=0
 0 input +6 lup @tab=0
@@ -2448,4 +2452,4 @@
 63618 input move @^1032530
 63618 input +2 ldown @^1032530
 63618 input +6 lup @^1032530
-64411 # game over: won
+64413 # game over: won

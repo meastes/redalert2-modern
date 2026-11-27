@@ -1628,12 +1628,6 @@
   },
   {
    "file": "src/techno.cpp",
-   "old": "\t\t\tdouble angle = M_PI / segments * RadialFireSegment - M_PI_2;",
-   "new": "\t\t\tdouble angle = (2.0 * M_PI / segments) * RadialFireSegment - M_PI / 2.0;   /* native: lane P28, main's exact 0x006CA890 (a full turn over the segments) */",
-   "why": "Lane P28 (re-pin to 66bccbbfdd): TechnoClass::Fire_At is still a parked draft (6 bytes differ), and its new text spaces the radial fan by pi/segments; main's exact 0x006CA890 (src-final src/recovered/techno.cpp:3310, unknown_tau_79d158 / segments) and the b873d2b3c6 draft use a full turn, 2*pi/segments. With pi the Soviet 6 replay (Flak Track or radial-fire volleys) won at tick 30688 instead of the recorded 30200. Main's form carried until the rebuild's row is exact."
-  },
-  {
-   "file": "src/techno.cpp",
    "old": "\t\tint * colors = new int[pips];",
    "new": "\t\tint colors_pad = Cargo.GetTotalSize() + 1;   /* native: the original's writes below and past the array land in the block */\n\t\tint * colors_block = new int[colors_pad + pips + 1];\n\t\tint * colors = colors_block + colors_pad;",
    "why": "Lane P34 (Soviet 10, heap corruption after a transport loaded): TechnoClass::Draw_Pips (exact, 0x006D4920) colours one int per pip in new int[Max_Pips()] from slot GetTotalSize()-1 (clamped to Max_Pips(), one past the end) down by each passenger's size, so a transport holding more than its pips' worth of size (an amphibious transport, Passengers=12, with two Apocalypses, Size=6, and an engineer) writes past the end and below the start. The original's heap took those stray ints; macOS malloc found its free lists broken (EXC_BREAKPOINT in xzone malloc at the next allocation: SDL_SaveBMP, AStarClass, a Metal command buffer; ASan: heap-buffer-overflow and a write below the block in Draw_Pips). The array now sits inside a block with room for every write the loop can make (the lowest slot is pips - total size); the pips drawn and their colours are the original's."
