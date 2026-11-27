@@ -124,6 +124,11 @@
 //                   (lane P55: a tank bunker sold with its tank inside);
 //   sell <BLDG>     the player's first building of type BLDG is sold (Sell_Back) (lane P55);
 //   kill <ID>       the first techno of type ID is destroyed (Take_Damage, the C4 warhead, forced) (lane P55);
+//   slaves <ID>     logs `harness-slaves <ID> manager <yes|no> nodes <n> live <n> owned <n> ids <id,...> &<addr>` for each
+//                   techno of type ID (its SlaveManager's nodes, the live slaves, those whose SlaveOwner is this techno,
+//                   the live slaves' IDs) and
+//                   `harness-slave <ID> owner <TYPE|none|stale> &<addr>` for each slave named; `... gone` when none
+//                   (lane P57: a deployed slave miner sold, which undeploys it, gamemd.exe 0x0044A03C);
 //   view            logs `harness-view <x>,<y> locked <0|1> zoom <z> frame <f>`: the tactical view's position
 //                   (Tactical::Get_Tactical_Position), whether the game ignores the player's input (IgnoreInput
 //                   0x00A8ED9C, a mission's locked intro) and the map zoom (lane N32: the touch pan and the pinch must
@@ -200,6 +205,7 @@ LayerType Layer_From_Name(char const * name);
 #include "planning.h"
 #include "ovrlight.h"
 #include "cell.h"
+#include "slavemgr.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -1231,6 +1237,45 @@ int Run_Order(int frame, char const * text)
 			++n;
 		}
 		if (!n) fprintf(stderr, "harness-bunker %s gone\n", word[1]);
+		return(1);
+	}
+	if (!strcmp(word[0], "slaves") && words >= 2) {
+		// lane P57: a slave miner's manager and slaves, and who each slave names as its owner (never a deleted techno)
+		int n = 0;
+		for (int i = 0; i < Technos.Count(); ++i) {
+			TechnoClass * techno = Technos[i];
+			// a slave waiting inside its miner is in limbo: listed too (a building or vehicle in limbo is not)
+			if (techno == NULL || strcmp(Type_Name(techno), word[1])) continue;
+			if (techno->IsInLimbo && techno->Fetch_RTTI() != RTTI_INFANTRY) continue;
+			SlaveManagerClass * manager = techno->SlaveManager;
+			int nodes = 0, live = 0, owned = 0;
+			char ids[160] = "";
+			if (manager != NULL) {
+				nodes = manager->SlaveNodes.Count();
+				for (int k = 0; k < nodes; ++k) {
+					InfantryClass * slave = manager->SlaveNodes[k]->Slave;
+					if (slave == NULL) continue;
+					++live;
+					if (slave->SlaveOwner == techno) ++owned;
+					size_t used = strlen(ids);
+					snprintf(ids + used, sizeof ids - used, "%s%d", used ? "," : "", slave->ID);
+				}
+			}
+			fprintf(stderr, "harness-slaves %s manager %s nodes %d live %d owned %d ids %s &%p\n", word[1], manager ? "yes" : "no",
+				nodes, live, owned, ids[0] ? ids : "-", (void *)techno);
+			if (manager != NULL && manager->Owner != techno) {
+				fprintf(stderr, "harness-slaves %s manager-owner-mismatch &%p\n", word[1], (void *)techno);
+			}
+			TechnoClass * owner = techno->SlaveOwner;
+			if (owner != NULL || techno->Fetch_RTTI() == RTTI_INFANTRY) {
+				bool alive = false;
+				for (int k = 0; k < Technos.Count() && owner != NULL && !alive; ++k) alive = Technos[k] == owner;
+				fprintf(stderr, "harness-slave %s owner %s &%p\n", word[1], owner == NULL ? "none" : alive ? Type_Name(owner) : "stale",
+					(void *)techno);
+			}
+			++n;
+		}
+		if (!n) fprintf(stderr, "harness-slaves %s gone\n", word[1]);
 		return(1);
 	}
 	if (!strcmp(word[0], "sell") && words >= 2) {

@@ -1909,3 +1909,75 @@ that took the sold bunker's memory, a GAWEAP); yr-native-campaign-crash-all05 (y
 recording to tick 95,575, replayed to tick 97,000 with `ra2_campaign.py --survive`; label yr-campaign-won). Not done here:
 the slave manager call just before it (0x0044AA3D: SlaveManagerClass::FUN_006B0DB0 when the building has a
 SlaveManager, under a test of its +0x218 object) is also missing from the draft.
+
+## Lane P57 (2026-11-27): YR's own steps in the TibSun- and RA2-shaped drafts
+
+Lanes P53 and P55 found two faults from glue drafts whose text is Tiberian Sun's (UnitClass::Assign_Destination's factory
+exit, the tank bunker left linked to a sold bunker). This lane compared BuildingClass::Do_MISSION_DECONSTRUCTION
+(glue/building_native.inc) with gamemd.exe 0x00449C30-0x0044ABC5 step by step and screened the other drafts.
+
+**Do_MISSION_DECONSTRUCTION, every step now as gamemd.exe's** (marked "YR (P57)" in the draft):
+* INITIAL: an undeployer (BuildingClass::Can_Be_Undeployed, 0x00449BC0: any UndeploysInto type but a construction yard,
+  a yard only for MCV redeploy and not mind controlled) that is artillery or a tick tank drops its target (0x0044A8DF; the
+  draft had IsVehicle, a 1x1 foundation); an undeployer speaks VoiceDeploy and plays its DeploySound (0x0044A95E); a
+  deployed slave miner whose archive target is a tiberium cell other than its own calls SlaveManagerClass::FUN_006B0DB0
+  (0x0044AA3D: the manager finds the ore field and sends the slaves there; the step P55 named); the bunker release
+  (P55); the upgrade refund sets RecalcPower and RecalcRadar only (the draft's extra IsRecalcNeeded removed); radio
+  RUN_AWAY goes to every link (RadioClass::SendToEachLink, 0x0044AB68; TibSun's Transmit_Message reaches the contact
+  only); the damage fires are removed (DamageFireAnims, FUN_0043C2A0's loop, 0x0044AB87) where TibSun ended every
+  building animation (DestroyNthAnim(BANIM_ALL), not in gamemd.exe). Removed as not in gamemd.exe: TibSun's repair-bay
+  sale (selling what stands on a Service Depot) and its AuxSound2.
+* HOLDING: SendToEachLink(RADIO_OVER_OUT) (0x0044A2F5); absorbed passengers (a bio reactor's) are unlimboed at the
+  building's own position with its cell's centre height (0x0044A499: gamemd.exe works out a per-cell exit point at
+  0x0044A3C4 and never reads it) and scattered; each counts as its house's infantry again with no RTTI test; one that
+  cannot be placed is RegisterDestruction(NULL)'d and deleted (no Limbo). No sell sound for an undeployer (0x0044A7CF);
+  the type's PackupSound on the building's Audio7 (0x0044A85B).
+* DURING: the pack-up sound follows the building (FUN_00750D40, 0x00449C94). Undeploying is Can_Be_Undeployed (0x00449CEA;
+  the draft's IsVehicle test sold every larger undeployer instead: a deployed Slave Miner, YAREFN, was refunded and
+  deleted with its slave manager); a foundation up to 2x2 undeploys in place, a larger one at its south-east neighbour
+  (0x00449E8E); the unit's EstimatedHealth is its strength (0x0044A039); **the building's SlaveManager goes to the unit
+  (SlaveManagerClass::SetOwner, 0x0044A03C): the slaves follow the undeployed miner**; the queued voice moves to the unit
+  (0x0044A0D4); the unit is selected with AllowVoice off (0x0044A123); the building leaves by Detach_All(true),
+  Audio7.EndLooping and UnInit (0x0044A1B5). A sold building's kill is RegisterDestruction(NULL) (vtable 0xE0, 0x0044A1F9;
+  TibSun's Record_The_Kill is slot 0xE4).
+* Looked for and not in gamemd.exe's function (handled elsewhere, if anywhere): the grinder, cloning vat, garrisoned or
+  ice buildings' occupants beyond FUN_00457DE0 (already called), psychic or radiation effects, spy plane or super weapon
+  cleanup.
+
+**Other drafts fixed:**
+* BuildingClass::Captured (an RA2 twin's text, game.exe 0x00444660): a tech building (NeedsEngineer) is powered on by
+  its capture (IsPoweredOn, light, fence post, powered animations; 0x004484B6); the gap generator's DestroyGap before and
+  CreateGap after (0x00448BB7, 0x00448C3E); vt_entry_48C(false, false, false, NULL) before TechnoClass::Captured and
+  UpdateSight for a player's capture (0x00448BD9, 0x00448D83); FUN_00448070(false) (the factory's primary flag,
+  0x00448C69); the new owner gains the ore purifier, self-healing and helipad docks the old owner lost (0x004491D5); both
+  houses' Update_Factories for a factory type (0x00449251); in a multiplayer game a computer house that captures a
+  non-neutral building sells it at once, upgrades refunded (0x004492D7).
+* BuildingClass::Exit_Object's AI placement (TibSun's text): a placement that Flush_For_Placement could not clear counts
+  the node's failures (BaseClass::FailedToPlaceNode) and in multiplayer drops a node past
+  Rule->MaximumBuildingPlacementFailures (0x00445237; before, the AI retried the node for ever); a placed slave miner
+  calls SlaveManagerClass::Deploy2 (0x004452F0); a placed wall piece becomes its overlay wall (Place_Firestorm_Wall,
+  Place_Wall, 0x00445345).
+
+**Check:** ctest `yr-native-slave-miner` (yr/tests/yr_slave_miner.py; harness order `slaves <ID>`, glue/yr_harness.cpp):
+a YAREFN with five live slaves is sold; it undeploys into an SMIN whose manager holds the same five slaves (by
+AbstractClass::ID) and every slave names the SMIN; the SMIN is then destroyed and no slave names a deleted techno. (Where
+the skirmish's random start has no ore near, the miner undeploys by itself before the sale, through the same
+deconstruction: the check holds either way.)
+
+**Screen of the rest** (gamemd.exe's calls, direct and by vtable slot, whose names the draft's text lacks; research
+scripts in the lane's scratch; vtable slots from the native build's Itanium dump at (index - 8) * 4). Most hits are the
+tree's other names for one function (aliases, data/name_aliases.tsv). Left for later, each a candidate YR step:
+
+| Draft | gamemd.exe | Not compared / candidate YR steps |
+| --- | --- | --- |
+| BuildingClass::Exit_Object (building_native.inc) | 0x00443C60, 6,759 B | the factory exits: HasFreeLink (0x00443CD4, 0x004440BC), FUN_0053A130 (0x00443CE7), the exit facing by atan2, Cell_Building/Cell_Techno and In_Local_Radar checks (0x00444294-0x0044433E), HouseClass::FUN_0050B760 and FUN_005060B0 (0x00444FBA-0x004450BD) |
+| BuildingClass::Captured | 0x00448260 | Session GAME_INTERNET's CapturedBuildings count (0x00448524); the laser fence's ScenarioInit test and LaserFenceFrame reset (0x00448CF5); the lists re-added after Grand_Opening in gamemd.exe (before it in the draft); the tint/anim drawer (0x00448DB9, Update_Anim_Appearance in the draft, not compared) |
+| BuildingClass::Do_MISSION_UNLOAD | 0x0044D880, 2,848 B | DelayTimerClass Count_Up/Count_Down and their completion tests (0x0044DD95-0x0044E239) |
+| InfantryClass::Per_Cell_Process (infantry_native.inc) | 0x00519630, 5,083 B | partly compared (lanes N4, P18); not: the engineer's refund and building animations (0x0051986E-0x0051992F), the radar event (0x00519BB6), RepairWoodBridgeAt/RepairConcreteBridgeAt (0x00519CF6) against the draft's Repair_Bridge, IsAbsorbAllowed (0x0051A322), AbortMotion, MapClass::DamageArea (0x0051A6C1-0x0051A7D3), vt_entry_48C/UpdateSight and RevealArea3 (0x0051A8D7-0x0051A925) |
+| FootClass::Active_Click_With (foot_native.inc) | 0x004D74E0 | Get_Height_AGL (0x004D7A49), FUN_0056D100 (0x004D7B51) |
+| MapClass::Set_Map_Dimensions (map_native.inc) | 0x00565C10 | FUN_00588C10 (0x00565D6F, 0x00566581), HouseClass::FUN_0050D250 (0x00566DDF) |
+| FlyLocomotionClass::Nearing_Target | 0x004CEFB0 | FUN_004D03D0, AbstractClass::GetTargetDirection |
+| MechLocomotionClass::Movement_AI | 0x005B01C0 | FUN_0056D100, HasAnyLink (0x005B0AAE) |
+| ParticleClass::Spark_Behavior_AI | 0x0062C6E0 | the slope matrix bounce (Get_Cell_Ramp, Get_Slope_Matrix, Rotate_Vector) |
+| UnitClass::Do_MISSION_HARVEST, InfantryClass::Assign_Destination, TechnoClass::Can_Deploy_Now, HouseClass::Can_Build, CellClass::Closest_Free_Spot, BuildingClass::Drop_Debris, Fire_Direction | | no call missing beyond aliases (Assign_Archive_Target is the ArchiveTarget store; Get_Gate is FindObjectOfType) |
+| WalkLocomotionClass::Movement_AI, HoverLocomotionClass::Process, HouseClass::Update_Present_Super_Weapons, Where_To_Place_Building, Can_Build_Here, CellClass::Reduce_Tiberium, DisplayClass::Mouse_Left_Up, UnitClass::Is_Route_Broken, MapClass::Repair_Train_Bridge, the draw drafts | address not found in this pass | not screened |
