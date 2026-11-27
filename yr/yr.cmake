@@ -505,7 +505,7 @@ endforeach()
 # and ticks only); pass: the mission's own triggers win it at the recorded tick and its score screen shows
 # (ra2/tests/ra2_campaign.py --game yr; label yr-campaign-won, about a minute each). Entries: <name>|<side>|<mission>.
 if(NOT WIN32)
-  foreach(yr_won "all01|allied|1")
+  foreach(yr_won "all01|allied|1" "all03|allied|3")
     string(REPLACE "|" ";" yr_won_parts "${yr_won}")
     list(GET yr_won_parts 0 yr_won_name)
     list(GET yr_won_parts 1 yr_won_side)
