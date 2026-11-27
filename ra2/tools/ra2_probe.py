@@ -20,6 +20,8 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / 'tools'))
+import host_tools  # noqa: E402
 # The llvm-mingw toolchain whose Win32/DirectX headers the units read (rewritten by yr/tools/yr_sdk.py into the
 # build folder, never copied into the repository): RA2_LLVM_MINGW, else an extracted release under toolchains/.
 MINGW = os.environ.get('RA2_LLVM_MINGW', '')
@@ -53,6 +55,15 @@ def flags(gen, windows=False):
             '-include', str(ROOT / 'port/include/ra2port/prelude.hpp'),
             '-include', str(sdk / 'yr_prelude.h'),
             '-idirafter', str(gen / 'mingw'), '-fno-zero-initialized-in-bss']
+
+
+def cmake_flags(gen, windows=False):
+    """The units' flags as ra2/ra2.cmake reads them (';'-separated), every path in forward slashes (lane P48).
+
+    ra2.cmake passes each two-word option (-include <path>, ...) as one SHELL: option, which CMake splits as a Unix
+    shell would: on a Windows host pathlib's backslashes were taken as escapes and dropped, so clang was asked for
+    C:ra2w...yrsdkyr_win_first.h (codex1's PC, ahtoi.cpp and audattr.cpp, the first units built)."""
+    return ';'.join(host_tools.slashed(f) for f in flags(gen, windows))
 
 
 ERR = re.compile(r'^(.*?):(\d+):\d+: (?:fatal )?error: (.*)$', re.M)
@@ -91,7 +102,7 @@ def main():
         subprocess.run([sys.executable, '-B', str(ROOT / 'yr/tools/yr_sdk.py'), '--mingw', str(mingw[0]),
                         '--out', str(gen / 'mingw-i686')], check=True, stdout=sys.stderr)
     if a.print_flags:
-        print(';'.join(flags(gen, a.target == 'windows')), end='')
+        print(cmake_flags(gen, a.target == 'windows'), end='')
         return
     only = set(x for x in a.only.split(',') if x)
     units = sorted(u for u in (gen / 'units').glob('*.cpp') if not only or u.stem in only or u.name in only)
