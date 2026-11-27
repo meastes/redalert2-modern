@@ -123,6 +123,14 @@
 //   bunker <ID>     logs `harness-bunker <ID> <TYPE|none|stale> &<addr>`: what each techno of type ID's BunkerLinkedItem names
 //                   (lane P55: a tank bunker sold with its tank inside);
 //   sell <BLDG>     the player's first building of type BLDG is sold (Sell_Back) (lane P55);
+//   teams [<text>]  logs `harness-team <name> h<house> line <mission>,<arg> moving <0|1> next <0|1> members <n>` for each
+//                   team whose type's name contains text, then `harness-team-member <ID> @<x>,<y> m<mission> limbo <0|1>
+//                   cargo <n> nav <0|1> s<strength>` for each member (lane P58: YR Soviet 1's transport team);
+//   units <ID>      logs `harness-units <ID> @<x>,<y> m<mission> q<queued> limbo <0|1> cargo <n> link <0|1> team <name|-> recruit
+//                   <team>/<autocreate> threat <avoidance> s<strength>` for each foot techno of type ID (lane P58);
+//   zonemap <x0> <y0> <x1> <y1> <ID>  logs each cell's movement zone for type ID's MZone and its height (lane P58);
+//   path <ID> <x> <y>  logs the path the first techno of type ID would take to x,y (lane P58);
+//   locals <i>...   logs `harness-locals <i>:<0|1>...`: the scenario's local variables (lane P58);
 //   kill <ID>       the first techno of type ID is destroyed (Take_Damage, the C4 warhead, forced) (lane P55);
 //   view            logs `harness-view <x>,<y> locked <0|1> zoom <z> frame <f>`: the tactical view's position
 //                   (Tactical::Get_Tactical_Position), whether the game ignores the player's input (IgnoreInput
@@ -193,6 +201,11 @@ LayerType Layer_From_Name(char const * name);
 #include "_command.h"
 #include "builtype.h"
 #include "rules.h"
+#include "team.h"
+#include "teamtype.h"
+#include "script.h"
+#include "astar.h"
+#include "inline.h"
 #include "_rules.h"
 #include "beacon.h"
 #include "shapebtn.h"
@@ -1231,6 +1244,129 @@ int Run_Order(int frame, char const * text)
 			++n;
 		}
 		if (!n) fprintf(stderr, "harness-bunker %s gone\n", word[1]);
+		return(1);
+	}
+	if (!strcmp(word[0], "teams")) {
+		int listed = 0;
+		for (int i = 0; i < Teams.Count(); ++i) {
+			TeamClass * team = Teams[i];
+			if (team == NULL || team->Class == NULL) continue;
+			char const * name = team->Class->Full_Name();
+			if (words >= 2 && (name == NULL || strstr(name, word[1]) == NULL)) continue;
+			int n = 0;
+			for (FootClass * member = team->Member; member != NULL; member = member->Member) ++n;
+			TeamMissionClass mission = team->Script->Get_Current_Mission();
+			fprintf(stderr, "harness-team %s h%d line %d,%d moving %d next %d members %d\n", name ? name : "?",
+				team->House ? team->House->HeapID : -1, (int)mission.Mission, mission.Data.Value, team->IsMoving ? 1 : 0,
+				team->IsNextMission ? 1 : 0, n);
+			for (FootClass * member = team->Member; member != NULL; member = member->Member) {
+				Coord coord = member->Center_Coord();
+				fprintf(stderr, "harness-team-member %s @%d,%d m%d limbo %d cargo %d nav %d s%d &%p\n", Type_Name(member),
+					coord.X / 256, coord.Y / 256, (int)member->Get_Mission(), member->IsInLimbo ? 1 : 0, member->Cargo.How_Many(),
+					member->NavCom != NULL ? 1 : 0, member->Strength, (void *)member);
+			}
+			++listed;
+		}
+		return(listed ? listed : 1);
+	}
+	if (!strcmp(word[0], "units") && words >= 2) {
+		// lane P58: each techno of type ID with its mission, team, cargo and recruitability
+		int listed = 0;
+		for (int i = 0; i < Technos.Count(); ++i) {
+			TechnoClass * techno = Technos[i];
+			if (techno == NULL || !techno->Is_Foot() || strcmp(Type_Name(techno), word[1])) continue;
+			FootClass * foot = (FootClass *)techno;
+			Coord coord = foot->Center_Coord();
+			fprintf(stderr, "harness-units %s @%d,%d m%d q%d limbo %d cargo %d link %d team %s recruit %d/%d threat %.2f s%d &%p\n", word[1],
+				coord.X / 256, coord.Y / 256, (int)foot->Get_Mission(), (int)foot->MissionQueue, foot->IsInLimbo ? 1 : 0,
+				foot->Cargo.How_Many(), foot->HasAnyLink() ? 1 : 0, foot->Team ? foot->Team->Class->Full_Name() : "-",
+				foot->IsTeamRecruitable ? 1 : 0, foot->IsAutocreateRecruitable ? 1 : 0, foot->Threat_Avoidance_Value(), foot->Strength, (void *)foot);
+			++listed;
+		}
+		return(listed ? listed : 1);
+	}
+	if (!strcmp(word[0], "zonemap") && words >= 6) {
+		// lane P58: `zonemap <x0> <y0> <x1> <y1> <ID>`: the movement zone of each cell for type ID's MZone (one character
+		// a zone, '-' none) and its height, as harness-zonemap rows
+		TechnoClass * techno = First_Of(word[5], NULL);
+		if (techno == NULL) return(-1);
+		TechnoTypeClass const * type = techno->Techno_Type_Class();
+		fprintf(stderr, "harness-zonemap %s mzone %d speed %d loco %08lx\n", word[5], (int)type->MZone, (int)type->Speed,
+			(unsigned long)type->Locomotor.Data1);
+		int x0 = atoi(word[1]), y0 = atoi(word[2]), x1 = atoi(word[3]), y1 = atoi(word[4]);
+		static char const digits[] = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+		for (int y = y0; y <= y1; ++y) {
+			char zrow[256], hrow[256];
+			int n = 0;
+			for (int x = x0; x <= x1 && n < 250; ++x, ++n) {
+				Cell cell((short)x, (short)y);
+				int zone = Map.In_Radar(cell) ? Map.Get_Cell_Zone(&cell, type->MZone, false) : -1;
+				zrow[n] = zone < 0 ? '-' : digits[zone % 62];
+				int h = Map.In_Radar(cell) ? (int)Map[cell].Height : 0;
+				hrow[n] = h < 0 ? '-' : digits[h % 62];
+			}
+			zrow[n] = hrow[n] = 0;
+			fprintf(stderr, "harness-zonemap z%3d %s   h %s\n", y, zrow, hrow);
+		}
+		return(1);
+	}
+	if (!strcmp(word[0], "path") && words >= 4) {
+		// lane P58: `path <ID> <x> <y>`: the path the first techno of type ID would take from its cell to x,y (FootClass::Find_Path,
+		// AStarClass::Find_Path): `harness-path <ID> @x,y -> x,y cost <n> length <n> via x,y ...` (every fourth cell)
+		TechnoClass * techno = NULL;
+		if (word[1][0] == '&') {
+			// a techno by its address, as `units` and `teams` log it
+			void * want = (void *)strtoull(word[1] + 1, NULL, 16);
+			for (int i = 0; i < Technos.Count(); ++i) if ((void *)Technos[i] == want) techno = Technos[i];
+		} else {
+			techno = First_Of(word[1], NULL);
+		}
+		if (techno == NULL || !techno->Is_Foot()) return(-1);
+		FootClass * foot = (FootClass *)techno;
+		Cell dest((short)atoi(word[2]), (short)atoi(word[3]));
+		static FacingType work[2000];
+		FacingType saved[CONQUER_PATH_MAX];
+		memcpy(saved, foot->Path, sizeof(saved));
+		foot->Path[0] = FACING_NONE;
+		// `path <ID> <x> <y> nothreat`: with the team's AvoidThreats and the unit's coefficient off for the search
+		bool nothreat = words >= 5 && !strcmp(word[4], "nothreat");
+		bool avoid = foot->Team != NULL && foot->Team->Class->AvoidThreats;
+		double coefficient = foot->ThreatAvoidanceCoefficient;
+		if (nothreat) {
+			if (foot->Team != NULL) foot->Team->Class->AvoidThreats = false;
+			foot->ThreatAvoidanceCoefficient = 0;
+		}
+		PathStruct * path = Search.Find_Path(foot->Get_Cell(), dest, foot, work, -1, MZONE_NONE, (AStarClass::ObstacleAvoidanceType)0);
+		if (nothreat) {
+			if (foot->Team != NULL) foot->Team->Class->AvoidThreats = avoid;
+			foot->ThreatAvoidanceCoefficient = coefficient;
+		}
+		memcpy(foot->Path, saved, sizeof(saved));
+		Cell at = foot->Get_Cell();
+		char line[2048];
+		int n = snprintf(line, sizeof(line), "harness-path %s @%d,%d -> %d,%d", word[1], at.X, at.Y, dest.X, dest.Y);
+		if (path == NULL) {
+			fprintf(stderr, "%s none\n", line);
+			return(1);
+		}
+		n += snprintf(line + n, sizeof(line) - n, " cost %d length %d via", path->Cost, path->Length);
+		Cell c = path->Start;
+		for (int k = 0; k < path->Length && path->Command[k] != FACING_NONE && n < (int)sizeof(line) - 16; ++k) {
+			c = Adjacent_Cell(c, path->Command[k]);
+			if (k % 4 == 3 || k + 1 == path->Length) n += snprintf(line + n, sizeof(line) - n, " %d,%d", c.X, c.Y);
+		}
+		fprintf(stderr, "%s\n", line);
+		return(1);
+	}
+	if (!strcmp(word[0], "locals") && words >= 2) {
+		char line[256];
+		int at = 0;
+		for (int k = 1; k < words; ++k) {
+			bool value = false;
+			Scen->Fetch_Local_Value(atoi(word[k]), value);
+			at += snprintf(line + at, sizeof(line) - at, " %s:%d", word[k], value ? 1 : 0);
+		}
+		fprintf(stderr, "harness-locals%s\n", line);
 		return(1);
 	}
 	if (!strcmp(word[0], "sell") && words >= 2) {
