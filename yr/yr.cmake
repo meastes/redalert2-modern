@@ -545,11 +545,11 @@ endforeach()
 # server, glue/yr_stepserver.cpp; ra2/tools/ra2_step.py --game yr), replayed from yr/tests/campaign/<name>.replay (inputs
 # and ticks only); pass: the mission's own triggers win it at the recorded tick and its score screen shows
 # (ra2/tests/ra2_campaign.py --game yr; label yr-campaign-won, a minute or two each, Allied 5 about ten minutes: the replay
-# runs to tick 112,634, hence --seconds 2400). Entries: <name>|<side>|<mission>.
+# runs to tick 177,682 in about four minutes; --seconds 2400). Entries: <name>|<side>|<mission>.
 # Lane P64 (2026-11-27): the five recordings below were made before the vendor pin moved to ra2-decomp ac45ee9e and
 # P61's gamemd fixes; on the new pin none wins (no fault). They are parked here, not run, until a campaign lane
 # re-records them from their own commands; each moves back to yr_won_all once a rerun wins at its tick.
-# Lane P68 re-recorded Allied 1 (won at 33,374).
+# Lane P68 re-recorded Allied 1 (won at 33,374); lane P70 Soviet 2 (9,464), Allied 5 (177,682) and Soviet 3 (34,606).
 set(yr_won_pending "all03|allied|3")
 set(yr_won_all "all01|allied|1" "all05|allied|5" "sov02|soviet|2" "sov03|soviet|3")
 if(NOT WIN32)
