@@ -220,3 +220,6 @@ set_tests_properties(mapinfo-tables PROPERTIES LABELS "ra2-quick;static")
 # 35-unit team of one).
 add_test(NAME commander-select COMMAND "${Python3_EXECUTABLE}" -B "${CMAKE_CURRENT_SOURCE_DIR}/tests/commander_select.py")
 set_tests_properties(commander-select PROPERTIES LABELS "ra2-quick;static")
+# Lane P75: place_legal aims by the footprint YR's step server reports (Allied 4's 2x2 robot control centre never placed).
+add_test(NAME commander-place COMMAND "${Python3_EXECUTABLE}" -B "${CMAKE_CURRENT_SOURCE_DIR}/tests/commander_place.py")
+set_tests_properties(commander-place PROPERTIES LABELS "ra2-quick;static")

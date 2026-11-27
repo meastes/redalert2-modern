@@ -747,7 +747,15 @@ bool RB_Step_Command(int frame, char const * text, bool live)
 					else if (prox && shroud && clear) { RB_Step_Out("place %d %d ok", cx, cy); ++legal; }
 				}
 			}
-			if (r > 0) RB_Step_Out("buildable %s %d legal", name, legal);
+			// lane P75: the footprint's extent (the occupy list's, as Get_Occupy_Dimensions gives it), so the client aims the
+			// placement click without a size table of its own (ra2_commander.py SIZE had no GAROBO: Allied 4's robot control
+			// centre was clicked one cell off and never placed)
+			int fw = 0, fh = 0;
+			for (Cell const * l = list; *l != REFRESH_EOL; ++l) {
+				if (l->X + 1 > fw) fw = l->X + 1;
+				if (l->Y + 1 > fh) fh = l->Y + 1;
+			}
+			if (r > 0) RB_Step_Out("buildable %s %d legal size %dx%d", name, legal, fw, fh);
 		}
 	} else if (RB_IS("probe")) {
 		int xy[2] = {0, 0};

@@ -998,12 +998,16 @@ def legal_spots(g, name, near, r=8):
     for l in g.cmd('buildable %s %d %d %d'%(name,near[0],near[1],r)):
         m=re.match(r'^place (-?\d+) (-?\d+) ok',l)
         if m: out.append((int(m.group(1)),int(m.group(2))))
+        # lane P75: YR's step server reports the footprint ("buildable X n legal size WxH"); it replaces the SIZE guess
+        m=re.match(r'^buildable \S+ \d+ legal size (\d+)x(\d+)',l)
+        if m and int(m.group(1)) > 0: FOOTPRINT[name]=(int(m.group(1)),int(m.group(2)))
     return out
+FOOTPRINT={}   # lane P75: footprints the step server reported (legal_spots)
 def place_legal(g, name, near, r=8, avoid=None, tries=3, pick=None):
     """A finished building placed on a legal origin (the step server's buildable) nearest near: the selection dropped,
     tab, icon, one click on the cell that puts the footprint's origin there. avoid(origin)->True skips an origin."""
-    w,h=SIZE.get(name,(3,3))
     sp=legal_spots(g,name,near,r)
+    w,h=FOOTPRINT.get(name) or SIZE.get(name,(3,3))
     if avoid: sp=[s for s in sp if not avoid(s)]
     if not sp: print('place_legal: no legal spot for',name,'near',near,flush=True); return None
     sp.sort(key=pick or (lambda s: max(abs(s[0]+w//2-near[0]),abs(s[1]+h//2-near[1]))))
