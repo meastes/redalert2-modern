@@ -2274,10 +2274,12 @@ FUN_0060D540 (matched upstream, the port's draft retired) faults on a cut pointe
 map-zoom, zoom-abort, end-banner, hd-vehicles, combat, controls, graphics, touch-team, type-select, command-bar-thumb,
 locked-input, standins, standins-triggers, war-factory, robot-tank, tank-bunker, slave-miner, grinder, factory-exits,
 garrison, mirage, deployers, building-anims, bridge-repair, keys-load, save-dialog, choose-map, skirmish-layout,
-planning-click, window-resize, lan-lobby, campaign-allied, campaign-crash-all05, mission-soak-yr-allied and -soviet; ra2-quick
+planning-click, window-resize, lan-lobby, campaign-allied (with the credits row), campaign-crash-all05, mission-soak-yr-allied and -soviet; ra2-quick
 15/15. Fail: interface-size (FUN_0060D540, above), planning (planning mode's node placement and pick-up: the matched planning
 mouse handlers FUN_0063AB60/FUN_0063A5A0 replaced the port's drafts and the harness reads no nodes; not yet traced),
-campaign-soviet (rerun pending after the credits log row; the Allied chain passes with it). ubsan labels not run.
+campaign-soviet (failed only on the credits log before that row; not rerun), lan-pair (both games stay in the lobby: "never
+reached the game", no CRCs; the retired LAN drafts were the frame loop and Wait_For_Players_To_Load, whose draft returned
+true for every session type, and upstream's matched network start wait now runs; not yet traced). ubsan labels not run.
 
 **Won replays** (not re-recorded; a campaign lane re-records them): all01 lost at tick 186481 (P61's ore-damage removal,
 as P61 expected); all03, all05, sov02 and sov03 reach their recorded win tick without the game ending (no game over; no
