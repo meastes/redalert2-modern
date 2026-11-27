@@ -532,8 +532,9 @@ endforeach()
 # ctests yr-native-campaign-won-<mission> (lane P50): Yuri's Revenge campaign missions won by a recorded play (the step
 # server, glue/yr_stepserver.cpp; ra2/tools/ra2_step.py --game yr), replayed from yr/tests/campaign/<name>.replay (inputs
 # and ticks only); pass: the mission's own triggers win it at the recorded tick and its score screen shows
-# (ra2/tests/ra2_campaign.py --game yr; label yr-campaign-won, about a minute each). Entries: <name>|<side>|<mission>.
-set(yr_won_all "all01|allied|1" "all03|allied|3")
+# (ra2/tests/ra2_campaign.py --game yr; label yr-campaign-won, a minute or two each, Allied 5 about ten minutes: the replay
+# runs to tick 112,634, hence --seconds 2400). Entries: <name>|<side>|<mission>.
+set(yr_won_all "all01|allied|1" "all03|allied|3" "all05|allied|5" "sov02|soviet|2")
 if(NOT WIN32)
   foreach(yr_won IN LISTS yr_won_all)
     string(REPLACE "|" ";" yr_won_parts "${yr_won}")
@@ -543,8 +544,9 @@ if(NOT WIN32)
     add_test(NAME yr-native-campaign-won-${yr_won_name} COMMAND "${Python3_EXECUTABLE}" -B "${CMAKE_CURRENT_SOURCE_DIR}/ra2/tests/ra2_campaign.py"
              --game yr --replay "${CMAKE_CURRENT_SOURCE_DIR}/yr/tests/campaign/${yr_won_name}.replay" --side ${yr_won_side}
              --mission ${yr_won_mission} --binary $<TARGET_FILE:yr-native> --data-dir "${RA2_NATIVE_YR_DATA_DIR}"
+             --seconds 2400
              --work "${CMAKE_CURRENT_BINARY_DIR}/tests/yr-campaign-won-${yr_won_name}")
-    set_tests_properties(yr-native-campaign-won-${yr_won_name} PROPERTIES SKIP_RETURN_CODE 77 RUN_SERIAL TRUE TIMEOUT 1200
+    set_tests_properties(yr-native-campaign-won-${yr_won_name} PROPERTIES SKIP_RETURN_CODE 77 RUN_SERIAL TRUE TIMEOUT 2700
                          LABELS yr-campaign-won)
   endforeach()
   # ctest yr-native-campaign-crash-all05 (lane P55): lane P52's YR Allied 5 recording, which ended in a crash at tick ~96,300
@@ -660,8 +662,9 @@ if(RA2_NATIVE_UBSAN_FLOAT AND NOT WIN32)
     add_test(NAME yr-native-ubsan-${yr_won_name} COMMAND "${Python3_EXECUTABLE}" -B "${CMAKE_CURRENT_SOURCE_DIR}/ra2/tests/ra2_campaign.py"
              --game yr --replay "${CMAKE_CURRENT_SOURCE_DIR}/yr/tests/campaign/${yr_won_name}.replay" --side ${yr_won_side}
              --mission ${yr_won_mission} --binary $<TARGET_FILE:yr-native> --data-dir "${RA2_NATIVE_YR_DATA_DIR}" --ubsan
+             --seconds 2400
              --work "${CMAKE_CURRENT_BINARY_DIR}/tests/yr-ubsan-${yr_won_name}")
-    set_tests_properties(yr-native-ubsan-${yr_won_name} PROPERTIES SKIP_RETURN_CODE 77 RUN_SERIAL TRUE TIMEOUT 1200
+    set_tests_properties(yr-native-ubsan-${yr_won_name} PROPERTIES SKIP_RETURN_CODE 77 RUN_SERIAL TRUE TIMEOUT 2700
                          LABELS yr-ubsan)
   endforeach()
 endif()
