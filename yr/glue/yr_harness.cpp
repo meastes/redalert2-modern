@@ -80,6 +80,9 @@
 //                   not a unit), and for each of the player's buildings whose type has PowersUnit= its
 //                   RegisteredAsPoweredUnitSource (lane P53);
 //   mission <ID>    logs `harness-mission <ID> <mission> &<addr>` for the player's first techno of type ID (lane N3);
+//   orders <ID>     logs `harness-orders <ID> @x,y m<mission> q<queue> mega<m> nav <x,y|-> navq <n> route <n> ...` for
+//                   each of the player's units of type ID: what decides whether it carries out an order (its radio contact,
+//                   deactivated, mind control, team, locomotor; lane P56);
 //   plan <dx> <dy>  every selected techno of the player's is ordered to the cell dx,dy from the first one's as a map
 //                   click orders it (Player_Assign_Mission): in planning mode a planned waypoint (lane N3);
 //   plans           logs `harness-plans mode <0|1> tokens <n> nodes <n>`: planning mode on or off, the planning tokens
@@ -808,6 +811,41 @@ int Run_Order(int frame, char const * text)
 		TechnoClass * techno = First_Of(word[1], PlayerPtr);
 		if (techno == NULL) return(-1);
 		fprintf(stderr, "harness-mission %s %d &%p\n", word[1], (int)techno->Get_Mission(), (void *)techno);
+		return(1);
+	}
+	if (!strcmp(word[0], "orders") && words >= 2) {
+		// logs `harness-orders <ID> @x,y m<mission> q<queue> mega<m> nav <x,y|-> navq <n> route <n> tar <0|1>
+		// radio <ID>:<rtti>@x,y|- links <n> deact <0|1> mc <0|1> team <0|1> moving <0|1> powered <0|1> locsrc <0|1>
+		// &<addr>` for each of the player's units of type ID (lane P56: units that kept guard whatever they were ordered)
+		int n = 0;
+		for (int i = 0; i < Technos.Count(); ++i) {
+			TechnoClass * techno = Technos[i];
+			if (techno == NULL || techno->House != PlayerPtr || techno->IsInLimbo || strcmp(Type_Name(techno), word[1])) continue;
+			if (techno->Fetch_RTTI() != RTTI_UNIT) continue;
+			UnitClass * unit = (UnitClass *)techno;
+			Cell cell = unit->Center_Coord().As_Cell();
+			char nav[32] = "-";
+			if (unit->NavCom != NULL) {
+				Cell to = unit->NavCom->Center_Coord().As_Cell();
+				snprintf(nav, sizeof(nav), "%d,%d", to.X, to.Y);
+			}
+			char radio[64] = "-";
+			int links = 0;
+			for (int k = 0; k < unit->RadioLinks.Length(); ++k) if (unit->RadioLinks[k] != NULL) ++links;
+			if (TechnoClass * with = unit->Contact_With_Whom()) {
+				Cell at = with->Center_Coord().As_Cell();
+				snprintf(radio, sizeof(radio), "%s:%d@%d,%d%s", Type_Name(with), (int)with->Fetch_RTTI(), at.X, at.Y,
+					with->IsInLimbo ? "/limbo" : "");
+			}
+			fprintf(stderr, "harness-orders %s @%d,%d m%d q%d mega%d nav %s navq %d route %d tar %d radio %s links %d deact %d mc %d "
+				"team %d moving %d powered %d locsrc %d &%p\n", word[1], cell.X, cell.Y, (int)unit->CurrentMission,
+				(int)unit->MissionQueue, (int)unit->MegaMission, nav, unit->NavQueue.Count(), unit->RouteQueue.Count(),
+				unit->TarCom != NULL ? 1 : 0, radio, links, unit->IsDeactivated() ? 1 : 0, unit->MindControlledBy != NULL ? 1 : 0,
+				unit->Team != NULL ? 1 : 0, unit->Locomotion->Is_Moving() ? 1 : 0, unit->Locomotion->Is_Powered() ? 1 : 0,
+				unit->LocomotorSource != NULL ? 1 : 0, (void *)unit);
+			++n;
+		}
+		if (!n) fprintf(stderr, "harness-orders %s none\n", word[1]);
 		return(1);
 	}
 	if (!strcmp(word[0], "doing") && words >= 2) {

@@ -47,6 +47,7 @@
 #include "shapebtn.h"
 #include "conquer.h"
 #include "wwmous.h"
+#include "planning.h"
 
 #include <stdarg.h>
 #include <stdint.h>
@@ -136,6 +137,19 @@ void RB_Centre(GadgetClass const & gadget, int * x, int * y)
 }
 
 // "@..." points (see the file comment), in the screen's game pixels; 0: no point (no click).
+// A map point is clicked only where the tactical view shows it (lane P56). Tactical::Coord_To_Pixel answers true up to 180
+// pixels below the view (and 360 beside it), so a cell near the map's edge, which the view cannot be centred on, resolved
+// to a pixel on the command bar: in Allied 5 a move click at @=163,140 pressed the bar's Planning Mode button, and from
+// then on every order was a planned waypoint (its line drawn, the units kept guarding), as gamemd.exe does in planning
+// mode. Outside the view there is no point (the host drops the event and logs "no point").
+static bool RB_Point_In_View(Point2D const & pixel, char const * spec)
+{
+	if (pixel.X >= 0 && pixel.Y >= 0 && pixel.X < TacticalRect.Width && pixel.Y < TacticalRect.Height) return(true);
+	fprintf(stderr, "step: @%s is at %d,%d, outside the tactical view (%dx%d): not clicked\n", spec, pixel.X, pixel.Y,
+		TacticalRect.Width, TacticalRect.Height);
+	return(false);
+}
+
 extern "C" int yr_step_resolve_point(char const * spec, int * x, int * y)
 {
 	HouseClass * player = PlayerPtr;
@@ -174,7 +188,7 @@ extern "C" int yr_step_resolve_point(char const * spec, int * x, int * y)
 		cell.Y = (short)RB_Read_Int(p);
 		Coord coord = Map[cell].Center_Coord();
 		Point2D pixel;
-		if (!TacticalMap->Coord_To_Pixel(coord, pixel)) return(0);
+		if (!TacticalMap->Coord_To_Pixel(coord, pixel) || !RB_Point_In_View(pixel, spec)) return(0);
 		*x = pixel.X + TacticalRect.X;
 		*y = pixel.Y + TacticalRect.Y;
 		return(1);
@@ -221,7 +235,7 @@ extern "C" int yr_step_resolve_point(char const * spec, int * x, int * y)
 			coord.X += dx * 256;
 			coord.Y += dy * 256;
 			Point2D pixel;
-			TacticalMap->Coord_To_Pixel(coord, pixel);
+			if (!TacticalMap->Coord_To_Pixel(coord, pixel) || !RB_Point_In_View(pixel, spec)) return(0);
 			*x = pixel.X + TacticalRect.X;
 			*y = pixel.Y + TacticalRect.Y;
 			return(1);
@@ -864,6 +878,13 @@ extern "C" void yr_step_server_frame(int frame)
 		}
 	}
 	if (base < 0) return;
+	// Planning mode on or off (lane P56: a held planning-mode key left the player's orders planned waypoints, not orders).
+	static int planning = -1;
+	if ((PlanningNodeClass::PlanningModeActive ? 1 : 0) != planning) {
+		planning = PlanningNodeClass::PlanningModeActive ? 1 : 0;
+		fprintf(stderr, "step: planning mode %s at tick %d\n", planning ? "on" : "off", frame - base);
+		RB_Step_News("news %d planning %s", frame - base, planning ? "on" : "off");
+	}
 	// The game's end, as Red Alert 2's Main_Loop seam logs it (mainloop_native.inc RB_Note_Game_Over; lane P50).
 	static bool ended = false;
 	if ((PlayerWins || PlayerLoses) && !ended) {
