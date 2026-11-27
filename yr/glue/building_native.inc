@@ -466,7 +466,8 @@ int BuildingClass::Exit_Object(TechnoClass * base, Cell preferred)	// NATIVE: YR
 // ra2-decomp. TibSun's text (TibSun archive code/building.cpp; same licence notice as above);
 // native changes are marked NATIVE. Behaviour code for the native build only. The survivors part is
 // compared with gamemd.exe 0x00449C30 (lane Y6: who leaves survivors, absorbed passengers and
-// occupants let out); the rest (MCV repacking) is not compared yet.
+// occupants let out), and the tank bunker's release (lane P55: 0x0044AAA4); the rest (MCV repacking)
+// is not compared yet.
 // ---------------------------------------------------------------------------------------------
 int BuildingClass::Do_MISSION_DECONSTRUCTION(void)
 {
@@ -504,6 +505,16 @@ int BuildingClass::Do_MISSION_DECONSTRUCTION(void)
 				tech->Sell_Back(1);
 				QueueMission(MISSION_GUARD, false);
 				return(1);
+			}
+
+			/*
+			**	NATIVE (lane P55): a tank bunker being sold lets its tank out first, as gamemd.exe does here
+			**	(0x0044AAA4: if BunkerLinkedItem, UnloadBunker, ahead of the upgrade refund). TibSun has no
+			**	bunkers; without it the tank kept its BunkerLinkedItem pointing at the sold (deleted) bunker,
+			**	and its death called ClearBunker through it (UnitClass::Take_Damage, YR Allied 5's crash).
+			*/
+			if (BunkerLinkedItem != NULL) {
+				UnloadBunker();
 			}
 
 			if (UpgradeLevel) {
