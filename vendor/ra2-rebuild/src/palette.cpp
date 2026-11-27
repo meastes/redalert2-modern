@@ -423,19 +423,18 @@ DynamicVectorClass<ColorScheme *> * SchemeListIterator::Next(void) // RA2: 0x006
 	if (node == NULL) {
 		return(NULL);
 	}
-	return((*node)->Schemes);
+	SchemeNode * entry = *node;
+	return(entry->Schemes);
 }
 
 
-#ifdef RA2_NON_MATCHING // not exact: 454 bytes differ by position against the image-derived bound 00603750 (504 B; ours 512 B, the image's calls): one register exchange, the library pointer in ebp where the image has edi, and the vectors' growth step, a bucket and a node in edi where it has ebp. Added reads of the library, declaration counts and the twin's table form leave it there
 void __fastcall Set_Scheme_Table_Theater(TheaterType theater) // RA2: 0x00603750, switches the library to the theater (made on first use)
 {
-	SchemeLibrary * library = Scheme_Library();
-	if (library->Mode != theater) {
-		library->Set_Mode(theater);
+	Scheme_Library();
+	if (TheSchemeLibrary->Mode != theater) {
+		TheSchemeLibrary->Set_Mode(theater);
 	}
 }
-#endif
 
 
 void SchemeLibrary_Free(void) // RA2: 0x00603950, empties the lists of player colors
@@ -466,7 +465,6 @@ int Scheme_List_Count(void) // RA2: 0x00603C10, how many player colors there are
 }
 
 
-#ifdef RA2_NON_MATCHING // not exact: 119 bytes differ (ra2-decomp's bare Scheme_Library() call; operand order in the loop): exact only with an unread `SchemeLibrary * library = Scheme_Library();` local, refused (an unread local does no work; owner ruling 2026-11-24, variation answer)
 int Palette_Scheme_Count(void) // RA2: 0x00603D50, how many palettes have a scheme list
 {
 	Scheme_Library(); // RA2: makes the library on first use (ra2-decomp's twin FUN_00626DA0 calls it bare)
@@ -479,7 +477,6 @@ int Palette_Scheme_Count(void) // RA2: 0x00603D50, how many palettes have a sche
 	}
 	return(count);
 }
-#endif
 
 
 void SchemeLibrary_Destroy(void) // RA2: 0x00603FA0, deletes the library
@@ -583,8 +580,9 @@ void SchemeLibrary::Add(char const * name) // RA2: 0x00604870, generates the sch
 void SchemeLibrary::Replace(char const * name) // RA2: 0x006049C0, generates the schemes of a filed palette again
 {
 	HashString key(name);
-	SchemeNode * node = *Table->Find(key);
-	node->Replace(Generate(name));
+	SchemeNode ** node = Table->Find(key);
+	SchemeNode * entry = *node;
+	entry->Replace(Generate(name));
 }
 
 

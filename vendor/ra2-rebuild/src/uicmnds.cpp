@@ -1169,6 +1169,16 @@ int LastHealthKind = -1;
 int LastRankKind = -1;
 
 /// <summary>
+/// Whether the object is of the named kind (Yuri's Revenge 0x00733C60; RA2 leaves out its selectability test and
+/// keeps no out-of-line copy).
+/// </summary>
+static int __fastcall Is_Of_Type(TechnoClass * techno, char const * name)
+{
+	char const * id = techno->Class_Of()->IniName;
+	return name != NULL && strcmp(id, name) == 0; // RA2: one expression (the twin returns true and false apart); Select_By_Type's second expansion needs the lighter text
+}
+
+/// <summary>
 /// Selects the type-select list's objects in the next health state (the first, when the list is new), and reports
 /// the state, or "mixed" when the current selection holds objects in other states.
 /// </summary>
@@ -1211,12 +1221,11 @@ void __fastcall Select_By_Health(bool flag)
 	Get_Selection_Info_Text(buffer, text);
 	Show_Player_Message(buffer, -1);
 	LastHealthKind = kind;
-	int commands = TypeSelectList->Count();
-	TypeSelectMode = 0;
-	if (commands != 0) {
-		TypeSelectMode = 3;
+	if (TypeSelectList->Count() == 0) {
+		Set_Type_Select_Mode(0);
+	} else {
+		Set_Type_Select_Mode(3);
 	}
-	AttackMoveMode = false;
 }
 
 /// <summary>
@@ -1262,16 +1271,13 @@ void __fastcall Select_By_Rank(bool flag)
 	Get_Selection_Info_Text(buffer, text);
 	Show_Player_Message(buffer, -1);
 	LastRankKind = kind;
-	int commands = TypeSelectList->Count();
-	TypeSelectMode = 0;
-	if (commands != 0) {
-		TypeSelectMode = 4;
+	if (TypeSelectList->Count() == 0) {
+		Set_Type_Select_Mode(0);
+	} else {
+		Set_Type_Select_Mode(4);
 	}
-	AttackMoveMode = false;
 }
 
-void __fastcall Select_By_Type(bool flag); // RA2: the definition is not exact yet
-#ifdef RA2_NON_MATCHING // not exact: 10 bytes differ against the image-derived bound 006f81b0 (741 B + 11), same size and calls; ra2-decomp's twin text (Yuri's Revenge 0x007339B0) with its name test (the id read ahead of the null test) and its SmartPtr selection list. Left: the mixed-kind loop's exit branch (the image leaves through jge and loops back through jmp, ours the reverse; a flag, an index test, continue and a loop-header test do not move it) and one store scheduled across pop ebp at the end
 char * __fastcall Pick_Type_By_Cost(TechnoList const & objects, char const * name, int limit, int * best);
 
 // RA2: remembers the kind of object the last type selection picked and its total cost (0x00AC1250, 0x00AC1348).
@@ -1305,21 +1311,14 @@ void __fastcall Select_By_Type(bool flag)
 	int count = list->Count();
 	for (int index = 0; index < count; index++) {
 		TechnoClass * techno = (*list)[index];
-		char const * id = techno->Class_Of()->IniName;
-		if (name != NULL && strcmp(id, name) == 0) {
+		if (Is_Of_Type(techno, name)) {
 			techno->Select();
 		}
 	}
 	wchar_t const * text = NULL;
 	SmartPtr<TechnoList> objects(Collect_Selected_Technos());
-	int objects_count = objects->Count();
-	for (int check = 0; check < objects_count; check++) {
-		TechnoClass * item = (*objects)[check];
-		char const * id = item->Class_Of()->IniName;
-		if (name == NULL || strcmp(id, name) != 0) {
-			text = StringTable::LoadString("MSG:Mixed", NULL, "D:\\Ra2\\UICmnds.cpp", 0x62d);
-			break;
-		}
+	if (!All_Technos_Pass(objects, (TechnoTest)Is_Of_Type, (int)name)) {
+		text = StringTable::LoadString("MSG:Mixed", NULL, "D:\\Ra2\\UICmnds.cpp", 0x62d);
 	}
 	if (text == NULL && CurrentObject.Count() > 0) {
 		text = CurrentObject[0]->Class_Of()->UIName;
@@ -1331,15 +1330,13 @@ void __fastcall Select_By_Type(bool flag)
 	if (name != NULL) {
 		delete[] name;
 	}
-	int commands = objects->Count();
-	TypeSelectMode = 0;
-	if (commands != 0) {
-		TypeSelectMode = 5;
+	if (objects->Count() == 0) { // RA2: the mode and the attack move flag through the unit's own setter in each arm (the image hoists the else arm's store; the twin writes the stores out)
+		Set_Type_Select_Mode(0);
+	} else {
+		Set_Type_Select_Mode(5);
 	}
-	AttackMoveMode = false;
 	delete objects;
 }
-#endif
 
 /// <summary>
 /// Collects the type names of a list of objects, each once.

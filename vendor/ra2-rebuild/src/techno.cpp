@@ -1400,7 +1400,6 @@ void TechnoClass::Per_Cell_Process(PCPType why)
 /// selection box and its condition indicator drawn over it. The talk bubble, when the
 /// object has something to say, is drawn whether the object is selected or not.
 /// </summary>
-#ifdef RA2_NON_MATCHING // not exact: 3138 bytes differ (adopted text)
 void TechnoClass::Draw_Post_Render(Point2D const & point, Rect const & cliprect) const
 {
 	bool sensed_underground = false;
@@ -1411,25 +1410,22 @@ void TechnoClass::Draw_Post_Render(Point2D const & point, Rect const & cliprect)
 		}
 
 		if (BombVisible && AttachedBomb != NULL && !Map[Get_Cell()].Is_Shrouded()) { // RA2: a visible bomb is drawn on the object
-			Point2D bomb_point;
-			TacticalMap->Coord_To_Pixel(Render_Coord(), bomb_point);
-			Draw_Shape(*LogicalSurface, *MouseDrawer, (ShapeSet const *)Rule->BOMBCURS_SHP, AttachedBomb->Get_Current_Flicker_Frame(), bomb_point, TacticalRect, ShapeFlags_Type(SHAPE_CENTER | SHAPE_WIN_REL | SHAPE_ALPHA));
+			Point2D pixel;
+			TacticalMap->Coord_To_Pixel(Render_Coord(), pixel);
+			Draw_Shape(*LogicalSurface, *MouseDrawer, Rule->BOMBCURS_SHP, AttachedBomb->Get_Current_Flicker_Frame(), pixel, TacticalRect, ShapeFlags_Type(SHAPE_CENTER | SHAPE_WIN_REL | SHAPE_ALPHA));
 		}
 
-		if (this != NULL && Fetch_RTTI() == RTTI_BUILDING) { // RA2: a building being repaired shows the wrench
-			BuildingClass const * bldg = Fetch_RTTI() == RTTI_BUILDING ? (BuildingClass const *)this : NULL;
-			if (bldg->IsRepairing && !Map[Get_Cell()].Is_Shrouded()) {
-				Point2D repair_point;
-				TacticalMap->Coord_To_Pixel(Render_Coord(), repair_point);
+		if (this != NULL && Fetch_RTTI() == RTTI_BUILDING && ((BuildingClass const *)((Fetch_RTTI() == RTTI_BUILDING) ? this : NULL))->IsRepairing) { // RA2: a building being repaired shows the wrench
+			if (!Map[Get_Cell()].Is_Shrouded()) {
+				Point2D pixel;
+				TacticalMap->Coord_To_Pixel(Render_Coord(), pixel);
 				int delay = Options.Normalize_Delay(14) / 4;
-				if (delay < 2) {
-					delay = 2;
-				}
-				Draw_Shape(*LogicalSurface, *MouseDrawer, (ShapeSet const *)BuildingTypeClass::WrenchShapes, ((Frame % delay) * 6) / (delay - 1), repair_point, cliprect, ShapeFlags_Type(SHAPE_CENTER | SHAPE_WIN_REL | SHAPE_ALPHA));
+				if (delay < 2) delay = 2;
+				Draw_Shape(*LogicalSurface, *MouseDrawer, (ShapeSet const *)BuildingTypeClass::WrenchShapes, 6 * (Frame % delay) / (delay - 1), pixel, cliprect, ShapeFlags_Type(SHAPE_CENTER | SHAPE_WIN_REL | SHAPE_ALPHA));
 			}
 		}
 
-		if (!IsDisguisedAs(PlayerPtr) && Visual_Character(false, NULL) != VISUAL_HIDDEN) { // RA2: the rank pip is drawn for anything visible
+		if (!IsDisguisedAs(PlayerPtr) && Visual_Character() != VISUAL_HIDDEN) { // RA2: the rank pip is drawn for anything visible
 			DrawVeterancyPips(point, cliprect);
 		}
 
@@ -1438,20 +1434,17 @@ void TechnoClass::Draw_Post_Render(Point2D const & point, Rect const & cliprect)
 			if (Fetch_RTTI() == RTTI_BUILDING) { // RA2: no core defenders, the virtual RTTI
 
 				int color = WHITE;
-				if (HeightAGL < -4) { // RA2: no LimpetType (not in RA2's layout)
+				if (HeightAGL < -4) {
 					color = BLACK;
 				}
 
-				Point3D const & lepton = TClass->Lepton_Dimensions(); // RA2: the dimensions come by reference
-				Coord dim = lepton;
+				Point3D dim = TClass->Lepton_Dimensions();
 				int x = dim.X / 2;
-				dim.Y /= 2; // RA2: the half is kept in the dimensions
-				int y = dim.Y;
+				int y = dim.Y /= 2; // RA2: the half is kept in the dimensions
 				color = NormalDrawer->Convert_Pixel(color);
-				Coord const & position = Center_Coord();
-				Coord center = position;
+				Coord center = Center_Coord();
 
-				if (Fetch_RTTI() != RTTI_INFANTRY) { // RA2: the virtual RTTI
+				if (Fetch_RTTI() != RTTI_INFANTRY) {
 					Draw_Double_Selection_Bracket(center + Coord(x, y, 0), center + Coord(-x, y, 0), color);
 					Draw_Double_Selection_Bracket(center + Coord(x, y, 0), center + Coord(x, -y, 0), color);
 					Draw_Double_Selection_Bracket(center + Coord(-x, y, 0), center + Coord(-x, y, dim.Z), color);
@@ -1479,7 +1472,7 @@ void TechnoClass::Draw_Post_Render(Point2D const & point, Rect const & cliprect)
 
 		if (IsMouseHovering && !IsSelected) { // RA2: a hovered object shows its health bar too
 			if (IsDisguisedAs(PlayerPtr)) {
-				if (GetDisguiseHouse(true) != NULL) {
+				if (GetDisguiseHouse(true)) {
 					Draw_Health_Bar(point, cliprect, true);
 				}
 			} else {
@@ -1487,12 +1480,11 @@ void TechnoClass::Draw_Post_Render(Point2D const & point, Rect const & cliprect)
 			}
 		}
 
-		if (TalkBubbleOwner == this && TalkBubbleType > 0 && TalkBubbleTimer.Value() > 0) {
-			Draw_Shape(*LogicalSurface, *NormalDrawer, (ShapeSet const *)ObjectTypeClass::TalkBubbleShapes, TalkBubbleType - 1, point, cliprect, ShapeFlags_Type(SHAPE_CENTER | SHAPE_WIN_REL)); // RA2: the call uses the standard draw defaults
+		if (TalkBubbleOwner == this && TalkBubbleType > 0 && (int)TalkBubbleTimer > 0) {
+			Draw_Shape(*LogicalSurface, *NormalDrawer, (ShapeSet const *)ObjectTypeClass::TalkBubbleShapes, TalkBubbleType - 1, point, cliprect, ShapeFlags_Type(SHAPE_CENTER | SHAPE_WIN_REL));
 		}
 	}
 }
-#endif
 
 
 
@@ -4581,7 +4573,7 @@ static inline Rect Target_Laser_Rect(Point2D const & point)
  *   07/03/1995 JLB : Moving platforms fire inaccurate projectiles.                            *
  *   02/22/1996 JLB : Handles camera "weapon" case.                                            *
  *=============================================================================================*/
-#ifdef RA2_NON_MATCHING // not exact: 6 bytes differ (6019-byte body; previously 3479; ra2-decomp's matched twin text (2e5b2c1) for the velocity scaling (Nonzero_Check and operator *=), the flak block (TPoint3D<float> copy-initialised, a named scatter angle in both arms), the muzzle animation's zadjust in one expression with min, the firing direction assigned straight from atan2 and the reveal test through As_Object: every call, the frame and all but one site are the image's with no added local. Left: the flak sum of squares, where the image adds Z, X, Y and ours X, Y, Z. It does not follow the local count (lane F60), live stores ahead of it, the written order of the sum (Z*Z + X*X + Y*Y compiles to X, Y, Z) or eighteen named-double forms; Yuri's Revenge sums X, Y, Z under the twin's text (lanes F59, F62). The radial turret facing is left as it was: the twin's form follows a reference not cleared here (lane F62, 2026-11-25))
+#ifdef RA2_NON_MATCHING // not exact: 6 bytes differ (6019-byte body; previously 3479; ra2-decomp's matched twin text (2e5b2c1) for the velocity scaling (Nonzero_Check and operator *=), the flak block (TPoint3D<float> copy-initialised, a named scatter angle in both arms), the muzzle animation's zadjust in one expression with min, the firing direction assigned straight from atan2 and the reveal test through As_Object: every call, the frame and all but one site are the image's with no added local. Left: the flak sum of squares, where the image adds Z, X, Y and ours X, Y, Z. It does not follow the local count (lane F60), live stores ahead of it, the written order of the sum (Z*Z + X*X + Y*Y compiles to X, Y, Z) or eighteen named-double forms; Yuri's Revenge sums X, Y, Z under the twin's text (lanes F59, F62). The radial turret facing is left as it was: the twin's form follows a reference not cleared here (lane F62, 2026-11-25). Lane F93 (2026-11-27): the radial angle's constant is the image's pi (the draft divided two pi; 8 -> 6 by position on today's tree). The flak sum's order is a rotation of X, Y, Z, as every other order VC6 gives this sum: it follows the function's symbol count in steps of 32, not within them (referenced locals at the top: +0 to +28 X, Y, Z; +32 to +60 Y, Z, X; from +64 X, Y, Z; the rest of the function is the image's only at +0 to +8 of each 32), and Z, X, Y was reached at no count from +4 to +260; lane F97 (2026-11-27): the count is the function's own referenced locals of any type, wherever they are declared (file-scope declarations, unreferenced locals and repeated stores to one local do not move it; ra2-decomp's include order does not either); the turned window is +31 to +62 exactly; with the suicide block or the spawner block taken out no count to +296 turns the sum, so the turn is not a count alone; Length_YZX at the site is another shape (6,016 B))
 BulletClass * TechnoClass::Fire_At(AbstractClass * target, int which)
 {
 	WeaponTypeClass * weapon = Get_Class_Weapon_Data(which)->Weapon;

@@ -6497,7 +6497,7 @@ void UnitClass::Unit_Draw_Voxel(Point2D xdrawpoint, Rect xcliprect, int brightne
 		if (voxl->VoxLib != NULL && voxl->MotLib != NULL) {
 			main_matrix.Rotate_Y(-(BarrelPitch.Current().As_Radian32() - main_matrix.Get_Y_Rotation()));
 			main_matrix.Translate(Get_Class_Weapon_Data(0)->FireFLH.X * PIXELS_PER_LEPTON, 0, Get_Class_Weapon_Data(0)->FireFLH.Z * PIXELS_PER_LEPTON);
-			Draw_Voxel(drawclass->AuxVoxel2, frame, tkey, &drawclass->AuxVoxel2Index, cliprect, drawpoint, Get_Isometric_View_Matrix() * main_matrix, brightness, SHAPE_NORMAL);
+			Draw_Voxel(*voxl, frame, tkey, &drawclass->AuxVoxel2Index, cliprect, drawpoint, Get_Isometric_View_Matrix() * main_matrix, brightness, SHAPE_NORMAL);
 		}
 	} else {
 		int charger = 0;
@@ -6554,7 +6554,7 @@ void UnitClass::Unit_Draw_Voxel(Point2D xdrawpoint, Rect xcliprect, int brightne
 				draw_barrel = false;
 				voxl = &drawclass->AuxVoxel2;
 				if (voxl->VoxLib != NULL && voxl->MotLib != NULL) {
-					Draw_Voxel(drawclass->AuxVoxel2, 0, tkey, &drawclass->AuxVoxel2Index, cliprect, drawpoint, barrel_matrix, brightness, ShapeFlags_Type(SHAPE_ALPHA | SHAPE_ZGRAD));
+					Draw_Voxel(*voxl, 0, tkey, &drawclass->AuxVoxel2Index, cliprect, drawpoint, barrel_matrix, brightness, ShapeFlags_Type(SHAPE_ALPHA | SHAPE_ZGRAD));
 				}
 			} else {
 				draw_barrel = true;
@@ -6565,7 +6565,7 @@ void UnitClass::Unit_Draw_Voxel(Point2D xdrawpoint, Rect xcliprect, int brightne
 			if (draw_barrel) {
 				voxl = &drawclass->AuxVoxel2;
 				if (voxl->VoxLib != NULL && voxl->MotLib != NULL) {
-					Draw_Voxel(drawclass->AuxVoxel2, 0, tkey, &drawclass->AuxVoxel2Index, cliprect, drawpoint, barrel_matrix, brightness, ShapeFlags_Type(SHAPE_ALPHA | SHAPE_ZGRAD));
+					Draw_Voxel(*voxl, 0, tkey, &drawclass->AuxVoxel2Index, cliprect, drawpoint, barrel_matrix, brightness, ShapeFlags_Type(SHAPE_ALPHA | SHAPE_ZGRAD));
 				}
 			}
 		}
@@ -6646,7 +6646,7 @@ void UnitClass::Unit_Draw_Voxel(Point2D xdrawpoint, Rect xcliprect, int brightne
 		}
 	}
 
-	composite->Fill_Rect(dirty, 0);
+	composite->Fill_Rect(dirty, TBLACK);
 }
 #endif
 
@@ -6882,4 +6882,55 @@ void UnitClass::Visceroid_AI()
         return;
     }
     VisceroidFacing = FACING_NONE;
+}
+
+// Canonical members of the existing voxel-cache index.
+template<>
+bool IndexClass<int, StaticBufferClass::Entry *>::Is_Archive_Same(int const & id) const
+{
+	if (Archive != 0 && Archive->ID == id) {
+		return(true);
+	}
+	return(false);
+}
+
+template<>
+bool IndexClass<int, StaticBufferClass::Entry *>::Is_Present(int const & id) const
+{
+	/*
+	**	If there are no data elements in the index table, then it can
+	**	never find the specified index. Check for and return failure
+	**	in this case.
+	*/
+	if (IndexCount == 0) {
+		return(false);
+	}
+
+	/*
+	**	Check to see if this same index element was previously searched for. If
+	**	so and it was previously found, then there is no need to search for it
+	**	again -- just return true.
+	*/
+	if (Is_Archive_Same(id)) {
+		return(true);
+	}
+
+	/*
+	**	Perform a binary search on the index nodes in order to look for a
+	**	matching index value.
+	*/
+	NodeElement const * nodeptr = Search_For_Node(id);
+
+	/*
+	**	If a matching index was found, then record it for future reference and return success.
+	*/
+	if (nodeptr != 0) {
+		Set_Archive(nodeptr);
+		return(true);
+	}
+
+	/*
+	**	Could not find element so return failure condition.
+	*/
+	return(false);
 }

@@ -272,6 +272,28 @@ bar) still wins at 64,413; **Soviet 11 no longer wins**: its click at @=22,82 (t
 8,000 ticks) resolves 120 pixels left of the view, off the window, and that click was part of the win (it wins without
 the rule at 35,900). It needs re-recording (or the point given another way); ra2-native-campaign-won-sov11 fails until then.
 
+## Lane P65 (work in progress, branch fix-p65-pin): re-pin to 782562d93c; behaviour rows on exact code (2026-11-27)
+
+NOT MERGED. At the new pin three won replays fail and the shell menus crash: Soviet 3 diverges at game frame 35,813
+(BuildingClass::Take_Damage is exact now: its run-away test sends the refinery's docked chrono miner off while
+unloading, where the old draft kept it; the recording then never wins, even advanced 24,000 ticks past its end), Soviet 12
+(wins on the old pin under the off-view rule, so a pin change too, not traced), and the new parked Combo_Proc draft
+(rewritten from ra2-decomp's bank) faults on a pointer cut to 32 bits (ra2-main-shell-options, ra2-native-skirmish,
+ra2-main-zoom-menu: signal 11 at Combo_Proc+3800, fault address 0xffffffffabe4d310) and needs a width sweep.
+
+Re-pin rows: the Static_Proc movie-name rows, Combo_Proc's three P12 rows and the lobby width rows re-anchored
+(LobbyEntries[] became named globals); four explicit specialisations that are the generic template word for word cut
+(netshare's DynamicVectorClass<MultiMission const *> constructor and Add, ownrdraw's Dictionary remove and ArrayList
+clear); the parked Control_Proc draft's IsPlaying read through the animation state.
+
+Behaviour rows on exact code: every row whose target is exact at the new pin was listed (197): pointer width, compiler
+spelling, floating point, saves, UB guards and the port's features stay. Removed: Coord_Scatter's lock-snap row (the exact
+text is the original's form), the GUIComboOpenSound row (the draft has it), the WinData +0x30/+0x50 raw-offset rows (the
+fields are named), lane P28's cut rows that replaced the exact AlphaShapeClass::Draw_All and Main_Options_Dialog_Proc
+by glue drafts (now the exact text with a pointer-width row, a missing-image guard and the Enhancements button's two
+rows), and glue/tactical_native.inc (a dead copy of the now exact Building_Player_Detector_Covers_Target). Kept on
+purpose: the load dialog shown again after a load error (P12-loaderr; the original hides it).
+
 ## Lane P50: Yuri's Revenge missions played to a real win through its step server (2026-11-27)
 
 yr/glue/yr_stepserver.cpp (Red Alert 2's step server on the YR tree; docs/yr-port-notes.md lane P50), replays in
