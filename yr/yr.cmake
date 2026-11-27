@@ -446,6 +446,13 @@ add_test(NAME yr-native-garrison COMMAND "${Python3_EXECUTABLE}" -B "${CMAKE_CUR
          --work "${CMAKE_CURRENT_BINARY_DIR}/yr-garrison")
 set_tests_properties(yr-native-garrison PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 240)
 
+# ctest yr-native-tank-bunker (lane P55): a tank and its tank bunker let go of each other when the tank is killed inside,
+# the bunker is killed or the bunker is sold (Do_MISSION_DECONSTRUCTION's UnloadBunker; yr/tests/yr_tank_bunker.py)
+add_test(NAME yr-native-tank-bunker COMMAND "${Python3_EXECUTABLE}" -B "${CMAKE_CURRENT_SOURCE_DIR}/yr/tests/yr_tank_bunker.py"
+         --binary $<TARGET_FILE:yr-native> --data-dir "${RA2_NATIVE_YR_DATA_DIR}"
+         --work "${CMAKE_CURRENT_BINARY_DIR}/yr-tank-bunker")
+set_tests_properties(yr-native-tank-bunker PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 300)
+
 # ctest yr-native-mirage (lane N4): a Mirage tank's camouflage draws as a tree in the tree's colours (Techno_Draw_Object's
 # disguise converter; yr/tests/yr_mirage.py)
 add_test(NAME yr-native-mirage COMMAND "${Python3_EXECUTABLE}" -B "${CMAKE_CURRENT_SOURCE_DIR}/yr/tests/yr_mirage.py"
@@ -532,6 +539,15 @@ if(NOT WIN32)
     set_tests_properties(yr-native-campaign-won-${yr_won_name} PROPERTIES SKIP_RETURN_CODE 77 RUN_SERIAL TRUE TIMEOUT 1200
                          LABELS yr-campaign-won)
   endforeach()
+  # ctest yr-native-campaign-crash-all05 (lane P55): lane P52's YR Allied 5 recording, which ended in a crash at tick ~96,300
+  # (a tank whose bunker had been sold died: BunkerLinkedItem named the deleted bunker), replayed on to tick 97,000: no
+  # fault (ra2_campaign.py --survive; about three minutes)
+  add_test(NAME yr-native-campaign-crash-all05 COMMAND "${Python3_EXECUTABLE}" -B "${CMAKE_CURRENT_SOURCE_DIR}/ra2/tests/ra2_campaign.py"
+           --game yr --replay "${CMAKE_CURRENT_SOURCE_DIR}/yr/tests/campaign/all05-crash.replay" --side allied --mission 5
+           --survive 97000 --binary $<TARGET_FILE:yr-native> --data-dir "${RA2_NATIVE_YR_DATA_DIR}"
+           --work "${CMAKE_CURRENT_BINARY_DIR}/tests/yr-campaign-crash-all05")
+  set_tests_properties(yr-native-campaign-crash-all05 PROPERTIES SKIP_RETURN_CODE 77 RUN_SERIAL TRUE TIMEOUT 1200
+                       LABELS yr-campaign-won)
 endif()
 
 # ctest mission-soak-yr-allied / -soviet (lane N25; label soak, not in the default gate; named outside yr-native so

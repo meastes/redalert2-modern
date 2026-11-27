@@ -1888,6 +1888,28 @@ a ROBO produced; the harness's new `robots` order logs the powered centres, the 
 registration. Before the fix the tank sat at its factory cell with the factory unloading at frame 420; after it the tank is at
 67,22 when the factory returns to guard and drives 6 cells when ordered.
 
+
+## Lane P55 (2026-11-27): the tank bunker sold with its tank inside (YR Allied 5's crash)
+
+Lane P52's Allied 5 play ended in signal 11 at tick ~96,300 (UnitClass::Take_Damage, then
+`As_Building(BunkerLinkedItem)->ClearBunker()` with a NULL building, vendor/ra2-decomp/src/unit.cpp). gamemd.exe
+(0x00737D73) makes the same checked cast and calls ClearBunker with whatever it gives, so on Windows a link that named
+anything but a building would fault the same way: the original keeps the link from ever going stale. Its
+Do_MISSION_DECONSTRUCTION lets the tank out of a bunker being sold (0x0044AAA4: `if (BunkerLinkedItem) UnloadBunker()`,
+after the slave manager's release and ahead of the upgrade refund); BuildingClass::Take_Damage does the same when the
+bunker dies (0x004424EA), ClearBunker when the tank dies (0x00737D97), TemporalClass::AI and the chrono warp when either is
+warped; TechnoClass::Detach drops the link only while a scenario loads (0x00707849, ScenarioInit), as the tree has it.
+The deconstruction draft (glue/building_native.inc, TibSun's text, which has no bunkers) had no such call, and Yuri's AI
+sold two NATBNKs with lasher tanks inside at frame 94,718: the tanks kept naming the deleted bunkers, and the first to
+die read the freed memory (by then another object's). The draft now calls UnloadBunker there.
+
+Checks: yr-native-tank-bunker (harness orders `bunker`, `sell`, `kill`, glue/yr_harness.cpp: a Grizzly killed inside a
+bunker, an IFV whose bunker is killed, the IFV in a second bunker that is sold; without the fix the IFV named the object
+that took the sold bunker's memory, a GAWEAP); yr-native-campaign-crash-all05 (yr/tests/campaign/all05-crash.replay, the
+recording to tick 95,575, replayed to tick 97,000 with `ra2_campaign.py --survive`; label yr-campaign-won). Not done here:
+the slave manager call just before it (0x0044AA3D: SlaveManagerClass::FUN_006B0DB0 when the building has a
+SlaveManager, under a test of its +0x218 object) is also missing from the draft.
+
 ## Lane P56 (2026-11-27): the prism tanks that stopped answering orders (Allied 5)
 
 Found by lane P52 in Allied 5 (resume-from-90439.replay): from some point every prism tank (SREF) kept mission 5 (guard)

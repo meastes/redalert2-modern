@@ -123,6 +123,10 @@
 //                   at the player's first techno (a SpotLightClass, as Combat_Lighting makes for a bright warhead;
 //                   lane N5: Delete_All_Objects deletes the living ones when a game is loaded or a new one starts);
 //   occupants <BLDG>  logs `harness-occupants <BLDG> h<house> <n>[p]`: the garrison of each building of type BLDG;
+//   bunker <ID>     logs `harness-bunker <ID> <TYPE|none|stale> &<addr>`: what each techno of type ID's BunkerLinkedItem names
+//                   (lane P55: a tank bunker sold with its tank inside);
+//   sell <BLDG>     the player's first building of type BLDG is sold (Sell_Back) (lane P55);
+//   kill <ID>       the first techno of type ID is destroyed (Take_Damage, the C4 warhead, forced) (lane P55);
 //   view            logs `harness-view <x>,<y> locked <0|1> zoom <z> frame <f>`: the tactical view's position
 //                   (Tactical::Get_Tactical_Position), whether the game ignores the player's input (IgnoreInput
 //                   0x00A8ED9C, a mission's locked intro) and the map zoom (lane N32: the touch pan and the pinch must
@@ -191,6 +195,8 @@ LayerType Layer_From_Name(char const * name);
 #include "command.h"
 #include "_command.h"
 #include "builtype.h"
+#include "rules.h"
+#include "_rules.h"
 #include "beacon.h"
 #include "shapebtn.h"
 #include "gscreen.h"
@@ -1245,6 +1251,48 @@ int Run_Order(int frame, char const * text)
 		ObjectTypeClass const * as = techno->IsDisguised() ? techno->GetDisguise(true) : NULL;
 		fprintf(stderr, "harness-disguise %s %d as %s r%d clear %d\n", word[1], techno->IsDisguised() ? 1 : 0,
 			as ? as->Name() : "-", as ? (int)as->Fetch_RTTI() : -1, techno->IsClearlyVisibleTo(PlayerPtr) ? 1 : 0);
+		return(1);
+	}
+	if (!strcmp(word[0], "bunker") && words >= 2) {
+		// logs `harness-bunker <ID> <TYPE|none|stale> &<addr>` for each techno of type ID: what its BunkerLinkedItem names
+		// (a tank in a tank bunker and the bunker name each other); `stale` when it names no techno left in the game, which
+		// is never read through (lane P55)
+		int n = 0;
+		for (int i = 0; i < Technos.Count(); ++i) {
+			TechnoClass * techno = Technos[i];
+			if (techno == NULL || techno->IsInLimbo || strcmp(Type_Name(techno), word[1])) continue;
+			TechnoClass * link = techno->BunkerLinkedItem;
+			bool alive = false;
+			for (int k = 0; k < Technos.Count() && link != NULL && !alive; ++k) alive = Technos[k] == link;
+			fprintf(stderr, "harness-bunker %s %s &%p\n", word[1], link == NULL ? "none" : alive ? Type_Name(link) : "stale",
+				(void *)techno);
+			++n;
+		}
+		if (!n) fprintf(stderr, "harness-bunker %s gone\n", word[1]);
+		return(1);
+	}
+	if (!strcmp(word[0], "sell") && words >= 2) {
+		// the player's first building of type BLDG is sold (Sell_Back(1): the sidebar's sell click; lane P55)
+		TechnoClass * found = First_Of(word[1], PlayerPtr);
+		if (found == NULL || found->Fetch_RTTI() != RTTI_BUILDING) {
+			fprintf(stderr, "harness-sell: no building of type %s\n", word[1]);
+			return(-1);
+		}
+		found->Sell_Back(1);
+		fprintf(stderr, "harness-sell %s &%p\n", word[1], (void *)found);
+		return(1);
+	}
+	if (!strcmp(word[0], "kill") && words >= 2) {
+		// the first techno of type ID (any house's) takes ten times its full strength from the C4 warhead, forced (as a
+		// building's death does to what stands on it); logs `harness-kill <ID> result <n>` (lane P55)
+		TechnoClass * found = First_Of(word[1], NULL);
+		if (found == NULL) {
+			fprintf(stderr, "harness-kill: no %s\n", word[1]);
+			return(-1);
+		}
+		int damage = found->Techno_Type_Class()->MaxStrength * 10;
+		ResultType result = found->Take_Damage(damage, 0, Rule->C4Warhead, NULL, true, true, NULL);
+		fprintf(stderr, "harness-kill %s result %d\n", word[1], (int)result);
 		return(1);
 	}
 	if (!strcmp(word[0], "occupants") && words >= 2) {
