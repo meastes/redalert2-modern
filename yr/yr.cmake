@@ -526,8 +526,9 @@ endforeach()
 # server, glue/yr_stepserver.cpp; ra2/tools/ra2_step.py --game yr), replayed from yr/tests/campaign/<name>.replay (inputs
 # and ticks only); pass: the mission's own triggers win it at the recorded tick and its score screen shows
 # (ra2/tests/ra2_campaign.py --game yr; label yr-campaign-won, about a minute each). Entries: <name>|<side>|<mission>.
+set(yr_won_all "all01|allied|1" "all03|allied|3")
 if(NOT WIN32)
-  foreach(yr_won "all01|allied|1" "all03|allied|3")
+  foreach(yr_won IN LISTS yr_won_all)
     string(REPLACE "|" ";" yr_won_parts "${yr_won}")
     list(GET yr_won_parts 0 yr_won_name)
     list(GET yr_won_parts 1 yr_won_side)
@@ -623,5 +624,37 @@ if(RA2_NATIVE_ASAN AND NOT WIN32)
                    "ASAN_OPTIONS=halt_on_error=0:detect_leaks=0:detect_odr_violation=0:log_path=${CMAKE_CURRENT_BINARY_DIR}/asan-yr-logs/${yr_asan_test}/asan")
       file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/asan-yr-logs/${yr_asan_test}")
     endif()
+  endforeach()
+endif()
+
+# ctest yr-native-ubsan-soak-allied / -soviet (lane P54; label yr-ubsan, only in an RA2_NATIVE_UBSAN_FLOAT build): the
+# mission soak of every campaign mission of the side under UBSan's float-cast-overflow check (tests/mission_soak.py
+# --ubsan), which fails on any out-of-range floating-to-integer conversion; with RA2_NATIVE_YR_REFERENCE_BINARY each
+# mission is also played by a release build and the digests must be the same. The won YR replays run under it too
+# (yr-native-ubsan-<name>, ra2_campaign.py --game yr --ubsan).
+if(RA2_NATIVE_UBSAN_FLOAT AND NOT WIN32)
+  set(RA2_NATIVE_YR_REFERENCE_BINARY "" CACHE FILEPATH "A release build's yr-native for yr-native-*-soak-* (optional)")
+  foreach(yr_ubsan_side allied soviet)
+    set(yr_ubsan_reference)
+    if(RA2_NATIVE_YR_REFERENCE_BINARY)
+      set(yr_ubsan_reference --reference "${RA2_NATIVE_YR_REFERENCE_BINARY}")
+    endif()
+    add_test(NAME yr-native-ubsan-soak-${yr_ubsan_side} COMMAND "${Python3_EXECUTABLE}" -B "${CMAKE_CURRENT_SOURCE_DIR}/tests/mission_soak.py"
+             --game yr --side ${yr_ubsan_side} --binary $<TARGET_FILE:yr-native> --data-dir "${RA2_NATIVE_YR_DATA_DIR}"
+             --work "${CMAKE_CURRENT_BINARY_DIR}/mission-soak/yr-ubsan-${yr_ubsan_side}" --ubsan ${yr_ubsan_reference} --jobs 3)
+    set_tests_properties(yr-native-ubsan-soak-${yr_ubsan_side} PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 1800 RUN_SERIAL TRUE
+                         LABELS yr-ubsan)
+  endforeach()
+  foreach(yr_won IN LISTS yr_won_all)
+    string(REPLACE "|" ";" yr_won_parts "${yr_won}")
+    list(GET yr_won_parts 0 yr_won_name)
+    list(GET yr_won_parts 1 yr_won_side)
+    list(GET yr_won_parts 2 yr_won_mission)
+    add_test(NAME yr-native-ubsan-${yr_won_name} COMMAND "${Python3_EXECUTABLE}" -B "${CMAKE_CURRENT_SOURCE_DIR}/ra2/tests/ra2_campaign.py"
+             --game yr --replay "${CMAKE_CURRENT_SOURCE_DIR}/yr/tests/campaign/${yr_won_name}.replay" --side ${yr_won_side}
+             --mission ${yr_won_mission} --binary $<TARGET_FILE:yr-native> --data-dir "${RA2_NATIVE_YR_DATA_DIR}" --ubsan
+             --work "${CMAKE_CURRENT_BINARY_DIR}/tests/yr-ubsan-${yr_won_name}")
+    set_tests_properties(yr-native-ubsan-${yr_won_name} PROPERTIES SKIP_RETURN_CODE 77 RUN_SERIAL TRUE TIMEOUT 1200
+                         LABELS yr-ubsan)
   endforeach()
 endif()

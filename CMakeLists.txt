@@ -54,6 +54,15 @@ if(RA2_NATIVE_ASAN)
                       -fno-omit-frame-pointer)
   add_link_options(-fsanitize=address)
 endif()
+# Lane P54: a float-cast-overflow build (UBSan's -fsanitize=float-cast-overflow, recoverable; configure a separate
+# folder, e.g. build/ubsan-fc, with -DRA2_NATIVE_UBSAN_FLOAT=ON): every floating-to-integer conversion out of the
+# target's range is reported (VC6's x87 _ftol and fistp give such a value a defined result; clang does not). Adds the
+# ctest label ra2-ubsan (ra2/ra2.cmake): campaign replays that must win at their recorded ticks with no report.
+option(RA2_NATIVE_UBSAN_FLOAT "Build with UBSan's float-cast-overflow check (a test build; adds the ra2-ubsan checks)" OFF)
+if(RA2_NATIVE_UBSAN_FLOAT)
+  add_compile_options(-g -fsanitize=float-cast-overflow -fsanitize-recover=float-cast-overflow -fno-omit-frame-pointer)
+  add_link_options(-fsanitize=float-cast-overflow)
+endif()
 
 # The platform seams: Win32 / DirectDraw / DirectSound / Winsock / OLE and the VC6 C runtime surface the game
 # imports, implemented on POSIX and SDL3 under the same C names (port/). Built without the VC6 dialect.

@@ -314,7 +314,8 @@ endforeach()
 # replayed from ra2/tests/campaign/<name>.replay (inputs and ticks only); pass: the mission's own triggers win it at the
 # recorded tick and its score screen shows (ra2/tests/ra2_campaign.py; label ra2-campaign-won, about a minute each).
 # Entries: <name>|<side>|<mission>.
-foreach(rb_won "all01|allied|1" "all02|allied|2" "all03|allied|3" "all04|allied|4" "all05|allied|5" "sov01|soviet|1" "sov03|soviet|3" "sov04|soviet|4" "all08|allied|8" "sov06|soviet|6" "all10|allied|10" "sov09|soviet|9" "sov11|soviet|11" "sov12|soviet|12" "sov02|soviet|2" "sov05|soviet|5" "sov07|soviet|7" "all07|allied|7" "sov10|soviet|10" "sov08|soviet|8" "all09|allied|9" "all06|allied|6" "all12|allied|12" "all11|allied|11")
+set(rb_won_all "all01|allied|1" "all02|allied|2" "all03|allied|3" "all04|allied|4" "all05|allied|5" "sov01|soviet|1" "sov03|soviet|3" "sov04|soviet|4" "all08|allied|8" "sov06|soviet|6" "all10|allied|10" "sov09|soviet|9" "sov11|soviet|11" "sov12|soviet|12" "sov02|soviet|2" "sov05|soviet|5" "sov07|soviet|7" "all07|allied|7" "sov10|soviet|10" "sov08|soviet|8" "all09|allied|9" "all06|allied|6" "all12|allied|12" "all11|allied|11")
+foreach(rb_won IN LISTS rb_won_all)
   string(REPLACE "|" ";" rb_won_parts "${rb_won}")
   list(GET rb_won_parts 0 rb_won_name)
   list(GET rb_won_parts 1 rb_won_side)
@@ -341,6 +342,23 @@ if(RA2_NATIVE_ASAN AND NOT WIN32)
              --work "${CMAKE_CURRENT_BINARY_DIR}/tests/asan-${rb_won_name}")
     set_tests_properties(ra2-native-asan-${rb_won_name} PROPERTIES SKIP_RETURN_CODE 77 RUN_SERIAL TRUE TIMEOUT 1800
                          LABELS ra2-asan)
+  endforeach()
+endif()
+# Lane P54: with RA2_NATIVE_UBSAN_FLOAT=ON (UBSan's float-cast-overflow check, CMakeLists.txt), every won replay above
+# under it: the win at the recorded tick, and no out-of-range floating-to-integer conversion reported
+# (ra2_campaign.py --ubsan). Label ra2-ubsan, not in the quick or campaign-won runs; about a minute each.
+if(RA2_NATIVE_UBSAN_FLOAT AND NOT WIN32)
+  foreach(rb_won IN LISTS rb_won_all)
+    string(REPLACE "|" ";" rb_won_parts "${rb_won}")
+    list(GET rb_won_parts 0 rb_won_name)
+    list(GET rb_won_parts 1 rb_won_side)
+    list(GET rb_won_parts 2 rb_won_mission)
+    add_test(NAME ra2-native-ubsan-${rb_won_name} COMMAND "${RB_PYTHON3}" -B "${RB_DIR}/tests/ra2_campaign.py"
+             --replay "${RB_DIR}/tests/campaign/${rb_won_name}.replay" --side ${rb_won_side} --mission ${rb_won_mission}
+             --binary $<TARGET_FILE:ra2-native> --data-dir "${RB_DATA_DIR}" --game-exe "${RB_GAME_EXE}" --ubsan
+             --work "${CMAKE_CURRENT_BINARY_DIR}/tests/ubsan-${rb_won_name}")
+    set_tests_properties(ra2-native-ubsan-${rb_won_name} PROPERTIES SKIP_RETURN_CODE 77 RUN_SERIAL TRUE TIMEOUT 1200
+                         LABELS ra2-ubsan)
   endforeach()
 endif()
 # Lane P30: walls bought and placed by clicks (Soviet 7, ra2/tests/regress/walls-sov07.replay as the live step server's
