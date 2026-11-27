@@ -8,9 +8,13 @@ and Windows itself all accept.
 
 The link tools run the host's nm and c++filt. A Mac has both; a Windows host with llvm-mingw has llvm-nm and
 llvm-cxxfilt (in RA2_LLVM_MINGW/bin); RA2_NM and RA2_CXXFILT name others.
+
+A tool run over many objects takes them in batches (batches()): a Windows command line holds at most 32,767
+characters (CreateProcess; WinError 206 past it), and 400 build paths are more than that (lane P51: codex1's PC).
 """
 import os
 import shutil
+import subprocess
 
 # Characters a quoted CMake argument would still interpret (or a list would split on): refused, not guessed at.
 CMAKE_UNSAFE = '"$;'
@@ -59,3 +63,25 @@ def tool(name):
         if found:
             return found
     return name
+
+
+# CreateProcess's limit is 32,767 characters with the terminating NUL; the margin covers the executable's path
+# as Windows resolves it.
+COMMAND_LIMIT = 32000
+
+
+def batches(cmd, paths, count, limit=COMMAND_LIMIT):
+    """PATHS in order, in runs of at most COUNT whose command line (CMD + the run, quoted as subprocess quotes it
+    on Windows) stays within LIMIT characters; a path too long for any run goes alone. With short paths the
+    runs are those of range(0, len(paths), COUNT), so a Mac build's output is unchanged."""
+    base = len(subprocess.list2cmdline([str(c) for c in cmd]))
+    run, size = [], base
+    for path in paths:
+        width = len(subprocess.list2cmdline([str(path)])) + 1
+        if run and (len(run) == count or size + width > limit):
+            yield run
+            run, size = [], base
+        run.append(path)
+        size += width
+    if run:
+        yield run

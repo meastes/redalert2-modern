@@ -71,8 +71,8 @@ PREFIX = ''   # '_' on Windows (lane Y13): COFF names are read in the Mach-O spe
 
 def nm(paths):
     defined, undefined = set(), set()
-    for i in range(0, len(paths), 400):
-        text = subprocess.run([NM, '-g'] + paths[i:i + 400], capture_output=True, text=True).stdout
+    for batch in host_tools.batches([NM, '-g'], paths, 400):
+        text = subprocess.run([NM, '-g'] + batch, capture_output=True, text=True).stdout
         for line in text.splitlines():
             parts = line.split()
             if len(parts) == 2 and parts[0] == 'U':

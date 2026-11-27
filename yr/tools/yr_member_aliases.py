@@ -63,8 +63,9 @@ def demangle(symbols):
 def unit_data_symbols(objects):
     """{symbol: object} of the data the YR units define."""
     out = {}
-    for i in range(0, len(objects), 300):
-        text = subprocess.run([host_tools.tool('nm'), '-g', '-A'] + objects[i:i + 300], capture_output=True, text=True).stdout
+    nm = [host_tools.tool('nm'), '-g', '-A']
+    for batch in host_tools.batches(nm, objects, 300):
+        text = subprocess.run(nm + batch, capture_output=True, text=True).stdout
         for line in text.splitlines():
             path, _, rest = line.rpartition(': ')
             parts = rest.split()

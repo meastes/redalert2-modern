@@ -30,9 +30,9 @@ MH_MAGIC_64 = 0xFEEDFACF
 def definitions(paths):
     """{object path: [external defined names]} (nm in batches)."""
     out = {}
-    for i in range(0, len(paths), 400):
-        batch = paths[i:i + 400]
-        text = subprocess.run([host_tools.tool('nm'), '-g', '-U'] + batch, capture_output=True, text=True).stdout
+    nm = [host_tools.tool('nm'), '-g', '-U']
+    for batch in host_tools.batches(nm, paths, 400):
+        text = subprocess.run(nm + batch, capture_output=True, text=True).stdout
         current = batch[0] if len(batch) == 1 else None
         for line in text.splitlines():
             if line.endswith(':') and line[:-1] in batch:

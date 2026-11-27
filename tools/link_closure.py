@@ -50,8 +50,8 @@ PREFIX = ''          # '_' on Windows: COFF names are read in the Mach-O spellin
 def nm_symbols(paths):
     """(defined, undefined) external symbol sets of objects/archives."""
     defined, undefined = set(), set()
-    for i in range(0, len(paths), 400):
-        out = subprocess.run([NM, '-g'] + paths[i:i + 400], capture_output=True, text=True).stdout
+    for batch in host_tools.batches([NM, '-g'], paths, 400):
+        out = subprocess.run([NM, '-g'] + batch, capture_output=True, text=True).stdout
         for line in out.splitlines():
             parts = line.split()
             if len(parts) == 2 and parts[0] == 'U':
@@ -123,8 +123,8 @@ def windows_system_exports(sysroot, libs=()):
     paths += glob.glob(os.path.dirname(sysroot) + '/lib/clang/*/lib/windows/libclang_rt.builtins-x86_64.a')
     paths += [l for l in libs if l]
     names = set()
-    for i in range(0, len(paths), 50):
-        out = subprocess.run([NM, '-g', '--defined-only'] + paths[i:i + 50], capture_output=True, text=True).stdout
+    for batch in host_tools.batches([NM, '-g', '--defined-only'], paths, 50):
+        out = subprocess.run([NM, '-g', '--defined-only'] + batch, capture_output=True, text=True).stdout
         names.update(PREFIX + l.split()[-1] for l in out.splitlines() if l.strip() and not l.endswith(':'))
     names.update(PREFIX + n for n in WINDOWS_LINKER_NAMES)
     return names

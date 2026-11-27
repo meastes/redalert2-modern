@@ -88,7 +88,9 @@ def is_coff(path):
 def nm_defined(paths):
     """The external names objects define, in the Mach-O spelling (COFF names gain the leading underscore, as
     tools/link_closure.py reads them on Windows)."""
-    out = subprocess.run([host_tools.tool('nm'), '-g', '--defined-only', '-j'] + paths, capture_output=True, text=True).stdout
+    nm = [host_tools.tool('nm'), '-g', '--defined-only', '-j']
+    out = ''.join(subprocess.run(nm + batch, capture_output=True, text=True).stdout
+                  for batch in host_tools.batches(nm, paths, len(paths) or 1))
     prefix = '_' if paths and is_coff(paths[0]) else ''
     return sorted({prefix + s for s in out.split('\n') if s and not s.endswith(':')})
 
