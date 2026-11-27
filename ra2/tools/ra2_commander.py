@@ -883,7 +883,7 @@ def vip_kill(g, team, vid, targets, guard=6, step=30, timeout=1500, avoid=('CTEC
     return True
 SIZE={'GAPOWR':(2,2),'GAREFN':(4,3),'GAPILE':(2,2),'GAWEAP':(5,3),'GATECH':(2,3),'GAAIRC':(3,3),'GAPILL':(1,1),'ATESLA':(1,1),
       'GAPRIS':(1,1),'GADEPT':(3,3),'GAYARD':(3,3),'NAPOWR':(2,2),'NAREFN':(4,3),'NAHAND':(2,2),'NAWEAP':(5,3),'NARADR':(2,2),
-      'NATECH':(2,3),'NALASR':(1,1),'TESLA':(1,1),'NAFLAK':(1,1),'NAYARD':(3,3),'NANRCT':(4,4),'GASPYS':(2,2),'NADEPT':(3,3),'GAOREP':(2,2),'NAINDP':(2,2)}
+      'NATECH':(2,3),'NALASR':(1,1),'TESLA':(1,1),'NAFLAK':(1,1),'NAYARD':(3,3),'NANRCT':(4,4),'GASPYS':(2,2),'NADEPT':(3,3),'GAOREP':(2,2),'NAINDP':(2,2),'GACSPH':(4,4)}
 def place_smart(g, name, near, reach=2, tries=10):
     """A finished building placed on a clear spot near 'near' within reach cells of an own building."""
     w,h=SIZE.get(name,(3,3))
@@ -963,15 +963,21 @@ def place_legal(g, name, near, r=8, avoid=None, tries=3, pick=None):
     sp.sort(key=pick or (lambda s: max(abs(s[0]+w//2-near[0]),abs(s[1]+h//2-near[1]))))
     before={o.id for o in g.mine() if o.type==name}
     for o0 in sp[:tries]:
-        g.raw_click('428 368', right=True)
         t=g.tab_of(name)
         if t is None: print('place_legal: not on sidebar',name); return None
-        g.raw_click('@tab=%d'%t); g.raw_click('@cameo=%s'%name)
-        # the click cell: the game places a building's origin at the clicked cell plus its ZoneOffset, -dim/2
-        # (DisplayClass::Set_Cursor_Shape, Mouse_Left_Release); (w-1)//2 was one cell short for an even width or height
-        # (2x2, 2x3, 4x3), which put the footprint one cell up-left of the legal origin (lane P36)
-        c=(o0[0]+w//2, o0[1]+h//2)
-        g.look(*c); g.raw_click('@=%d,%d'%c); g.adv(2)
+        # the click cell: the game places a building's origin at the release cell plus its ZoneOffset, which
+        # DisplayClass::Set_Cursor_Shape sets to -(dim - Cell(1,1)) / 2 (TPoint2D's division truncates; dim the occupy
+        # list's extent, Get_Occupy_Dimensions), so the click is origin + ((w-1)//2, (h-1)//2): 1x1 and 2x2 +0, 3x3 and
+        # 4x4 +1 (lane P47; P36's +dim/2 was one cell long for the 4x4 chronosphere). origin + dim//2 is kept as a
+        # fallback for an elevated cell whose centre pixel the click resolves to a neighbour.
+        cells=[(o0[0]+(w-1)//2, o0[1]+(h-1)//2)]
+        if (w//2,h//2)!=((w-1)//2,(h-1)//2): cells.append((o0[0]+w//2, o0[1]+h//2))
+        for c in cells:
+            g.raw_click('428 368', right=True)
+            g.raw_click('@tab=%d'%t); g.raw_click('@cameo=%s'%name)
+            g.look(*c); g.raw_click('@=%d,%d'%c); g.adv(2)
+            now=[o for o in g.mine() if o.type==name and o.id not in before]
+            if now: break
         now=[o for o in g.mine() if o.type==name and o.id not in before]
         if now: print('placed',name,o0,now[0],g.tick,flush=True); return now[0]
     g.raw_click('428 368', right=True)
