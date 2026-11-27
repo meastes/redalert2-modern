@@ -1798,6 +1798,31 @@
    "old": "unsigned int depth_address;",
    "new": "uintptr_t depth_address;",
    "why": "P64: the sonic wave's draw (WaveClass::Draw_Sonic and FUN_007602E0, which upstream now matches) keeps the depth buffer's address (ZBuffer::Get_Buffer_Offset) in an unsigned int; natively that is a 64-bit pointer (the header row makes Get_Buffer_Offset uintptr_t), so the local is pointer-sized (yr-native-standins faulted reading the cut address)."
+  },
+  {
+   "file": "src/sidebar.cpp",
+   "regex": true,
+   "old": "OutList\\.Add\\(EventClass\\(\\n(\\t+)PlayerPtr->HeapID, EventClass::PRODUCE,",
+   "new": "Yr_Queue_Five_Add(EventClass(   /* NATIVE (lane Y8) */\\n\\1PlayerPtr->HeapID, EventClass::PRODUCE,",
+   "why": "Native addition (lane Y8, Queue five with Shift; not original behaviour), carried by lane P64 from the retired draft of SidebarClass::StripClass::Action (0x006AAD00, which upstream now matches): a build icon's PRODUCE event goes through Yr_Queue_Five_Add (glue/yr_enhancements.cpp), which adds it five times with Shift held when the enhancement is on, and once otherwise."
+  },
+  {
+   "file": "src/sidebar.cpp",
+   "old": "// FUNCTION: GAMEMD 0x006AAD00\n",
+   "new": "bool Yr_Queue_Five_Add(EventClass const &event);\t// NATIVE (lane Y8): Queue five with Shift, glue/yr_enhancements.cpp\n// FUNCTION: GAMEMD 0x006AAD00\n",
+   "why": "The declaration for the row above."
+  },
+  {
+   "file": "src/egos.cpp",
+   "old": "\tHide_Mouse();\n\n\twhile ( EgoList.Count() ){\n",
+   "new": "\tHide_Mouse();\n\tfprintf(stderr, \"credits: %d lines\\n\", EgoList.Count());   /* NATIVE: the run log's note (yr-native-campaign-*) */\n\n\twhile ( EgoList.Count() ){\n",
+   "why": "Native diagnostic (lane Y3's note, carried by lane P64 from the retired draft of Show_Who_Was_Responsible): the credits log their line count, which the campaign chain checks read as proof the credits ran. The game state is untouched."
+  },
+  {
+   "file": "src/queue.cpp",
+   "old": "\tFUN_0064DAB0();\n\tDAT_00B04474[Frame & 255] = DAT_00AC51FC;\n",
+   "new": "\tFUN_0064DAB0();\n\tDAT_00B04474[Frame & 255] = DAT_00AC51FC;\n\tYr_Native_Log_Frame_CRC(Frame, DAT_00AC51FC);   // NATIVE: RA2_NATIVE_CRC_LOG (glue/queue_native.inc)\n",
+   "why": "Native diagnostic only (lane YW2, LAN tests), carried by lane P64 to upstream's matched Queue_AI_Multiplayer (0x006475F0; the port's draft logged it before): with RA2_NATIVE_CRC_LOG set each network frame's game CRC goes to the log, so two games' logs compare frame by frame. The game state is untouched."
   }
  ]
 }

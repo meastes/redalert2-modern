@@ -123,3 +123,6 @@ __ZNK9CellClass13Is_Tile_SwampEv	__ZNK9CellClass26Is_Tile_Clear_To_Green_LATEv
 # Main_Game calls Init_Game(argc, argv) (lane P64): upstream matches Init_Game (0x0052BA60) as int Init_Game(void), which
 # retired the port's draft (yr/glue/init_game_native.inc); the arguments go unread, as in gamemd.exe.
 __Z9Init_GameiPPc	__Z9Init_Gamev
+# WS_Save_Dialog_Values (lane P64): the name the old pin gave 0x00608070 (a dialog's slide-out), which the Enhancements page
+# (glue/mainopt_native.inc) and the network screens call; upstream ac45ee9e defines it as FUN_00608070.
+__Z21WS_Save_Dialog_ValuesP6HWND__	__Z12FUN_00608070P6HWND__
