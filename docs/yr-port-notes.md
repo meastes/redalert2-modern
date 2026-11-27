@@ -1788,6 +1788,29 @@ Reproduced on the Mac from New Campaign (Allied), with logs; all three are in th
   Yr_Timer_Corner (glue/yr_map_zoom.cpp) answers the shown part's corner while zoomed. Red Alert 2's zoom draws its
   timers the same way (not checked here).
 
+## Lane P44 (2026-11-26): Yuri's Revenge under AddressSanitizer
+
+Lane P35's sweep (docs/ra2-port-notes.md) on this port. Build: RA2_NATIVE_ASAN=ON with RA2_NATIVE_YR=ON in its own
+folder; every yr- and one- test there runs with ASAN_OPTIONS halt_on_error=0:log_path=<build>/asan-yr-logs/<test>/asan
+(yr/yr.cmake), so a run writes every report and goes on (before, each run stopped at its first: lane P35's seven
+failures). Two full runs of the 35 yr-native tests and the mission soak of both campaigns found the sites listed in
+docs/regressions.md (lane P44 section); after them no test writes a report.
+
+Most were the original's own reads past an object that gamemd.exe's layout absorbs, answered with the original's bytes
+(read from gamemd.exe: the pip table's neighbours, the theater table's predecessor, the combo strings' padding, the bytes
+before MissionControl). Two were the data generator's, not the original's: a name sharing its address with a
+structure (Special, UnitCompositeDirtyRect) or declared a pointer in another unit got storage too small for what
+the native code writes, and yr_data.py now sizes them (the shared-address names of a structure become offsets into it).
+
+The layout check: tests/mission_soak.py --reference <binary> plays each mission with both binaries and compares the
+digests (every techno's type, place, strength and mission every 250 frames, the houses' money, the scenario generator).
+Release and ASan parted at frame 2 of Soviet 1. The game's generator calls were the same in both (an lldb trace of every
+Random2Class call); a trace of fastmath::sin/cos arguments put the first difference in WalkLocomotionClass::Movement_AI,
+an angle of -1.7689 against 4.5145: DirType::From_Radian's double-to-short conversion out of range, undefined, and the
+two builds' code kept different values. Fixed as Red Alert 2 fixed it in lane P9 (gamemd.exe's multiply and _ftol);
+after it all 14 missions match. The digest's generator hash had included Random2Class's padding, which differed between
+builds by itself; it no longer does. ctests: yr-native-asan-soak-allied / -soviet (label yr-asan).
+
 ## Next
 
 0. The Windows builds on a real PC (RA2YRNative.exe with its two DLLs and SDL3.dll is on the user's PC, lane P1;

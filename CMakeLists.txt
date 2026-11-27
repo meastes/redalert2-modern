@@ -46,7 +46,8 @@ endif()
 # Lane P35: an AddressSanitizer build of everything (configure a separate folder, e.g. build/asan, with
 # -DRA2_NATIVE_ASAN=ON): reports are recoverable (halt_on_error=0 in the ra2-asan tests' ASAN_OPTIONS), and
 # use-after-scope is off (MixFileClass's Straw chain trips it by the original's destructor order). Adds the ctest label
-# ra2-asan (ra2/ra2.cmake): campaign replays that must win at their recorded ticks with no report.
+# ra2-asan (ra2/ra2.cmake): campaign replays that must win at their recorded ticks with no report; with RA2_NATIVE_YR=ON
+# also yr-asan (yr/yr.cmake, lane P44): the YR mission soaks with no report, and every yr- test logs its reports.
 option(RA2_NATIVE_ASAN "Build with AddressSanitizer (a test build; adds the ra2-asan checks)" OFF)
 if(RA2_NATIVE_ASAN)
   add_compile_options(-g -fsanitize=address -fsanitize-recover=address -fno-sanitize-address-use-after-scope
