@@ -7,61 +7,6 @@
 // build; never part of an exact build.
 // ---------------------------------------------------------------------------------------------
 
-// gamemd.exe 0x00732950 (729 bytes): "select all units of this type", called by the command
-// bar's TypeSelect button (TabClass::AI) and by the TypeSelect key's quick press
-// (FUN_00732CC0). The names are the selected objects' types (and what they deploy or undeploy
-// into, FUN_00732D10). First on the screen; when every such unit on the screen is already
-// selected, or on a second press, across the map (DAT_00B0FE64, NavCycleMode 2).
-void __fastcall FUN_00732950(void)
-{
-	wchar_t text[260];
-	if (Unsorted::MuteSWLaunches) {
-		return;
-	}
-	FUN_006DA770(TacticalMap);
-	if (Unsorted::NavCycleMode != 2) {
-		DAT_00B0FE64 = false;
-	}
-	NameList * names = FUN_00732D10();
-
-	TechnoList * list;
-	if (DAT_00B0FE64) {
-		list = FUN_00731EB0(FUN_00732580, 0);
-	} else {
-		list = Collect_Owned_Visible();
-		bool unselected = false;
-		int count = list->Count();
-		for (int i = 0; i < count; ++i) {
-			TechnoClass * techno = (*list)[i];
-			if (Is_Named_Selectable(techno, names) && !techno->IsSelected) {
-				unselected = true;
-				break;
-			}
-		}
-		if (!unselected) {
-			DAT_00B0FE64 = true;
-		}
-		if (DAT_00B0FE64) {
-			delete list;
-			list = FUN_00731EB0(FUN_00732580, 0);
-		}
-	}
-
-	int count = list->Count();
-	for (int i = 0; i < count; ++i) {
-		TechnoClass * techno = (*list)[i];
-		if (Is_Named_Selectable(techno, names)) {
-			techno->Select();
-		}
-	}
-	FUN_00731D10(text);
-	FUN_00730A90(text, 240);
-	Unsorted::NavCycleMode = 2;
-	DAT_00B0FE58 = false;
-	delete names;
-	delete list;
-}
-
 // gamemd.exe 0x00733380 (614 bytes) and 0x007336C0 (624 bytes): the HealthNav and VeterancyNav keys
 // (init.cpp's HealthNavCommandClass/VeterancyNavCommandClass; Shift keeps the selection). The first
 // press takes the selected units (or, with none, the player's units on the screen: FUN_007331B0) and
@@ -118,14 +63,4 @@ static void Nav_Cycle(bool clear, int mode, int & last, int (*state_of)(TechnoCl
 	last = state;
 	Unsorted::NavCycleMode = DAT_00B0FE6C->Count() ? mode : 0;
 	DAT_00B0FE58 = false;
-}
-
-void __fastcall FUN_00733380(bool clear)
-{
-	Nav_Cycle(clear, 3, HealthNavLast_00845560, Nav_Health_Of, FUN_00733640, FUN_007336A0);
-}
-
-void __fastcall FUN_007336C0(bool clear)
-{
-	Nav_Cycle(clear, 4, VeterancyNavLast_00845564, Nav_Veterancy_Of, FUN_00733930, FUN_00733990);
 }

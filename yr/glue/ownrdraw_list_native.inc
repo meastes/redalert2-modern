@@ -291,14 +291,14 @@ LRESULT CALLBACK OwnerDraw::ListBoxHandler(HWND window, UINT message, WPARAM wpa
 		if (message == LB_ADDSTRING || message == LB_RESETCONTENT) InvalidateRect(window, NULL, TRUE);
 		return result;
 	}
-	if (!data->ScrollBar.skipDraw) {
+	if (!data->skipDraw) {
 		RECT where;
 		Get_Display_Rect(window, &where);
 		Rect area(where.left, where.top, where.right - where.left, where.bottom - where.top);
 		Surface *surface = AlternateSurface;
 		OwnerDraw::CopyDimmedBackground(area, window, YR_REC(int, data, 0xC8));
 		OwnerDraw::DrawBeveledBorder(*surface, area, 1, ODColorToHiColor(OwnerDraw::DefaultBorderColor));
-		BitFont *font = data->Wide.font != NULL ? data->Wide.font : BitFont::Instance;
+		BitFont *font = data->Font != NULL ? data->Font : BitFont::Instance;
 		int count = (int)YR_Original(window, LB_GETCOUNT, 0, 0);
 		int top = (int)YR_Original(window, LB_GETTOPINDEX, 0, 0);
 		int height = (int)YR_Original(window, LB_GETITEMHEIGHT, 0, 0);

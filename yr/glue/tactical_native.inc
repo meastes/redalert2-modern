@@ -255,7 +255,7 @@ void Tactical::Render(Surface & surface, bool fullredraw, int drawpass)
 		LaserDrawClass::Draw_All();
 		EBolt::FUN_004C2830();
 		LineTrail::Process_All();
-		RadBeam::FUN_006591B0();
+		RadBeam::Update_All();
 		BeaconManager.Draw(LogicalSurface, TacticalRect);
 
 		Draw_Rubber_Band();

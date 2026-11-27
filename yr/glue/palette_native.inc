@@ -8,22 +8,3 @@
 // generated again for it (Generate by the key's name, the old set released and the new one kept in
 // the node: SchemeNode::Replace). Behaviour code for the native build; never part of an exact build.
 // ---------------------------------------------------------------------------------------------
-void __fastcall FUN_006267A0(TheaterType theater)
-{
-	SchemeLibrary *library = Library();
-	if (library->Mode == theater) {
-		return;
-	}
-	library->Mode = theater;
-	HashIterator it;
-	it.BucketIndex = 0;
-	it.InBucketIndex = 0;
-	it.OutOfBuckets = false;
-	for (HashString *key = Next_Key(library->Table, &it); key != NULL; key = Next_Key(library->Table, &it)) {
-		SchemeNode **node = library->Table->Find(*key);
-		DynamicVectorClass<ColorScheme *> *schemes = library->Generate((char const *)key);
-		if (node != NULL) {
-			(*node)->Replace(schemes);
-		}
-	}
-}

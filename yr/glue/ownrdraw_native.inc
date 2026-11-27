@@ -11,12 +11,8 @@ BOOL CALLBACK ClassifyLayoutBand(HWND window, LPARAM lparam);
 BOOL CALLBACK SendTransitionCompleteToCustomTextChildProc(HWND window, LPARAM lparam);
 bool __fastcall TrySetDialogLayoutBand1(HWND dialog);
 bool __fastcall TrySetDialogLayoutBand2(HWND dialog);
-void __fastcall PrepareDialogChildControls(HWND dialog, int kind);
 void __fastcall UpdateControlPosition(HWND dialog, LPARAM lparam);
 }
-unsigned char __fastcall FUN_0060C930(HWND dialog);
-unsigned char __fastcall FUN_0060CCC0(HWND dialog);
-unsigned char __fastcall FUN_0060CDB0(HWND dialog);
 void __fastcall Remove_Modeless_Dialog(HWND window);
 WideWstring FUN_00603FC0(HWND window, HWND control, WORD low, WORD high);
 WideWstring FUN_00603F60(HWND window, HWND control);
@@ -36,136 +32,6 @@ namespace Unsorted { extern int WSDialogCount; }
 // WM_INITDIALOG prepares, scales, lays out and centres the dialog. The x86 jump table on
 // message - 2 (0x006230DC/0x006230F0) is the switch below.
 namespace UI {
-int __fastcall StandardWndProc(HWND window, UINT message, WPARAM wparam, LPARAM lparam)
-{
-	switch (message) {
-	case WM_DESTROY:
-		Remove_Modeless_Dialog(window);
-		Unsorted::WSDialogCount--;
-		SetFocus(MainWindow);
-		return 0;
-
-	case WM_DRAWITEM:
-		OwnerDraw::Draw_Item((LPDRAWITEMSTRUCT)lparam);
-		return 1;
-
-	case WM_PAINT: {
-		OwnerDraw::WinData *data = NULL;
-		if (!OwnerDraw::Dialogs.getPointer(window, &data) || data == NULL) {
-			return 0;
-		}
-		if (data->ScrollBar.skipDraw) {
-			ValidateRect(window, NULL);
-			return 1;
-		}
-		OwnerDraw::Paint(window);
-		data = NULL;
-		OwnerDraw::Dialogs.getPointer(window, &data);
-		if (data != NULL && data->Dialog.reservedBE[0]) {
-			HWND item = GetDlgItem(window, 0x71A);
-			if (item != NULL) {
-				SendMessage(item, 0x4E2, 0, 0);
-			}
-			DrawCampaignMenuTransition(window, false);
-			data->Dialog.reservedBE[0] = 0;
-		}
-		ValidateRect(window, NULL);
-		return 0;
-	}
-
-	case WM_ERASEBKGND:
-		return 1;
-
-	case WM_NCHITTEST: {
-		HWND tip = GetDlgItem(window, 0x695);
-		if (tip == NULL) {
-			return 0;
-		}
-		WORD x = LOWORD(lparam);
-		WORD y = HIWORD(lparam);
-		RECT rect;
-		GetWindowRect(window, &rect);
-		POINT point;
-		point.x = x - rect.left;
-		point.y = y - rect.top;
-		WideWstring text;
-		HWND child = ChildWindowFromPointEx(window, point, CWP_SKIPINVISIBLE);
-		if (child != NULL) {
-			text = FUN_00603FC0(window, child, x, y);
-			if (wcscmp(text.get(), DAT_00887734) == 0) {
-				text = FUN_00603F60(window, child);
-				if (wcscmp(text.get(), DAT_00887734) == 0) {
-					text = FUN_00604060(window, child);
-				}
-			}
-		}
-		SendMessage(tip, 0x4B2, 0, (LPARAM)text.text());
-		return 0;
-	}
-
-	case WM_INITDIALOG:
-		Unsorted::WSDialogCount++;
-		if (lparam != 0) {
-			int id = *(unsigned short *)lparam;
-			UI::RegisterComboDropAndNewEditClasses();
-			OwnerDraw::CurrentDialogHwnd = window;
-			EnumChildWindows(window, OwnerDraw::SetNeedsControlImage, 1);
-			OwnerDraw::SetNeedsControlImage(window, 1);
-			EnumChildWindows(window, FUN_0060F320, 1);
-			EnumChildWindows(window, OwnerDraw::RegisterChildControlProc, 0);
-			OwnerDraw::RegisterChildControlProc(window, 0);
-			EnumChildWindows(window, OwnerDraw::SetNeedsControlImage, 0);
-			OwnerDraw::SetNeedsControlImage(window, 0);
-			Resize_Dialogs(window);
-			FUN_0060D2C0(window, id);
-		} else {
-			OwnerDraw::PrepareDialogChildControls(window, 0);
-			Resize_Dialogs(window);
-			OwnerDraw::WinData *data = NULL;
-			OwnerDraw::Dialogs.getPointer(window, &data);
-			if (data != NULL) {
-				data->Dialog.DialogID = 0;
-			}
-		}
-		if (!Session.FUN_0069BBE0()) {
-			FUN_0060CF00(window);
-		}
-		FUN_0060CAF0(window);
-		FUN_0060C930(window);
-		FUN_0060CCC0(window);
-		FUN_0060CDB0(window);
-		EnumChildWindows(window, OwnerDraw::InitCompactDialogControlsProc, 0);
-		if (OwnerDraw::TrySetDialogLayoutBand1(window)) {
-			int offset[2] = { DAT_007F5BE0, DAT_007F5BEC };
-			OwnerDraw::UpdateControlPosition(window, (LPARAM)offset);
-		} else {
-			OwnerDraw::TrySetDialogLayoutBand2(window);
-		}
-		EnumChildWindows(window, OwnerDraw::ClassifyLayoutBand, 0);
-		EnumChildWindows(window, OwnerDraw::ResetControlDrawModeAndTimerProc, 0);
-		Center_Window_Within_Window(window);
-		SetFocus(window);
-		return 0;
-
-	case WM_CTLCOLORMSGBOX:
-	case WM_CTLCOLOREDIT:
-	case WM_CTLCOLORLISTBOX:
-	case WM_CTLCOLORBTN:
-	case WM_CTLCOLORDLG:
-	case WM_CTLCOLORSCROLLBAR:
-	case WM_CTLCOLORSTATIC:
-		return (int)(intptr_t)GetStockObject(BLACK_BRUSH);
-
-	case 0x497:
-		SendMessage(window, 0x4A9, (WPARAM)window, 1);
-		return 0;
-
-	case 0x4EC:
-		EnumChildWindows(window, OwnerDraw::SendTransitionCompleteToCustomTextChildProc, 0);
-		return 0;
-	}
-	return 0;
-}
 }
 
 // OwnerDraw::DefaultHandler, YR 0x00610CA0 (7,265 bytes, unmatched in ra2-decomp): the window
@@ -178,9 +44,45 @@ int __fastcall StandardWndProc(HWND window, UINT message, WPARAM wparam, LPARAM 
 // cleanup copy skipped while the web browser shows, RunOpenAnimationIfNeeded for the slide-in and
 // FUN_00610570's teardown on WM_NCDESTROY. Record fields the tree does not name are reached at
 // gamemd.exe's offsets: +0x70/+0xA8 (Dialog.reserved70) and the tail +0x1E8..+0x1FC (reserved).
-#define YR_REC_TAIL(type, data, off) (*(type *)&(data)->reserved[(off) - 0x140])
-#define YR_REC_70(data) (*(int *)&(data)->Dialog.reserved70[0])
-#define YR_REC_A8(data) ((data)->Dialog.reserved70[0x38])
+// NATIVE (lane P64): upstream ac45ee9e names every WinData field (src/ownrdraw.cpp); the drafts'
+// raw 32-bit offsets are those fields, here by name (natively the pointers before them are 8 bytes).
+static inline void *Yr_WinData_Field(OwnerDraw::WinData *d, int off)
+{
+	switch (off) {
+	case 0x70: return &d->StaticDrawMode;
+	case 0x7C: return &d->StaticOwnsShape;
+	case 0x80: return &d->StaticTextRevealCount;
+	case 0x84: return &d->StaticTextRevealDelay;
+	case 0x88: return &d->StaticTextRevealStep;
+	case 0x8C: return &d->StaticColorAdjust;
+	case 0x90: return &d->StaticSoundIndex;
+	case 0x94: return &d->StaticFrameCount;
+	case 0x98: return &d->StaticCurrentFrame;
+	case 0x9C: return &d->StaticLastFrameTick;
+	case 0xA0: return &d->StaticFrameDelayMs;
+	case 0xA8: return &d->StaticAnimationRunning;
+	case 0xC4: return &d->ButtonTimerActive;
+	case 0xC5: return &d->ButtonAlternateFrame;
+	case 0xC8: return &d->alpha;
+	case 0xCC: return &d->UseItemColorOverrides;
+	case 0xCD: return &d->disabled;
+	case 0xD0: return &d->ComboBoxMaxVisibleDropItems;
+	case 0xD5: return &d->HasTopPanelAnimation;
+	case 0xD6: return &d->HasButtonAnimation;
+	case 0xD7: return &d->HasMainScreenAnimation;
+	case 0x110: return &d->ComboBox.itemColors[0];
+	case 0x1E8: return &d->font;
+	case 0x1EC: return &d->bkMode;
+	case 0x1F0: return &d->bkColor;
+	case 0x1F4: return &d->textColor;
+	case 0x1FC: return &d->animState;
+	}
+	fprintf(stderr, "yr-native: WinData offset 0x%X has no field\n", off);
+	abort();
+}
+#define YR_REC_TAIL(type, data, off) (*(type *)Yr_WinData_Field((data), (off)))
+#define YR_REC_70(data) ((data)->StaticDrawMode)
+#define YR_REC_A8(data) ((data)->StaticAnimationRunning)
 extern HWND DAT_00AC48C0;                         // 0x00AC48C0 the open combo drop-down
 extern HWND DAT_00AC48C4;                         // 0x00AC48C4 its owner dialog
 int __fastcall Is_Web_Browser_Visible(void);
@@ -432,12 +334,12 @@ LRESULT CALLBACK DefaultHandler(HWND window, UINT message, WPARAM wparam, LPARAM
 		if (data == NULL) {
 			goto after_messages;
 		}
-		if (!data->Wide.hasFocus) {
+		if (!data->hasFocus) {
 			CancelIMEComposition();
-			data->Wide.hasFocus = 1;
+			data->hasFocus = 1;
 		}
 	} else if (message == WM_KILLFOCUS) {
-		data->Wide.hasFocus = 0;
+		data->hasFocus = 0;
 	} else if (message == WM_SHOWWINDOW) {
 		if (wparam == 0) {
 			if (data == NULL) {
@@ -483,14 +385,14 @@ LRESULT CALLBACK DefaultHandler(HWND window, UINT message, WPARAM wparam, LPARAM
 	if (data != NULL) {
 		if (message == 0x4CE) {
 			allow_proc = FALSE;
-			result = data->Wide.hasText == 0;
+			result = data->hasText == 0;
 			goto after_messages;
 		} else if (message == 0x4B5) {
 			char *destination = (char *)lparam;
 			if (destination != NULL) {
 				*destination = '\0';
-				if (data->Wide.text != NULL) {
-					WideToCharString(destination, data->Wide.text, wparam - 1);   // NATIVE: gamemd.exe passes wparam and writes one byte past the buffer
+				if (data->text != NULL) {
+					WideToCharString(destination, data->text, wparam - 1);   // NATIVE: gamemd.exe passes wparam and writes one byte past the buffer
 					if (wparam > 0) {
 						destination[wparam - 1] = '\0';
 					}
@@ -500,32 +402,32 @@ LRESULT CALLBACK DefaultHandler(HWND window, UINT message, WPARAM wparam, LPARAM
 			wchar_t *destination = (wchar_t *)lparam;
 			if (destination != NULL) {
 				*destination = L'\0';
-				if (data->Wide.text != NULL) {
-					wcsncpy(destination, data->Wide.text, wparam);
+				if (data->text != NULL) {
+					wcsncpy(destination, data->text, wparam);
 					if ((int)wparam > 0) {
 						destination[wparam - 1] = L'\0';
 					}
 				}
 			}
 		} else if (message == 0x4EB) {
-			data->Wide.rejectChars = (wchar_t *)lparam;
+			data->rejectChars = (wchar_t *)lparam;
 		} else if (message == 0x4B4) {
 			data->Set_Text((char const *)lparam);
-			data->Wide.hasText = 1;
+			data->hasText = 1;
 		} else if (message == 0x4D1) {
-			result = data->Wide.asciiOnly;
-			data->Wide.asciiOnly = wparam;
+			result = data->asciiOnly;
+			data->asciiOnly = wparam;
 			allow_proc = FALSE;
 			goto after_messages;
 		} else if (message == 0x4B2) {
-			wchar_t const *text = data->Wide.text;
+			wchar_t const *text = data->text;
 			wchar_t const *new_text = (wchar_t const *)lparam;
 			bool both = text != NULL || new_text != NULL;
 			bool added = text == NULL && new_text != NULL;
 			bool removed = text != NULL && new_text == NULL;
 			bool changed = added || removed || (both && wcscmp(text, new_text) != 0);
 			data->Set_Text((wchar_t const *)lparam);
-			data->Wide.hasText = 0;
+			data->hasText = 0;
 			if (changed && YR_REC_70(data) == 1 && YR_REC_A8(data)) {
 				KillTimer(window, 0);
 				YR_REC_A8(data) = 0;
@@ -565,7 +467,7 @@ after_messages:
 					if (ODTooltip.isActive && ODTooltip.isHidden != 1 && ODTooltip.background != NULL) {
 						Rect drect = ODTooltip.bounds;
 						Rect srect(0, 0, ODTooltip.bounds.Width, ODTooltip.bounds.Height);
-						DAT_00887308->Blit_From(drect, *ODTooltip.background, srect, false, true);
+						VisibleSurface->Blit_From(drect, *ODTooltip.background, srect, false, true);
 						ODTooltip.isHidden = true;
 						show_tooltip = TRUE;
 					}
@@ -696,7 +598,7 @@ after_proc:
 			destroydata->cachedSurface = NULL;
 			CachedSurfaceCount--;
 		}
-		FUN_00610570(window, 0);
+		ODRemoveFromDict(window, 0);
 	}
 
 cleanup:
@@ -718,11 +620,11 @@ cleanup:
 						// update now, children included, so the copy below shows the strip with them.
 						UpdateWindow(window);
 					}
-					DAT_00887308->Lock();
+					VisibleSurface->Lock();
 					AlternateSurface->Lock();
-					DAT_00887308->Blit_From(destination, *AlternateSurface, whole, false, true);
+					VisibleSurface->Blit_From(destination, *AlternateSurface, whole, false, true);
 					AlternateSurface->Unlock();
-					DAT_00887308->Unlock();
+					VisibleSurface->Unlock();
 					ArrayList<HWND> children;
 					EnumChildWindows(window, (WNDENUMPROC)ODAddWindowToList, (LPARAM)&children);
 					HWND child = NULL;
@@ -737,11 +639,11 @@ cleanup:
 						FUN_0072AA10(&source, -1, -1);
 						FUN_0072AA10(&destination, -1, -1);
 					}
-					DAT_00887308->Lock();
+					VisibleSurface->Lock();
 					AlternateSurface->Lock();
-					DAT_00887308->Blit_From(destination, *AlternateSurface, source, false, true);
+					VisibleSurface->Blit_From(destination, *AlternateSurface, source, false, true);
 					AlternateSurface->Unlock();
-					DAT_00887308->Unlock();
+					VisibleSurface->Unlock();
 				}
 			}
 			min_update_rect.x = 0xFFFFFF;
@@ -770,8 +672,8 @@ cleanup:
 // A disabled shape button's text takes the side's colour (txtlabel2.cpp's RGBs, through the
 // hicolor format). Message 0x4DC flashes the button (+0xC4) by a one-second timer toggling the
 // lit flag (+0xC5); a press plays GUIMainButtonSound. The button state is +0xE8.
-#define YR_REC_FLASH(data) ((data)->Dialog.reservedBE[0xC4 - 0xBE])
-#define YR_REC_LIT(data) ((data)->Dialog.reservedBE[0xC5 - 0xBE])
+#define YR_REC_FLASH(data) ((data)->ButtonTimerActive)
+#define YR_REC_LIT(data) ((data)->ButtonAlternateFrame)
 namespace OwnerDraw {
 ConvertClass * GetSmallButtonAnimConvert(void);
 ConvertClass * GetSideButtonConvert(void);
@@ -788,220 +690,6 @@ extern RGBClass DAT_00B0F9FC;
 extern RGBClass DAT_00B0FB14;
 extern RGBClass DAT_00B0FB19;
 extern RGBClass DAT_00B0FA94;
-
-static unsigned YR_Hicolor_Text_Color(RGBClass const & rgb)
-{
-	RGBClass shown = DSurface::Deconstruct_Hicolor_Pixel((unsigned short)DSurface::Build_Hicolor_Pixel(rgb));
-	return 0x02000000 | (shown.Get_Blue() << 16) | (shown.Get_Green() << 8) | shown.Get_Red();
-}
-
-LRESULT CALLBACK OwnerDraw::OwnerDrawButtonHandler(HWND window, UINT message, WPARAM wparam, LPARAM lparam)
-{
-	static char _prev_state = 'u';
-
-	WNDPROC proc = NULL;
-	DialogProcs.getValue(window, proc);
-
-	RECT drect;
-	memset(&drect, 0, sizeof(drect));
-	Get_Display_Rect(window, &drect);
-	Rect origin(drect.left, drect.top, drect.right - drect.left, drect.bottom - drect.top);
-
-	RECT crect;
-	memset(&crect, 0, sizeof(crect));
-	GetClientRect(window, &crect);
-
-	WinData *data = Find_Data(window);
-	if (data == NULL) {
-		return CallWindowProc(proc, window, message, wparam, lparam);
-	}
-	int state = data->DrawItem.itemState;
-	// NATIVE (lane C23, as RA2's Paint_Button, link/behaviour_m14_ownerdraw.cpp): the port's Win32 layer
-	// sends no WM_DRAWITEM, so a held button is also the button's own BST_PUSHED (BM_GETSTATE bit 2):
-	// the menu buttons' pressed frame, the one-game toggle's among them.
-	if (message == WM_PAINT && (CallWindowProc(proc, window, BM_GETSTATE, 0, 0) & BST_PUSHED)) state |= 1;
-	LONG style = GetWindowLong(window, GWL_STYLE);
-
-	switch (message) {
-	case WM_ACTIVATE:
-	case WM_KILLFOCUS:
-	case WM_MOUSEACTIVATE:
-		return 0;
-
-	case WM_TIMER:
-		YR_REC_LIT(data) = !YR_REC_LIT(data);
-		InvalidateRect(window, NULL, TRUE);
-		break;
-
-	case WM_LBUTTONDOWN:
-	case WM_LBUTTONDBLCLK:
-		if (data->ScrollBar.skipDraw) {
-			return 0;
-		}
-		VocClass::PlayGlobal(Rule->GUIMainButtonSound, 1.0f, 0x2000);
-		break;
-
-	case 0x4DC:
-		data = Find_Data(window);
-		if (lparam == 1) {
-			if (!YR_REC_FLASH(data)) {
-				YR_REC_FLASH(data) = 1;
-				SetTimer(window, 0, 1000, NULL);
-			}
-		} else if (YR_REC_FLASH(data)) {
-			YR_REC_FLASH(data) = 0;
-			YR_REC_LIT(data) = 0;
-			KillTimer(window, 0);
-			InvalidateRect(window, NULL, TRUE);
-		}
-		break;
-
-	case WM_PAINT: {
-		if (data->ScrollBar.skipDraw) {
-			ValidateRect(window, NULL);
-			return 0;
-		}
-		Rect rect = origin;
-		unsigned color = PrimaryTextColor;
-
-		if (data->cachedSurface == NULL) {
-			Surface *surface = new BSurface(crect.right + 1, crect.bottom + 1, 2);
-			data->cachedSurface = surface;
-			CachedSurfaceCount++;
-			Rect dest(0, 0, crect.right + 1, crect.bottom + 1);
-			Rect src(drect.left, drect.top, crect.right + 1, crect.bottom + 1);
-			surface->Blit_From(dest, *AlternateSurface, src);
-		}
-
-		int kind = data->Dialog.LayoutBand;
-		if (kind != 0) {
-			ConvertClass *convert = NULL;
-			SHPStruct *shape = NULL;
-			int frame = 0;
-			if (kind == 1) {
-				convert = GetSmallButtonAnimConvert();
-				shape = SmallButtonAnimShape;
-				frame = (state & 1) ? 4 : (YR_REC_LIT(data) ? 3 : 2);
-			} else if (kind == 2) {
-				convert = GetSideButtonConvert();
-				shape = SideButtonShape;
-				frame = (state & 1) ? 1 : (YR_REC_LIT(data) ? 2 : 0);
-			} else if (kind == 3) {
-				convert = FUN_0072B050();
-				shape = CloseButtonShape;
-				frame = (state & 1) ? 1 : (YR_REC_LIT(data) ? 2 : 0);
-			}
-			if (style & WS_DISABLED) {
-				if (Session.FUN_0069BBE0()) {
-					if (Scen->PlayerSideIndex == 0) {
-						color = YR_Hicolor_Text_Color(DAT_00B0F9FC);
-					} else if (Scen->PlayerSideIndex == 1) {
-						color = YR_Hicolor_Text_Color(DAT_00B0FB14);
-					} else {
-						color = YR_Hicolor_Text_Color(DAT_00B0FB19);
-					}
-				} else {
-					color = YR_Hicolor_Text_Color(DAT_00B0FA94);
-				}
-			}
-			Point2D point = FUN_0072A9C0(&rect);
-			Rect clip = AlternateSurface->Get_Rect();
-			if (convert != NULL && shape != NULL) {
-				Draw_Shape(*AlternateSurface, *convert, (ShapeSet const *)shape, frame, point, clip, SHAPE_WIN_REL);
-			}
-		} else if (data->image != NULL) {
-			Surface *image = data->image;
-			if ((state & 1) && data->altImage != NULL) {
-				image = data->altImage;
-			}
-			Rect src(0, 0, rect.Width, rect.Height);
-			AlternateSurface->Blit_From(rect, *image, src);
-		} else {
-			char updown = (state & 1) ? 'd' : 'u';
-			if (style & WS_DISABLED) {
-				updown = 'u';
-			} else if (updown == 'd' && _prev_state == 'u') {
-				VocClass::PlayGlobal(Rule->GenericClick, 1.0f, 0x2000);
-			}
-			_prev_state = updown;
-
-			int widths[2] = {7, 7};
-			int margins[2] = {10, 10};
-			int heights[2] = {24, 30};
-			int index = 0;
-			for (unsigned int i = 0; i < 2; i++) {
-				if (heights[i] > rect.Height && i != 0) {
-					break;
-				}
-				index = i;
-			}
-			int height = heights[index];
-			int w = widths[index];
-			int margin = margins[index];
-
-			if (data->cachedSurface != NULL) {
-				Rect cachesrc(0, 0, crect.right + 1, crect.bottom + 1);
-				Rect cachedest(drect.left, drect.top, crect.right + 1, crect.bottom + 1);
-				AlternateSurface->Blit_From(cachedest, *data->cachedSurface, cachesrc);
-				InvalidateRect(window, NULL, FALSE);
-			}
-
-			origin.Y += (rect.Height - height) / 2;
-			if (state & 1) {
-				origin.Y += 2;
-			}
-
-			Rect destrect;
-			Rect sourcerect;
-			char buffer[40];
-			Surface *image;
-
-			sprintf(buffer, "b%c%c_li%d.pcx", updown, 'e', height);
-			image = SurfaceCache.GetSurface(buffer);
-			origin.Height = image->Get_Height();
-			destrect = origin;
-			destrect.Width = w;
-			destrect.Height = height;
-			sourcerect = Rect(0, 0, w, height);
-			AlternateSurface->Blit_From(destrect, *image, sourcerect);
-
-			sprintf(buffer, "b%c%c_mi%d.pcx", updown, 'e', height);
-			image = SurfaceCache.GetSurface(buffer);
-			Rect midrect = origin;
-			midrect.X += w;
-			midrect.Width -= margin;
-			midrect.Height = image->Get_Height();
-			SurfaceCache.Draw(midrect, *AlternateSurface, *image, 0, 0);
-
-			sprintf(buffer, "b%c%c_ri%d.pcx", updown, 'e', height);
-			image = SurfaceCache.GetSurface(buffer);
-			destrect = origin;
-			destrect.X += origin.Width - margin;
-			destrect.Width = margin;
-			destrect.Height = image->Get_Height();
-			sourcerect = Rect(0, 0, destrect.Width, destrect.Height);
-			AlternateSurface->Blit_From(destrect, *image, sourcerect);
-		}
-
-		if (data->image == NULL && data->Wide.text != NULL) {
-			RECT client;
-			GetClientRect(window, &client);
-			Rect text_rect(origin.X, origin.Y + 1, origin.Width + origin.X - 2, origin.Height + origin.Y);
-			if (state & 1) {
-				text_rect.X += 2;
-				text_rect.Y += 4;
-			}
-			DrawWideText(AlternateSurface, data->Wide.text, (LTRBStruct *)&text_rect, data->Wide.font, color, 5, 0xC, 0, 0, 0);
-		}
-		if (data->Dialog.LayoutBand == 0 && (style & WS_DISABLED)) {
-			FUN_00621B80(&rect, AlternateSurface, 0, 128);
-		}
-		ValidateRect(window, NULL);
-		return 0;
-	}
-	}
-	return CallWindowProc(proc, window, message, wparam, lparam);
-}
 
 // OwnerDraw::StaticHandler, YR 0x006153E0 (4,032 bytes, unmatched in ra2-decomp; RA2 counterpart
 // 0x005F2B50, whose behaviour rewrite in native/link/behaviour_m14_ownerdraw.cpp follows its
@@ -1020,371 +708,17 @@ LRESULT CALLBACK OwnerDraw::OwnerDrawButtonHandler(HWND window, UINT message, WP
 #include "movies.h"
 #include "shapeset.h"
 void FUN_004068E0(char const *format, ...);
-#define YR_REC(type, data, off) (*(type *)((char *)&(data)->Dialog + (off) - 0x28))
+#define YR_REC(type, data, off) (*(type *)Yr_WinData_Field((data), (off)))
 namespace OwnerDraw { extern int DisabledTextColor; }
 int Control_Volume(HWND dialog, HWND control);
 MovieHandle * __fastcall OwnerDraw_InitMovieHandle(char const * name, Surface * surface, Rect * bounds);
 extern DynamicVectorClass<char const *> Movies;
 
 namespace {
-struct YRStaticPointers {
-	HWND Window;
-	MovieHandle *Movie;           // +0x58
-	MovieHandle *Second;          // +0x60
-	ConvertClass *Drawer;         // +0x74
-	void const *Shape;            // +0x78
-	HWND Notify;                  // +0xA4
-};
-YRStaticPointers YRStatics[256];
-YRStaticPointers &YR_Static(HWND window)
-{
-	YRStaticPointers *free_slot = NULL;
-	for (int index = 0; index < ARRAY_SIZE(YRStatics); index++) {
-		if (YRStatics[index].Window == window) {
-			return YRStatics[index];
-		}
-		if (YRStatics[index].Window == NULL && free_slot == NULL) {
-			free_slot = &YRStatics[index];
-		}
-	}
-	if (free_slot == NULL) {
-		free_slot = &YRStatics[0];
-	}
-	memset(free_slot, 0, sizeof(*free_slot));
-	free_slot->Window = window;
-	return *free_slot;
-}
-
-void YR_Static_Release_Movies(HWND window, YRStaticPointers &extra)
-{
-	if (extra.Movie != NULL) {
-		delete extra.Movie;
-		extra.Movie = NULL;
-	}
-	KillTimer(window, 0x65);
-	if (extra.Second != NULL) {
-		delete extra.Second;
-		extra.Second = NULL;
-	}
-}
-
-void YR_Static_Start_Movie(HWND window, YRStaticPointers &extra, char const *name)
-{
-	YR_Static_Release_Movies(window, extra);
-	RECT area;
-	Get_Display_Rect(window, &area);
-	extra.Movie = OwnerDraw_InitMovieHandle(name, AlternateSurface, NULL);
-	if (extra.Movie != NULL) {
-		extra.Movie->SetPosition(area.left, area.top);
-		MoveWindow(window, area.left, area.top, extra.Movie->Width, extra.Movie->Height, FALSE);
-		SetTimer(window, 0x65, 0x22, NULL);
-	}
-}
-
 unsigned short YR_Hicolor(unsigned color)
 {
 	return (unsigned short)DSurface::Build_Hicolor_Pixel(color & 0xFF, (color >> 8) & 0xFF, (color >> 16) & 0xFF);
 }
-}
-
-LRESULT CALLBACK OwnerDraw::StaticHandler(HWND window, UINT message, WPARAM wparam, LPARAM lparam)
-{
-	WinData *data = Find_Data(window);
-	if (data == NULL) {
-		return 0;
-	}
-	YRStaticPointers &extra = YR_Static(window);
-
-	switch (message) {
-	case WM_DESTROY:
-		if (data->cachedSurface != NULL) {
-			delete data->cachedSurface;
-			data->cachedSurface = NULL;
-		}
-		if (YR_REC(bool, data, 0x7C)) {
-			delete (char *)extra.Shape;
-			extra.Shape = NULL;
-		}
-		if ((YR_REC(int, data, 0x70) == 1 && YR_REC(bool, data, 0xA8)) || YR_REC(int, data, 0x70) == 4) {
-			KillTimer(window, 0);
-		}
-		YR_Static_Release_Movies(window, extra);
-		{
-			WNDPROC proc = NULL;
-			DialogProcs.getValue(window, proc);
-			LRESULT result = CallWindowProc(proc, window, message, wparam, lparam);
-			extra.Window = NULL;
-			return result;
-		}
-
-	case WM_MOVE:
-	case WM_SIZE:
-	case WM_WINDOWPOSCHANGED:
-		if (data->cachedSurface != NULL) {
-			delete data->cachedSurface;
-		}
-		data->cachedSurface = NULL;
-		InvalidateRect(window, NULL, FALSE);
-		return 0;
-
-	case WM_PAINT: {
-		if (data->ScrollBar.skipDraw || extra.Movie != NULL) {
-			ValidateRect(window, NULL);
-			return 0;
-		}
-		RECT client;
-		if (data->cachedSurface == NULL) {
-			RECT where;
-			Get_Display_Rect(window, &where);
-			GetClientRect(window, &client);
-			int width = client.right + 1;
-			int height = client.bottom + 1;
-			data->cachedSurface = new BSurface(width, height, 2);
-			CachedSurfaceCount++;
-			data->cachedSurface->Blit_From(Rect(0, 0, width, height), *AlternateSurface, Rect(where.left, where.top, width, height), false, true);
-		}
-		RECT area;
-		Get_Display_Rect(window, &area);
-		if (YR_REC(bool, data, 0xB4)) {
-			AlternateSurface->Fill_Rect(Rect(area.left, area.top, area.right - area.left, area.bottom - area.top), YR_Hicolor(YR_REC(unsigned, data, 0xB8)));
-		}
-		int kind = YR_REC(int, data, 0x70);
-		if (kind == 0 || kind == 1) {
-			if (data->Wide.text != NULL && (kind == 0 || YR_REC(bool, data, 0xA8))) {
-				LONG style = GetWindowLong(window, GWL_STYLE);
-				int flags = (style & SS_CENTER) ? 0x11 : ((style & SS_RIGHT) ? 0x12 : 0x10);
-				unsigned color = (style & WS_DISABLED) ? DisabledTextColor : YR_REC(unsigned, data, 0xEC);
-				DrawWideText(AlternateSurface, data->Wide.text, (LTRBStruct *)&area, data->Wide.font, color, flags,
-					YR_REC(int, data, 0xAC), 0, YR_REC(int, data, 0x80), YR_REC(int, data, 0x8C));
-				if (YR_REC(int, data, 0x90) != -1) {
-					VocClass::PlayGlobal(YR_REC(int, data, 0x90), 1.0f, 0x2000);
-				}
-				if (kind == 1) {
-					int length = wcslen(data->Wide.text) + 1 + YR_REC(int, data, 0x8C);
-					if (YR_REC(int, data, 0x80) < length) {
-						YR_REC(int, data, 0x80) += YR_REC(int, data, 0x88);
-						if (YR_REC(int, data, 0x80) >= length) {
-							KillTimer(window, 0);
-						}
-					}
-				}
-			}
-		} else if ((kind == 2 || kind == 3 || kind == 4) && (int)(GetTickCount() - YR_REC(unsigned, data, 0x9C)) > YR_REC(int, data, 0xA0)) {
-			Rect to(area.left, area.top, area.right - area.left, area.bottom - area.top);
-			GetClientRect(window, &client);
-			Rect from(client.left, client.top, client.right - client.left, client.bottom - client.top);
-			AlternateSurface->Blit_From(to, *data->cachedSurface, from, false, true);
-			if (kind == 2) {
-				Surface *image = data->image;
-				if (image != NULL) {
-					int width = image->Get_Width();
-					int height = image->Get_Height();
-					Rect at = to;
-					if (to.Width > width) {
-						at.Width = width;
-						at.X = to.X + (to.Width - width) / 2;
-					}
-					if (to.Height > height) {
-						at.Height = height;
-						at.Y = to.Y + (to.Height - height) / 2;
-					}
-					SurfaceCache.DrawTrans(at, *AlternateSurface, *image, (short)YR_Hicolor(0xFF00FF));
-				}
-			} else if (extra.Shape != NULL) {
-				ShapeSet const *shape = (ShapeSet const *)extra.Shape;
-				int frame = YR_REC(int, data, 0x98);
-				Point2D at(to.X, to.Y);
-				if (shape->Get_Height() < to.Height) {
-					at.Y = to.Y + (to.Height - shape->Get_Height()) / 2;
-				}
-				if (shape->Get_Width() < to.Width) {
-					at.X = to.X + (to.Width - shape->Get_Width()) / 2;
-				}
-				Rect clip = AlternateSurface->Get_Rect();
-				Draw_Shape(*AlternateSurface, *extra.Drawer, (ShapeSet const *)shape, frame, at, clip, SHAPE_WIN_REL);
-				if (kind == 4 && YR_REC(bool, data, 0xA8)) {
-					int next = frame + 1;
-					if (next >= YR_REC(int, data, 0x94)) {
-						next = 0;
-					}
-					YR_REC(int, data, 0x98) = next;
-					if (extra.Notify != NULL) {
-						SendMessage(extra.Notify, 0x4D8, next, (LPARAM)window);
-					}
-				}
-			}
-		}
-		ValidateRect(window, NULL);
-		return 0;
-	}
-
-	case WM_TIMER:
-		if (wparam == 0x65) {
-			if (extra.Movie == NULL) {
-				return 0;
-			}
-			if (extra.Movie->AdvanceFrame()) {
-				InvalidateRect(window, NULL, FALSE);
-			}
-			if (!extra.Movie->FramesLeft()) {
-				return 0;
-			}
-			if (YR_REC(int, data, 0x5C)) {
-				extra.Movie->SeekToFrame(1);
-				FUN_004068E0("Movie looped\n");
-				return 0;
-			}
-			YR_Static_Release_Movies(window, extra);
-			return 0;
-		} else {
-			int kind = YR_REC(int, data, 0x70);
-			if (kind == 1) {
-				InvalidateRect(window, NULL, TRUE);
-				return 0;
-			}
-			bool reveal = kind == 2 || kind == 3;
-			if (!reveal && kind != 4) {
-				return 0;
-			}
-			if ((int)(GetTickCount() - YR_REC(unsigned, data, 0x9C)) <= YR_REC(int, data, 0xA0)) {
-				return 0;
-			}
-			if (reveal || YR_REC(bool, data, 0xA8)) {
-				InvalidateRect(window, NULL, TRUE);
-				if (reveal) {
-					KillTimer(window, 0);
-					return 0;
-				}
-			}
-			if (YR_REC(int, data, 0x94) != 0) {
-				return 0;
-			}
-			KillTimer(window, 0);
-			if (extra.Shape == NULL) {
-				return 0;
-			}
-			int frames = ((ShapeSet const *)extra.Shape)->Get_Count();
-			YR_REC(int, data, 0x94) = frames;
-			SetTimer(window, 0, frames, NULL);
-			return 0;
-		}
-
-	case 0x497: {
-		HWND parent = GetParent(window);
-		YR_REC(int, data, 0x70) = 0;
-		GetDlgCtrlID(window);
-		YR_REC(int, data, 0xAC) = 0xC;
-		YR_REC(unsigned, data, 0xEC) = PrimaryTextColor;
-		(void)parent;
-		return 0;
-	}
-
-	case 0x498:
-		if ((unsigned)lparam != YR_REC(unsigned, data, 0xEC)) {
-			InvalidateRect(window, NULL, FALSE);
-		}
-		YR_REC(unsigned, data, 0xEC) = ((int)lparam == -1) ? PrimaryTextColor : (unsigned)lparam;
-		return 0;
-
-	case 0x4B1:
-		YR_REC(bool, data, 0xB4) = true;
-		YR_REC(unsigned, data, 0xB8) = (unsigned)lparam;
-		return 0;
-
-	case 0x4B2:
-	case 0x4B4:
-		if (data->cachedSurface != NULL) {
-			RECT where;
-			Get_Display_Rect(window, &where);
-			RECT inner;
-			GetClientRect(window, &inner);
-			int width = inner.right + 1;
-			int height = inner.bottom + 1;
-			AlternateSurface->Blit_From(Rect(where.left, where.top, width, height), *data->cachedSurface, Rect(0, 0, width, height), false, true);
-			InvalidateRect(window, NULL, FALSE);
-		}
-		return 1;
-
-	case 0x4D3:
-		if (extra.Shape == NULL || YR_REC(int, data, 0x70) != 4 || YR_REC(bool, data, 0xA8)) {
-			return 0;
-		}
-		YR_REC(bool, data, 0xA8) = true;
-		SetTimer(window, 0, Control_Volume(GetParent(window), window), NULL);
-		return 0;
-
-	case 0x4D4:
-		if (YR_REC(int, data, 0x70) == 4 && YR_REC(bool, data, 0xA8)) {
-			KillTimer(window, 0);
-			YR_REC(bool, data, 0xA8) = false;
-		}
-		return 0;
-
-	case 0x4D5:
-		if (YR_REC(int, data, 0x70) == 4) {
-			YR_REC(int, data, 0x98) = (int)lparam;
-			InvalidateRect(window, NULL, TRUE);
-		}
-		return 0;
-
-	case 0x4D6:
-		return (YR_REC(int, data, 0x70) == 4) ? YR_REC(int, data, 0x98) : -1;
-
-	case 0x4D7:
-		if (YR_REC(int, data, 0x70) == 4) {
-			extra.Notify = (HWND)lparam;
-		}
-		return 0;
-
-	case 0x4DF:
-		if ((int)wparam >= 0 && (int)wparam < Movies.Count()) {
-			YR_Static_Start_Movie(window, extra, Movies[(int)wparam]);
-		}
-		return 0;
-
-	case 0x4E0:
-		if (extra.Movie != NULL) {
-			extra.Movie->Pause(true);
-		}
-		return 0;
-
-	case 0x4E1:
-		if (extra.Movie != NULL) {
-			extra.Movie->Pause(false);
-		}
-		return 0;
-
-	case 0x4E2:
-		YR_Static_Release_Movies(window, extra);
-		return 0;
-
-	case 0x4E3:
-		YR_REC(int, data, 0x5C) = (int)wparam;
-		return 0;
-
-	case 0x4E4:
-		YR_Static_Start_Movie(window, extra, (char const *)lparam);
-		return 0;
-
-	case 0x4EE:
-		if (YR_REC(int, data, 0x70) == 1 && !YR_REC(bool, data, 0xA8)) {
-			YR_REC(bool, data, 0xA8) = true;
-			YR_REC(int, data, 0x80) = 1;
-			SetTimer(window, 0, YR_REC(int, data, 0x84), NULL);
-			InvalidateRect(window, NULL, FALSE);
-		}
-		return 0;
-
-	case 0x4F0:
-		if (extra.Movie != NULL) {
-			extra.Movie->Blit();
-		}
-		return 0;
-	}
-
-	WNDPROC proc = NULL;
-	DialogProcs.getValue(window, proc);
-	return CallWindowProc(proc, window, message, wparam, lparam);
 }
 
 // OwnerDraw::ResetControlDrawModeAndTimerProc, YR 0x0060A5B0 (1,184 bytes, unmatched in
@@ -1433,7 +767,7 @@ bool YR_Animated_Dialog(int type)
 int YR_Dialog_Type(HWND dialog)
 {
 	OwnerDraw::WinData *data = Find_Data(dialog);
-	return (data != NULL) ? data->Dialog.DialogID : 0;
+	return (data != NULL) ? data->DialogID : 0;
 }
 
 // Play_Control_Sound (0x006035F0): the drawer of the control's animation.
@@ -1537,11 +871,10 @@ BOOL CALLBACK OwnerDraw::ResetControlDrawModeAndTimerProc(HWND window, LPARAM lp
 			goto timer;
 		}
 		YR_REC(int, data, 0x70) = 4;
-		YRStaticPointers &extra = YR_Static(window);
-		if (extra.Shape == NULL) {
+		if (data->StaticShape == NULL) {
 			bool allocated = false;
-			extra.Drawer = YR_Control_Drawer(parent, window);
-			extra.Shape = YR_Control_Shape(parent, window, allocated);
+			data->StaticShapeDrawer = YR_Control_Drawer(parent, window);
+			data->StaticShape = (ShapeSet *)YR_Control_Shape(parent, window, allocated);
 			YR_REC(bool, data, 0x7C) = allocated;
 		}
 	}
@@ -1556,9 +889,8 @@ timer:
 			YR_REC(bool, data, 0xA8) = true;
 		}
 	} else if (animated) {
-		YRStaticPointers &extra = YR_Static(window);
-		if (extra.Shape != NULL) {
-			YR_REC(int, data, 0x94) = ((ShapeSet const *)extra.Shape)->Get_Count();
+		if (data->StaticShape != NULL) {
+			YR_REC(int, data, 0x94) = ((ShapeSet const *)data->StaticShape)->Get_Count();
 			YR_REC(bool, data, 0xA8) = false;
 		}
 	}
@@ -1701,69 +1033,6 @@ void __fastcall FUN_0060B550(HWND window);
 void __fastcall FUN_0060B610(HWND window);
 void __fastcall FUN_0060B7A0(HWND window);
 bool Is_Owner_Draw_Message(unsigned int msg);
-
-BOOL CALLBACK FUN_0060C0C0(HWND window, LPARAM lparam)
-{
-	HWND parent = GetParent(window);
-	if (OwnerDraw::CurrentDialogHwnd != parent) {
-		return TRUE;
-	}
-	Point2D const &offset = *(Point2D const *)lparam;
-
-	Rect rect(0, 0, 0, 0);
-	if (FUN_00608500(parent, window, &rect)) {
-		FUN_0060AF50(window, (RECT *)&rect);
-		FUN_0060B950(window);
-		return TRUE;
-	}
-	bool owner_drawn = (GetWindowLong(window, GWL_STYLE) & BS_OWNERDRAW) == BS_OWNERDRAW;
-	OwnerDraw::WinData *data = Find_Data(window);
-	if (owner_drawn && data != NULL && data->Dialog.ControlType == 0 && FUN_00608CD0(parent, window)) {
-		FUN_0060B000(window, offset);
-		FUN_0060B950(window);
-		return TRUE;
-	}
-	if (FUN_00608CD0(parent, window)) {
-		FUN_0060B1D0(window, offset);
-		FUN_0060B950(window);
-		return TRUE;
-	}
-	data = Find_Data(window);
-	if (owner_drawn && data != NULL && data->Dialog.ControlType == 0 && FUN_00609730(parent, window)) {
-		FUN_0060B350(window);
-		FUN_0060B950(window);
-		return TRUE;
-	}
-	if (FUN_00609730(parent, window)) {
-		FUN_0060B420(window);
-		FUN_0060B950(window);
-		return TRUE;
-	}
-	int type = YR_Dialog_Type(parent);
-	int id = GetDlgCtrlID(window);
-	if (Is_Owner_Draw_Message(type) && id == 0x695) {
-		FUN_0060B550(window);
-		FUN_0060B950(window);
-		return TRUE;
-	}
-	if (type == 0xE2 && id == 0x71D) {
-		FUN_0060B610(window);
-		FUN_0060B950(window);
-		return TRUE;
-	}
-	if (YR_IN(type, 0xB7, 0x2B4, 0xBBB, 0xF5, 0x2B5, 0xB8, 0xA3, 0xB6, 0x10C, 0x73, 0xFF, 0xEA)) {
-		FUN_0060B7A0(window);
-		FUN_0060B950(window);
-		return TRUE;
-	}
-	RECT parent_rect;
-	RECT where;
-	GetWindowRect(GetParent(window), &parent_rect);
-	GetWindowRect(window, &where);
-	MoveWindow(window, where.left - parent_rect.left, where.top - parent_rect.top, where.right - where.left, where.bottom - where.top, FALSE);
-	FUN_0060B950(window);
-	return TRUE;
-}
 
 // DrawCampaignMenuTransition, YR 0x006071E0 (3,553 bytes, unmatched in ra2-decomp): slides the
 // dialog's frame pieces in (reverse) or out, one piece after another, then tells the dialog 0x4EC
@@ -1990,14 +1259,14 @@ void __fastcall DrawCampaignMenuTransition(HWND dialog, bool reverse)
 				YR_Draw_Piece(drawer_c, shape_main, phase * dir + base_main, point, window);
 			}
 		}
-		DAT_00887308->Lock();
+		VisibleSurface->Lock();
 		AlternateSurface->Lock();
-		DAT_00887308->Blit_From(to, *AlternateSurface, from, false, true);
+		VisibleSurface->Blit_From(to, *AlternateSurface, from, false, true);
 		if (has_d7) {
-			DAT_00887308->Blit_From(to_main, *AlternateSurface, from_main, false, true);
+			VisibleSurface->Blit_From(to_main, *AlternateSurface, from_main, false, true);
 		}
 		AlternateSurface->Unlock();
-		DAT_00887308->Unlock();
+		VisibleSurface->Unlock();
 		FUN_00406F70();
 		Sleep(30);
 	}
