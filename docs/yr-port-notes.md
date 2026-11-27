@@ -2184,3 +2184,103 @@ bridge-repair and deployers pass.
 there), FootClass::Active_Click_With (Get_Height_AGL, FUN_0056D100), MapClass::Set_Map_Dimensions (FUN_00588C10,
 HouseClass::FUN_0050D250), Fly/Mech locomotors and Spark_Behavior_AI, the drafts with no address found, and Exit_Object's
 infantry move-after-Unlimbo noted above.
+
+## Lane P64 (2026-11-27): the vendor pin moved to ra2-decomp ac45ee9e; glue drafts retired where upstream matches
+
+**New pin.** `vendor/ra2-decomp` is gibbo101/ra2-decomp `ac45ee9ec1dc44ae2a9c54e37570c25de0fea994` (27 Nov, 909 commits after
+`8719494727`), copied by `tools/update_yr_vendor.sh` from redalert2-decomp `c768a31a42` (its `yr/ra2-decomp`, archived unchanged
+from the local reference clone; on redalert2-decomp main since f31bb57b0b). `vendor/tibsun` is unchanged (upstream's
+`TIBSUN_COMMIT` is still `dbfbfbf`). New upstream text includes `src/ra2asm/*.asm` (MASM, not built natively). Licences
+unchanged (GPL-3.0-or-later with EA's section 7 terms; `data/` MIT); THIRD_PARTY.md updated.
+
+**What upstream still lacks.** `data/functions.csv` lists 20,386 functions; the manifest matches 19,326. Of the 1,060
+unmatched, 1,033 are library code (CRT, MFC-style helpers: `data/library.csv`), so **27 game functions** are unmatched (the
+README's "19,326 of 19,353"), 6 of them "reconstructed" (`data/reconstructed.csv`: 0x0047EFE0 Draw_Shroud_Or_Fog_Shape,
+0x00492830 BlitTransLucent50::BlitForward, and four TibSun asm routines). The other 21: 0x00443C60, 0x00481180
+CellClass::FindInfantrySubposition, 0x004BC750, 0x00547CF0, 0x00565C10 MapClass::Set_Map_Dimensions, 0x0056D100
+MapClass::Is_Same_Cell_Zone, 0x0058D620, 0x005981F0, 0x00598960 MapGeneratorClass::Generate_Random_Map, 0x0060A5B0
+OwnerDraw::ResetControlDrawModeAndTimerProc, 0x0060B950, 0x00610CA0 OwnerDraw::DefaultHandler, 0x00617250
+OwnerDraw::ComboBoxHandler, 0x00618D40 OwnerDraw::ListBoxHandler, 0x0064BDD0 (Extract_Compressed_Events), 0x006D3D10
+TacticalClass::Render, 0x006D7F20, 0x0075AEC0, 0x00789B60, 0x007BAB90, 0x007BB350. Upstream carries markerless drafts of
+some of them (Set_Map_Dimensions, Generate_Random_Map, ListBoxHandler); the port removes those (fixups.json regex rows) and
+keeps its own, which the played checks have run on.
+
+**Retired** (the draft removed, upstream's matched function used; each checked twice: clang's redefinition of the name in
+the unit, and the address in `data/manifest.csv`). 152 functions; 37 glue files deleted outright (`ahandle2`, `alphashp`,
+`astar`, `bounce`, `builtype`, `bullet`, `combat`, `credits`, `fire_at`, `fly`, `hover`, `infantry`, `init_game`,
+`ionblast`, `ipxmgr`, `ldprgmgr`, `link2`, `mech`, `partsys`, `pcx`, `progress`, `radar`, `radbeam`, `rocket`,
+`scenario`, `slavemanager`, `srfcache`, `startup_winmain`, `team`, `techno`, `techtype`, `ui_register`, `vanim`,
+`wave`, and the emptied helpers):
+
+| Glue | Retired |
+| --- | --- |
+| building | Do_MISSION_DECONSTRUCTION, Drop_Debris, FUN_00457DE0, Captured, Fire_Direction, Do_MISSION_UNLOAD |
+| bullet | Unlimbo, AI, Shrapnel, Projectile_Motion |
+| combat / fire_at | Explosion_Damage, DamageGroup / Railgun_Beam_Damage, TechnoClass::Fire_At |
+| display / foot / fly / mech / hover / drive / ship / rocket / walk | Set_Cursor_Pos, Mouse_Left_Up / Active_Click_With / Nearing_Target / Movement_AI / Process, While_Moving, Start_Of_Move / Draw_Matrix, While_Moving (both) / Process |
+| house | Update_Present_Super_Weapons, Can_Build, Where_To_Place_Building, AI_Build_Defense, Random_Cell_In_Zone, Fire_PsyDom |
+| infantry / unit | Assign_Destination, Per_Cell_Process / Assign_Destination, Do_MISSION_HARVEST |
+| map / map_zones | AddContentAt, Reveal, Repair_Train_Bridge, Repair_Bridge, Pick_Random_Tile_Variant / Zone_Reset, Compute_Zone_Connections, Reset_Subzone, Register_Zone_Connection_Entries, Update_Cell_Subzones, Region_Threat, Can_Repair_Bridge, Zone_Span, Subzone_Span and their pack helpers |
+| mapgen | Create_Region_From_Cell, Build_North_Ramp, Generate_Starting_Points, Place_Waterfall, Grow_Water_Region, Create_Tiberium, Generate_Rural_Roads |
+| netshare / queue | LBSaveSelections, DecodePubGameopt, FUN_005EA3E0, FUN_005EC9F0, FUN_005E6920 / Execute_DoList, Queue_AI_Multiplayer, Wait_For_Players, Draw_Sync_Bars, Game::LogFrameCRC |
+| ownrdraw (+combo, ui_register) | StandardWndProc, OwnerDrawButtonHandler, StaticHandler, FUN_0060C0C0, NewEditHandler, FUN_0060D540, UI::RegisterWindow |
+| sidebar / tactical drafts' neighbours | Reposition_Sidebar, both AI, Draw_It, Recalc, Action |
+| techno / techtype / vanim | Techno_Draw_Object, Draw_Pre_Render, Techno_Render_Voxel_Object, Draw_Health_Bar, Can_Deploy_Now, vt_entry_3D8, Draw_A_Link_To / the TechnoTypeClass constructor / the VoxelAnimClass constructor |
+| startup / init | WinMain / Init_Game, Allocate_Surfaces, ConvertClass::CreateFromFile, FUN_00534E50 |
+| planmgr / slavemanager / uicmnds / wave / vox / voxel / palette / radar / radbeam | the FUN_ drafts (FUN_0063AB60, FUN_0063A5A0, FUN_00639CB0, FUN_00637E00, FUN_0063B550, FUN_00634E10, FUN_0063C690, FUN_0063CAE0; FUN_006AF6C0, FUN_006AFD60, FUN_006B0880; FUN_00732950, FUN_00733380, FUN_007336C0; Draw_Sonic, Draw_Laser, FUN_007602E0; FUN_00752760; FUN_00754CB0; FUN_006267A0; FUN_00658330; FUN_00659AC0, FUN_00659FF0) |
+| others | FillCurrentVector, AlphaShapeClass::Draw_All, Find_Path_Regular, PlaceBeacon, BounceClass::AI, Get_Draw_Rect, Reduce_Tiberium, Graphic_Logic, Show_Who_Was_Responsible, IonBlastClass::One_Time, Service, Preview_Tile, LoadProgressManager::Draw, LineTrail, the Options dialog FUN_0055FDB0, Spark/Gas_Behavior_AI, Smoke_AI, Spark_AI, Draw_Player, Wait_For_Players_To_Load, SurfaceCache Draw/DrawMasked, SuperClass::Launch, Impatient_Click, TAction_IRON_CURTAIN, TeamClass::AI, Read_PCX_File |
+
+The YR (P5x/P6x) gamemd fixes inside retired drafts (P53 factory exit, P57 deconstruction/capture, P61 Per_Cell_Process,
+P62 hover) go with them: they brought drafts to gamemd.exe's shape, which the matched functions are by construction.
+The native-only parts of retired drafts are carried as fixups on upstream's text: the interface size's sidebar height
+(WinMain), the Enhancements button and its label (FUN_0055FDB0), the HD vehicles' owner call (Techno_Render_Voxel_Object),
+the credits' wait servicing the callback and their "credits:" log line (Show_Who_Was_Responsible), Queue five with Shift
+(StripClass::Action's PRODUCE events), the LAN CRC log in Queue_AI_Multiplayer, the -CD. disk check (Init_Game), no SEH frame
+around Main_Game. WS_Save_Dialog_Values (the old pin's name of 0x00608070, called by the Enhancements page and the network
+screens) is aliased to upstream's FUN_00608070. The divide-by-zero and bounds guards the drafts carried (AI_Build_Defense, Smoke_AI, Spark_AI, the slave
+manager's null owner, Explosion_Damage's ring bound, Bullet AI's SpawnDelay) are not carried: arm64 integer division by
+zero does not trap, and the matched code is what gamemd.exe runs.
+
+**Kept** (upstream lacks the function, or the glue is port-only): Tactical::Render and Draw_Tiles(Cell, Rect) (tactical),
+BuildingClass::Exit_Object and ForceCreate (building, with P61's fixes), OwnerDraw::DefaultHandler, ComboBoxHandler,
+ResetControlDrawModeAndTimerProc, FUN_0060B950 (ownrdraw, ported from the old pin's Dialog/Wide views to upstream's named
+WinData; the window side table for movie/shape pointers is gone, the record's members hold them), ListBoxHandler
+(ownrdraw_list; upstream's draft removed), Set_Map_Dimensions (map), Generate_Random_Map and its helpers (mapgen),
+FUN_0064BDD0 and the LAN CRC log (queue), CellClass::Draw_Shroud_Or_Fog_Shape and Closest_Free_Spot (cell), the map-zone
+helpers upstream declares but does not define, MultiplayerGameMode's base virtuals (mpgamemode: upstream matches that code
+as MultiplayerBattle's), the FUN_004E02C0 / FUN_00652540 forwarders (upstream matches them as templates the native build
+does not emit by those names), Game::CallBack, the movie and multiplayer bindings, wsproto's CRC wrappers, xsurface,
+dsurface, isotype Draw_Tile, walk Movement_AI, the ccini/uicmnds2 aliases, and every `yr_*.cpp` (step server, harness,
+platform glue, enhancements, map zoom, LAN). New: `yr_wol_globals.cpp` (storage for Westwood Online globals upstream's units
+now reference while wonline.cpp stays out), `_itow` (yr_crt), `set_control_word` (yr_asm).
+
+**fixups.json.** Dropped as fixed upstream: MouseControl[86], the Audio*Attribs pointer types, the SidebarRect DAT_ names,
+the sidebar mouse class, LightningStorm_RequestStop, WinData's raw offsets (13 rows), and the four class-array aliases in
+globals.cpp (Sides/HouseTypes/TeamTypes/TechnoTypes: upstream no longer defines the ::Array statics, so the rows left the
+vectors undefined and the house types unbuilt). Rewritten for moved text: the backdrop art (now WinData members),
+Tactical::DrawTimer, Change_Display_Mode, Ingame_Menu_Dialog, the score sort, the progress unit. New for clang: explicit
+specializations declared before use (map.cpp, srfcache.cpp), WideWstring::truncate's 64-bit WPARAM, INVOKE_YR's case values.
+globals.tsv gains the addresses of names upstream introduced (CameoDrawer, Keys, NoExceptionHandler, the Drive/Tunnel
+locomotor CLSIDs, ...); name_aliases.tsv binds Main_Game's Init_Game(argc, argv) to Init_Game(void). The link closure
+went from 89 to 88 undefined symbols; the new ones are Westwood Online functions only.
+
+**Pointer width in newly matched code.** The tests found upstream functions that keep pointers in 32-bit ints: the
+techno-list helpers' callback context (uicmnds.cpp, type select) and the sonic wave's depth-buffer address (wave.cpp,
+stand-ins and the Allied 5 / Soviet 6 soaks); both are fixups now. One is still open: OwnerDraw's combo drop-down procedure
+FUN_0060D540 (matched upstream, the port's draft retired) faults on a cut pointer (+3752) in yr-native-interface-size's
+1.5x run.
+
+**Checks** (Mac, -j4). Pass: skirmish-smoke, -score, -long, save, original-layouts, member-aliases (table regenerated),
+map-zoom, zoom-abort, end-banner, hd-vehicles, combat, controls, graphics, touch-team, type-select, command-bar-thumb,
+locked-input, standins, standins-triggers, war-factory, robot-tank, tank-bunker, slave-miner, grinder, factory-exits,
+garrison, mirage, deployers, building-anims, bridge-repair, keys-load, save-dialog, choose-map, skirmish-layout,
+planning-click, window-resize, lan-lobby, campaign-allied, campaign-crash-all05, mission-soak-yr-allied and -soviet; ra2-quick
+15/15. Fail: interface-size (FUN_0060D540, above), planning (planning mode's node placement and pick-up: the matched planning
+mouse handlers FUN_0063AB60/FUN_0063A5A0 replaced the port's drafts and the harness reads no nodes; not yet traced),
+campaign-soviet (rerun pending after the credits log row; the Allied chain passes with it). ubsan labels not run.
+
+**Won replays** (not re-recorded; a campaign lane re-records them): all01 lost at tick 186481 (P61's ore-damage removal,
+as P61 expected); all03, all05, sov02 and sov03 reach their recorded win tick without the game ending (no game over; no
+crash, no fault). P61 expected all01 and all03 to fail; all05, sov02 and sov03 now diverge too, which the pin move explains
+(152 drafts replaced by matched code changes the simulation); none showed a crash.
+
