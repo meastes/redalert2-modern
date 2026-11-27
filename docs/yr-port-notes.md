@@ -2013,3 +2013,37 @@ tree's other names for one function (aliases, data/name_aliases.tsv). Left for l
 | ParticleClass::Spark_Behavior_AI | 0x0062C6E0 | the slope matrix bounce (Get_Cell_Ramp, Get_Slope_Matrix, Rotate_Vector) |
 | UnitClass::Do_MISSION_HARVEST, InfantryClass::Assign_Destination, TechnoClass::Can_Deploy_Now, HouseClass::Can_Build, CellClass::Closest_Free_Spot, BuildingClass::Drop_Debris, Fire_Direction | | no call missing beyond aliases (Assign_Archive_Target is the ArchiveTarget store; Get_Gate is FindObjectOfType) |
 | WalkLocomotionClass::Movement_AI, HoverLocomotionClass::Process, HouseClass::Update_Present_Super_Weapons, Where_To_Place_Building, Can_Build_Here, CellClass::Reduce_Tiberium, DisplayClass::Mouse_Left_Up, UnitClass::Is_Route_Broken, MapClass::Repair_Train_Bridge, the draw drafts | address not found in this pass | not screened |
+## Lane P58 (2026-11-27): YR Soviet 1's lock after the naval phase (traced, not fixed)
+
+Found by lane P52: after Objective 1 (tick ~7,550) input stays locked; local 9 is never set, so SP2.14 → ... →
+SP2.13_Unlock never runs. Traced with try1-locked.replay (private/campaign_saves/yr/sov01) and the new harness orders
+below. What happens:
+
+1. Team "TM_Sov_1 Trans_1 Boris_5 ..." (Priority 7, AvoidThreats=yes, script "Move to X_BG": 3,23 3,58 8,1 20,15 39,9 ...)
+   reaches wp23 (57,95) at ~8,100. Its path to wp58 (80,82) goes north round the island (61,71 - 77,71 - 85,70 - 86,76),
+   ~70 cells, not over the west beach (~25 cells): every target with x >= 80 does, x <= 79 goes west. The choice is
+   AStarClass::Find_Path_Hierarchical's (matched): on the coarse subzone graph the north route scores 3.000 (water
+   subzones score 0) and the west one 3.001 (one diagonal, cross-block edge 115 -> 532 next to the rubble CANEWY11
+   leaves at 75,82 on frame 1). Without threat avoidance the result is the same.
+2. "TM_Sov_1 Trans_4 Flak Trak" (script "Move to X_BF": 3,23 3,57 39,8 8,3) sets local 8 at wp57 (85,74) at ~9,200;
+   75 frames later (SP2.6b "Trans 3 Leaves", TEVENT_TIME 5) team "TM_Sov_1 Trans (Flak)" (Priority 10, SAPC, script
+   "Secret Trans (Flak) Leaves" 3,15 3,13 3,23 3,10 37,0) is created and recruits the SAPC nearest wp57. The emptied
+   Flak Trak SAPC is still in MISSION_UNLOAD (not recruitable) on that frame (it turns to guard one frame later), so
+   TeamClass::Recruit/Can_Add (both matched) take Boris's SAPC, 2 cells away, moving (recruitable) in a priority-7
+   team. Its 12 passengers stay members of the Boris team in limbo; the SAPC sails west and leaves (P52's "lost at
+   43,93"). The Boris team never unloads, so 39,9 never runs.
+
+Compared with gamemd.exe and found the same: TeamClass::AI's dispatch (0x006E9140, jump table 0x006E9F74: cases 3, 8,
+0x14, 0x27 call or inline what the draft calls), Flag_Into_Action, the recruit condition, TMission_UNLOAD/Can_Add/
+Recruit (matched), AStarClass::Find_Path_Regular (0x00429A90) against astar_native.inc, MapClass::Region_Threat
+(0x00585F40, its quadrant tables), Update_Cell_Subzones (0x00584550) and Subzone_Span's span and cross-block rules
+(0x005824A0). The SAPC moves at Current_Speed (15 leptons a frame). Not settled: whether gamemd.exe takes the north
+route here and loses the same one-frame race (the race turns on Random_Pick in Do_MISSION_UNLOAD's delays), or a
+draft upstream differs: HoverLocomotionClass::Process/While_Moving/Start_Of_Move (hover_native.inc, TibSun's text, not
+compared; gamemd.exe's Process 0x00514310 already differs at a stopped start: it sets speed 1.0 and calls
+Start_Of_Move(0)/While_Moving(1) where the draft calls Start(), and it has a radio-contact branch), the initial subzone
+build (Reset_Subzone, Zone_Reset). No source change to game code; no test added (nothing to pass yet).
+
+Harness orders added (glue/yr_harness.cpp): `teams [<text>]` (each team's script line and members: mission, limbo,
+cargo, NavCom), `units <ID>` (mission, queue, team, recruitability, threat avoidance), `locals <i>...`,
+`path <ID|&addr> <x> <y> [nothreat]` (the path AStarClass::Find_Path gives), `zonemap <x0> <y0> <x1> <y1> <ID>`.
