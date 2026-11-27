@@ -262,6 +262,13 @@ add_test(NAME yr-native-skirmish-smoke COMMAND "${Python3_EXECUTABLE}" -B "${CMA
          --binary $<TARGET_FILE:yr-native> --data-dir "${RA2_NATIVE_YR_DATA_DIR}"
          --work "${CMAKE_CURRENT_BINARY_DIR}/yr-skirmish-smoke")
 set_tests_properties(yr-native-skirmish-smoke PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 300)
+# ctest yr-native-window-resize (lane P48, codex1's Windows recheck: a black map after a window size change): a
+# skirmish, the window maximised, minimised and resized through SDL with the game's cursor left on an edge as the
+# pointer leaves for the window's controls; the map area stays lit (tests/window_resize.py).
+add_test(NAME yr-native-window-resize COMMAND "${Python3_EXECUTABLE}" -B "${CMAKE_CURRENT_SOURCE_DIR}/tests/window_resize.py"
+         --game yr --binary $<TARGET_FILE:yr-native> --data-dir "${RA2_NATIVE_YR_DATA_DIR}"
+         --work "${CMAKE_CURRENT_BINARY_DIR}/yr-window-resize")
+set_tests_properties(yr-native-window-resize PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 400 RUN_SERIAL TRUE)
 
 # ctest yr-native-skirmish-score (lane Y4): a lost skirmish (the MCV deployed, the construction yard
 # sold in a short game), the Skirmish Score screen, Continue and Back to the main menu

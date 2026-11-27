@@ -199,6 +199,7 @@ Uint32 const kScriptedToolbar = SDL_EVENT_USER + 0x5C;   // input script "toolba
 Uint32 const kScriptedZoom = SDL_EVENT_USER + 0x5D;      // input script "zoom FACTOR X Y" (lane C16)
 Uint32 const kScriptedMapCheck = SDL_EVENT_USER + 0x5E;  // input script "mapcheck" (lane C16)
 Uint32 const kScriptedDump = SDL_EVENT_USER + 0x5F;      // input script "dump" (lane C16)
+Uint32 const kScriptedWindow = SDL_EVENT_USER + 0x60;    // input script "window W H|minimize|restore|maximize" (lane P48)
 std::string window_dump_to;    // lane P21: the step server's screenshot file (ra2port_screenshot)
 bool window_dump_now = false;   // the next present writes RA2_NATIVE_WINDOW_DUMP's picture whatever its period
 void (*before_exit)() = nullptr;     // the app's settings (main.cpp)
@@ -945,6 +946,24 @@ void mouse_move(float x, float y)
     pointer_y = y;
     ra2port::post_message(ra2port::main_window(), 0x0200, 0, mouse_lparam(x, y));
 }
+// The pointer left the window, or the window was minimised (lane P48, codex1's Windows recheck: "the map goes black
+// after a window size change"). The game reads its cursor where the last motion put it, and a pointer that leaves
+// the window sends no more motion: leaving across the title bar to the window's controls (maximise, restore,
+// minimise) or the taskbar, its last point lay on the picture's edge (the window's edge row, or clamp_to_picture's
+// hold), and ScrollClass::Scroll_Edge (scroll.cpp: x <= 0, y <= 0, the last column or row) scrolled the map on every
+// frame until the pointer came back: into the unrevealed corner of the map, black, the sidebar untouched, and a save
+// made then kept that view. The original never met it: its full-screen window held the mouse (ClipCursor) and
+// windowed mode was a debug option. Now the cursor is held one pixel inside the edges while the pointer is
+// away; its next motion in the window puts it back. In full screen the pointer cannot leave (the display's edges
+// still scroll), so a deliberate edge scroll is only lost by a pointer pushed past a window's edge.
+void hold_cursor_off_edges(const char *why)
+{
+    if (touch_ui || tex_w < 3 || tex_h < 3 || !ra2port::main_window()) return;
+    float x = SDL_clamp(pointer_x, 1.0f, (float)(tex_w - 2)), y = SDL_clamp(pointer_y, 1.0f, (float)(tex_h - 2));
+    if (x == pointer_x && y == pointer_y) return;
+    fprintf(stderr, "host: %s: the game's cursor held off the edge (%.0f,%.0f to %.0f,%.0f)\n", why, pointer_x, pointer_y, x, y);
+    mouse_move(x, y);
+}
 void mouse_button(int b, bool down, float x, float y)
 {
     if (down) {
@@ -1571,6 +1590,10 @@ void pump_events()
             case SDL_EVENT_TEXT_INPUT:
                 input = true;
                 break;
+            case SDL_EVENT_WINDOW_MOUSE_LEAVE:      // the pointer's own (lane P48): only a scripted "leave" counts
+                input = true;
+                ours = e.window.data1 == kScriptedFocus;
+                break;
             default:
                 break;
             }
@@ -1638,6 +1661,12 @@ void pump_events()
         }
         case SDL_EVENT_FINGER_DOWN: case SDL_EVENT_FINGER_MOTION: case SDL_EVENT_FINGER_UP: case SDL_EVENT_FINGER_CANCELED:
             finger_event(e.tfinger, e.type);
+            break;
+        case SDL_EVENT_WINDOW_MOUSE_LEAVE:
+            hold_cursor_off_edges("the pointer left the window");
+            break;
+        case SDL_EVENT_WINDOW_MINIMIZED:
+            hold_cursor_off_edges("the window was minimised");
             break;
         case SDL_EVENT_WINDOW_RESIZED: case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED: case SDL_EVENT_WINDOW_SAFE_AREA_CHANGED:
         case SDL_EVENT_DISPLAY_ORIENTATION:
@@ -2320,6 +2349,15 @@ void script_parse_line(char *line)
             script_out->push_back(s);
             return;
         }
+        if (action == "leave") {
+            // leave: the pointer leaves the window (SDL's mouse-leave; lane P48's tests: across the title bar to the
+            // window's controls).
+            Scripted s = {frame, {}, std::string()};
+            if (script_ms >= 0) { s.ms = script_ms; s.frame = 0x7FFFFFFF; s.dialog = script_dialog; }
+            s.event.type = SDL_EVENT_WINDOW_MOUSE_LEAVE;
+            script_out->push_back(s);
+            return;
+        }
         if (action == "resign" || action == "background" || action == "foreground") {
             // resign / background / foreground: the iOS lifecycle as SDL reports it (the scene
             // resigns active, enters the background, becomes active again; test scaffolding,
@@ -2353,6 +2391,22 @@ void script_parse_line(char *line)
             if (script_ms >= 0) { s.ms = script_ms; s.frame = 0x7FFFFFFF; s.dialog = script_dialog; }
             s.event.type = kScriptedDump;
             script_out->push_back(s);
+            return;
+        }
+        if (action == "window" || action == "minimize" || action == "restore" || action == "maximize") {
+            // window W H / minimize / restore / maximize: the window's size changed as the player's
+            // window controls change it, through SDL (lane P48's tests: the map after a resize).
+            Scripted s = {frame, {}, action};   // the action in spec (window.data1/2 hold the size)
+            if (script_ms >= 0) { s.ms = script_ms; s.frame = 0x7FFFFFFF; s.dialog = script_dialog; }
+            s.event.type = kScriptedWindow;
+            if (action == "window") {
+                ok = tokens.size() >= 4;
+                s.event.window.data1 = ok ? atoi(tokens[2].c_str()) : 0;
+                s.event.window.data2 = ok ? atoi(tokens[3].c_str()) : 0;
+                ok = ok && s.event.window.data1 > 0 && s.event.window.data2 > 0;
+            }
+            if (ok) script_out->push_back(s);
+            else fprintf(stderr, "input-script: cannot read line %d %s\n", frame, action.c_str());
             return;
         }
         if (action == "mapcheck") {
@@ -2585,6 +2639,21 @@ void play(Scripted &s, int number)
             redraw();
             return;
         }
+        if (e.type == kScriptedWindow) {
+            if (!window) return;
+            int w = e.window.data1, h = e.window.data2;
+            if (s.spec == "window") {
+                if (SDL_GetWindowFlags(window) & SDL_WINDOW_MAXIMIZED) SDL_RestoreWindow(window);
+                SDL_SetWindowSize(window, w, h);
+            } else if (s.spec == "minimize") SDL_MinimizeWindow(window);
+            else if (s.spec == "restore") SDL_RestoreWindow(window);
+            else SDL_MaximizeWindow(window);
+            SDL_SyncWindow(window);
+            int ww = 0, wh = 0;
+            SDL_GetWindowSize(window, &ww, &wh);
+            fprintf(stderr, "input-script: frame %d: %s %dx%d: window now %dx%d points\n", number, s.spec.c_str(), w, h, ww, wh);
+            return;
+        }
         if (e.type == kScriptedMapCheck) {
             // Every 7th game pixel of the tactical area to the window and back: the largest error and
             // the pixels that would come back as another (the click lands where it is shown).
@@ -2633,7 +2702,8 @@ void play(Scripted &s, int number)
         }
         if (e.type == SDL_EVENT_KEY_DOWN || e.type == SDL_EVENT_KEY_UP) {
             e.key.windowID = id;
-        } else if (e.type == SDL_EVENT_WINDOW_FOCUS_LOST || e.type == SDL_EVENT_WINDOW_FOCUS_GAINED) {
+        } else if (e.type == SDL_EVENT_WINDOW_FOCUS_LOST || e.type == SDL_EVENT_WINDOW_FOCUS_GAINED
+                   || e.type == SDL_EVENT_WINDOW_MOUSE_LEAVE) {
             e.window.windowID = id;
             e.window.data1 = kScriptedFocus;
         } else if (e.type == SDL_EVENT_QUIT || e.type == SDL_EVENT_WILL_ENTER_BACKGROUND || e.type == SDL_EVENT_DID_ENTER_BACKGROUND

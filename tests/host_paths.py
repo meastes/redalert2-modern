@@ -9,6 +9,9 @@ cmake -P:
     files in forward slashes, while the old raw form fails (so the check would see the bug come back);
   * ra2/tools/ra2_units.py and yr/tools/yr_coff.py write lists through it (one unit, into a scratch folder);
   * line_directive() never leaves a backslash in a #line;
+  * the RA2 units' compile flags (ra2/tools/ra2_probe.py --print-flags, read by ra2/ra2.cmake into SHELL: options)
+    keep every path whole under CMake's SHELL: splitting (lane P48: codex1's PC compiled ahtoi.cpp with
+    -include C:ra2wcodex1...yrsdkyr_win_first.h, the backslashes taken as escapes), and the old form would not;
   * yr/data/host_c_headers.txt, the list a Windows host uses in place of the macOS SDK, equals what the SDK
     leaves out (skipped without xcrun).
 
@@ -45,6 +48,67 @@ def cmake_reads(cmake, listing, var, expect, tmp):
     if got != expect:
         return 'cmake read %r, expected %r' % (got[:3], expect[:3])
     return None
+
+
+def shell_options(cmake, flags, tmp, block):
+    """The words clang gets for FLAGS (';'-separated) through BLOCK (ra2.cmake's pairing loop) and SHELL: splitting."""
+    script = tmp / 'shell.cmake'
+    script.write_text('set(rb_unit_flags [==[%s]==])\n%s\n'
+                      'foreach(o IN LISTS rb_unit_options)\n'
+                      '  if(o MATCHES "^SHELL:(.*)$")\n'
+                      '    separate_arguments(w UNIX_COMMAND "${CMAKE_MATCH_1}")\n'
+                      '  else()\n'
+                      '    set(w "${o}")\n'
+                      '  endif()\n'
+                      '  foreach(x IN LISTS w)\n'
+                      '    message(STATUS "word=${x}")\n'
+                      '  endforeach()\n'
+                      'endforeach()\n' % (flags, block))
+    p = subprocess.run([cmake, '-P', str(script)], capture_output=True, text=True)
+    if p.returncode:
+        return None
+    return [l.split('word=', 1)[1] for l in (p.stdout + p.stderr).splitlines() if 'word=' in l]
+
+
+def ra2_flags_check(cmake, tmp, problems):
+    """ra2_probe.py's Windows flags with a Windows checkout's paths, through ra2.cmake's own loop."""
+    sys.path.insert(0, str(ROOT / 'ra2/tools'))
+    import ra2_probe  # noqa: E402
+    text = (ROOT / 'ra2/ra2.cmake').read_text()
+    start = text.index('set(rb_unit_options "")')
+    block = text[start:text.index('endforeach()', start) + len('endforeach()')]
+    win_root = PureWindowsPath(r'C:\ra2\w\codex1\build\redalert2-modern')
+    gen = win_root / 'build' / 'windows-one' / 'ra2' / 'gen'
+    saved = ra2_probe.ROOT
+    ra2_probe.ROOT = win_root
+    try:
+        fixed = ra2_probe.cmake_flags(gen, True)
+        raw = ';'.join(ra2_probe.flags(gen, True))   # the form before lane P48
+    finally:
+        ra2_probe.ROOT = saved
+    want = ['C:/ra2/w/codex1/build/redalert2-modern/yr/sdk/yr_win_first.h',
+            'C:/ra2/w/codex1/build/redalert2-modern/platform/win/dialect_win.hpp',
+            'C:/ra2/w/codex1/build/redalert2-modern/port/include/ra2port/prelude.hpp',
+            'C:/ra2/w/codex1/build/redalert2-modern/build/windows-one/ra2/gen/mingw']
+    words = shell_options(cmake, fixed, tmp, block)
+    if words is None:
+        problems.append('ra2.cmake flags: cmake -P failed on the pairing loop')
+        return
+    for w in want:
+        if w not in words:
+            problems.append('ra2.cmake flags: %s is not one word of %r' % (w, words[:6]))
+    for i, w in enumerate(words):
+        if w in ('-include', '-isystem', '-idirafter') and (i + 1 >= len(words) or not words[i + 1].startswith('C:/')):
+            problems.append('ra2.cmake flags: %s is followed by %r' % (w, words[i + 1] if i + 1 < len(words) else None))
+    if any('\\' in w for w in words):
+        problems.append('ra2.cmake flags: a backslash reached clang: %r' % [w for w in words if '\\' in w][:2])
+    # A checkout path with a space stays one word.
+    spaced = shell_options(cmake, '-include;C:/ra2/a b/x.h', tmp, block)
+    if spaced != ['-include', 'C:/ra2/a b/x.h']:
+        problems.append('ra2.cmake flags: a path with a space split: %r' % spaced)
+    old = shell_options(cmake, raw, tmp, block)
+    if old is not None and want[0] in old:
+        problems.append('the raw backslash flags kept their path: the check cannot see the bug')
 
 
 def main():
@@ -100,6 +164,8 @@ def main():
                 why = cmake_reads(a.cmake, gen / 'coff_units.cmake', 'RB_NATIVE_UNITS', listed, tmp)
                 if why or len(listed) != len(units):
                     problems.append('yr_coff.py coff_units.cmake: %s' % (why or listed))
+
+        ra2_flags_check(a.cmake, tmp, problems)
 
         # The Windows host's header list against the macOS SDK it stands for.
         xcrun = shutil.which('xcrun')

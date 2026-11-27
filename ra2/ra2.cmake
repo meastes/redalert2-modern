@@ -67,7 +67,9 @@ set(rb_unit_options "")
 set(rb_pending "")
 foreach(rb_flag IN LISTS rb_unit_flags)
   if(rb_pending)
-    list(APPEND rb_unit_options "SHELL:${rb_pending} ${rb_flag}")
+    # The second word quoted (lane P48): SHELL: splits as a Unix shell would, so a path with a space stays one word
+    # (ra2_probe.py --print-flags gives every path in forward slashes: a backslash there would be an escape).
+    list(APPEND rb_unit_options "SHELL:${rb_pending} \"${rb_flag}\"")
     set(rb_pending "")
   elseif(rb_flag MATCHES "^-(include|idirafter|isystem|Xclang|arch)$")
     set(rb_pending "${rb_flag}")
@@ -354,6 +356,14 @@ if(NOT WIN32)
            --binary $<TARGET_FILE:ra2-native> --data-dir "${RB_DATA_DIR}" --game-exe "${RB_GAME_EXE}"
            --work "${CMAKE_CURRENT_BINARY_DIR}/tests/frame-clock")
   set_tests_properties(ra2-native-frame-clock PROPERTIES SKIP_RETURN_CODE 77 RUN_SERIAL TRUE TIMEOUT 900 LABELS ra2-step)
+  # Lane P48 (codex1's Windows recheck: the map black after maximise/restore and minimise/restore, and in a save made
+  # then): Allied 1 through the step server, the window's size changed through SDL with the game's cursor left on an
+  # edge as the pointer leaves; the view stays and the map area stays lit, and the save made after loads with its map
+  # (tests/window_resize.py).
+  add_test(NAME ra2-native-window-resize COMMAND "${RB_PYTHON3}" -B "${RB_ROOT}/tests/window_resize.py"
+           --game ra2 --binary $<TARGET_FILE:ra2-native> --data-dir "${RB_DATA_DIR}" --game-exe "${RB_GAME_EXE}"
+           --work "${CMAKE_CURRENT_BINARY_DIR}/tests/window-resize")
+  set_tests_properties(ra2-native-window-resize PROPERTIES SKIP_RETURN_CODE 77 RUN_SERIAL TRUE TIMEOUT 600 LABELS ra2-step)
 endif()
 # Lane P5: the resave route over the user's other four saves in the install folder (ra2-native-resave is ALL01T);
 # label ra2-resaves, not ra2-quick (about 2.5 minutes each).
