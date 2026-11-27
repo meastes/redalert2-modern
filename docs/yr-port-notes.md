@@ -2315,3 +2315,7 @@ crash, no fault). P61 expected all01 and all03 to fail; all05, sov02 and sov03 n
 replays, 44 of 44 (lan-pair-wine skipped: no Windows build given), interface-size, planning, lan-pair, campaign-soviet
 (with P64's credits row) and member-aliases among them; ra2-quick 15/15; check_tree clean. The yr-ubsan labels were not
 run (they need a separate RA2_NATIVE_UBSAN_FLOAT build and run the soaks and won replays).
+
+**Won replays** at lane P66's tip (left failing; a campaign lane re-records them): all01 lost at tick 186,481 (as at
+P64); all03, all05 and sov02 do not end (no game over by ctest's 2,400 s limit); sov03 now ends lost (game over, lose,
+after 1,608 s; at P64 it did not end). No fault or trap in any of the five logs.
