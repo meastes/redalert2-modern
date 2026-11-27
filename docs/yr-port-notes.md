@@ -2376,3 +2376,45 @@ private/campaign_saves/yr/<mission>/p70 and scripts/p70.
 | Soviet 4 (SOV04UMD) | not won; base economy does not hold | 0.3 (P60 0.4 + P63 0.5 + 0.3) | A fresh start (P60's try1 and P63's s4-try1 are old-pin recordings). P60's s4a.py plan (s4p.py): Yuri's first raid (five YURI, two BRUTE, then initiates) comes from 95,130 at about 7,300; the four starting Rhinos at the rally 88,128 were taken by mind control and the base was lost at 16,769 (try1). With two tesla coils on the east side (88,133 and 86,128), six dogs and conscripts, the rally inside the base (84,132) and home defence to 18 cells, the base holds to 60,260 (three refineries, seven harvesters, two war factories, four coils), but credits stay at 0-15 from about 21,000 and the Rhinos never gather: 0 at 60,260 with only four recorded as killed (the rest mind-controlled), while lost buildings are rebuilt. Next: the derricks (41,113, 51,67, 160,68) for income and the ore oasis north of the base (dossier), dogs or tesla troopers screening the Rhinos from YURI, Romanov found early by one dog at the bar (136-140,64-70) and kept at home (he is Germans', PlayerControl=yes). Recordings in private/campaign_saves/yr/sov04/p70 |
 
 Allied 7 was not started: the dossier's plan needs the Iron Curtain and the Chronosphere fired on a 3x3 tank group (two map clicks for the Chronosphere), a navy for the Genetic Mutator, and an Allied base on a plateau reachable only by Chronosphere, all on a fresh start (P60's try2 does not preload on the new pin); more than this lane's remaining time. No crash, trap or assertion in any P70 run.
+
+## Lane P71 (2026-11-27): Soviet 5 and Soviet 4 on the ac45ee9e pin; the sell button's tooltip fault
+
+Fresh starts on the ac45ee9e pin; the cap is 3 lane-hours a mission in all (a mission first tried on the old pin counts
+1.5 h fresh here). Recordings and scripts are in private/campaign_saves/yr/<mission>/p71 and scripts/p71.
+
+**Port fault found and fixed (commit 8b4dea9, kept separate from the mission work):** yr-native faulted (signal 11 in
+StringTable::LoadString's bsearch, from ToolTipManager::Process) when the pointer rested on the sidebar's sell button
+(Soviet 5, tick 11,588, a building sold through "@sell"). The cause is vendor/ra2-decomp/src/sidebar.cpp, new on this pin.
+It stores the sell and repair buttons' tooltip labels as `tooltip.Text = (int)"TXT_SELL_MODE"` /
+`(int)"TXT_REPAIR_MODE"`. ToolTip::Text is intptr_t natively (lane Y3), but the cast cut the pointer. gamemd.exe 0x00724AD0
+reads the label pointer at +0x14 and passes it whole to StringTable::LoadString (0x00734E60).
+
+The fix was followed by a sweep of every `(int)`, `(unsigned)`, `(long)` and `(DWORD)` cast of a string or an address in
+vendor/ra2-decomp src and include, checked against the generated units. Rows were given to:
+- LAN co-op's campaign info. DecodePubGameopt 0x005E3D10 passes `(unsigned)stats` and `(unsigned)&string[2]` through
+  vt_entry_5C and vt_entry_74, and MPCooperative reads them back as MPlayerScoreType * and char *. The argument is now
+  uintptr_t in multiplayer.h, mpbattle.h and mpcoop.h, in their definitions and in yr/glue/mpgamemode_native.inc; the
+  vtable slots are unchanged.
+- The Session slot loops' pointer compares (session.cpp 0x0069BC60).
+- The audio failsafe timer's high-word pointer (failsafeGetTime 0x004093F0). This one is latent: it is used only if
+  QueryPerformanceFrequency fails.
+
+Left as they are:
+- wonline.cpp: the unit is left out natively.
+- building.cpp, radar.cpp, tab.cpp, queue.cpp, audevent.cpp: already rewritten by earlier rows.
+- FirewallHelperClass::Find_Mangled_Port's IPX channel op (0x005D9220): Westwood Online only.
+- SpawnBaseUnits' unused argument.
+- Tiberium_Adjust's pregame pick (0x004818E0): gamemd.exe's own arithmetic, and the pregame path is never called.
+- cdcntrl.cpp's DOS ioctl registers: the CD check is skipped.
+- priority.h's debug bounds.
+- VectorClass::ID: a difference of two cut pointers is still right modulo 2^32.
+
+Checks: the crash replay passes ra2_campaign.py --survive 11700; yr-native-skirmish-smoke and
+yr-native-campaign-won-sov02 pass.
+
+| Mission | Result | Lane-hours | Notes |
+| --- | --- | --- | --- |
+| Soviet 5 (SOV05UMD) | not won; shelved for this lane | 0.75 (1.8 on the old pin) | Eight tries (sov05/p71/try1-8). **Dreadnoughts by sea:** a route kept 9+ cells from the 16 static Boomers (s5lib.py LEGS: the east channel, south of the six-boomer pack at 141-164,197-203, north up the bay to 129,172, 23 cells from the pen) still loses them. About 12 Boomers patrol the whole coast (mission 2), the north-east channel included: dreads were hit at 171-186,61-76 from tick 4,173, one was lost by 4,647 and all three by about 9,000. **The AL beach base:** the MCV deploys at 212,121 once the transports and the starting units are moved off the footprint; in try 1 a click on the cell where a transport stood put the MCV back in it. From a deploy at 5,200, a Yuri raid from both Yuri houses (about 25 units: Yuri, Gattling and Lasher tanks, initiates, our transports mind-controlled) comes in through the north gap (200-210,111-115) and from the south-west at 11,300-13,600. It razes the base by 15,000-17,000, with or without a sentry gun and a tesla coil. In try 2, where the base went up later and slower with two coils, it held to 37,000. The base's legal building spots are few (buildable: the war factory only at 208,117), and a war factory in the pocket at 203,113 sealed a War Miner in. **Kirovs:** one Kirov alone, flown over the sea from the south, died 6 cells short of the pen (about 2.2 HP a tick from the gattlings). Two Kirovs, ready by 14,337 after the leanest base (no defences, the radar and barracks sold), brought the pen to 1,282/1,500; the last one died at 140,153 (about 4 HP a tick). The plan needs about 4 healthy Kirovs, but Gattling tanks in the raid hit them as they leave the base. Next: hold the 13,000 raid first, as try 2 did, then four Kirovs over the sea (east, then south, then west along y 176 to 140,176, then north) |
+| Soviet 4 (SOV04UMD) | not won; shelved for this lane | 0.25 (P60 0.4 + P63 0.5 + P70 0.3) | Fresh start (sov04/p71). With refineries by the east (99,131) and west (58,125) ore, three coils and seven War Miners, the base had 22 Rhinos by 44,565 (s4m.py). Two problems followed. (1) In the Moroccan town on the road north (82-102,64-100), initiates garrison the civilian houses (CAMORR05 86,67 and CAMORR08 102,81 become YuriCountry's) and the plaza's four gattlings stand at its corners. Elite initiates mauled the Rhinos: 7 of 22 died in about 500 ticks at 86-90,78-80, against 11 initiates. fight_legs does not target garrisoned houses. Given them as targets (buildings=YuriCountry, CA* first, s4n2.py), the push still died before the plaza. In the replay the same 22 Rhinos stood unhurt at 80-90,90-99 when given no order. (2) Without a home guard (Mgr defend off) the base fell to a raid from 61,800 (try 2, V3s in production). The dogs Mgr's home defence keeps buying are lost chasing raiders up to 30 cells out (about 40 dogs in try 1). Next: V3s (range 18) on the garrisoned houses and the plaza from the south (about 88,92) with Rhinos screening, a home guard of Rhinos and coils only. Then over the causeway (x 95-97, y 44-55, the only way into the north base, whose other sides are cliffs): first the gate's psychic towers (94,33 and 98,33, range 7), then Yuri's seven reactors (89,31; 104-108,33; 110-114,16-20). Yuri's power is 2,050 against a drain of about 1,100, and low power turns the towers and gattlings Neutral. Romanov (RMNV, 50 HP, no weapon) is found last and carried in a flak track |
+
+Allied 7 was not started this lane. No other crash, trap or assertion came up in any P71 run.
