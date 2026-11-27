@@ -195,7 +195,7 @@ void InfantryClass::Per_Cell_Process(PCPType why)
 		}
 
 		/*
-		**	YR (lane P61, gamemd.exe 0x0051973C-0x00519945): a soldier sent into a grinder (MISSION_EATEN) that
+		**	YR (P61, gamemd.exe 0x0051973C-0x00519945): a soldier sent into a grinder (MISSION_EATEN) that
 		**	reaches the building's cell is ground up: its die voice (the player's only) and die sound, the
 		**	building's house refunded the soldier's Refund_Amount, its tag sprung, the grinder's sound and
 		**	grinding animation, and the soldier deleted. TibSun's text had no grinder: the soldier was never
@@ -288,7 +288,7 @@ void InfantryClass::Per_Cell_Process(PCPType why)
 					// are we trying to repair a bridge?
 					if (tech->RTTI == RTTI_BUILDING && ((BuildingClass*)tech)->Class->IsBridgeRepairHut) {
 						/*
-						**	YR (lane P61, gamemd.exe 0x00519B90-0x00519CD9): the player's repair is a radar event
+						**	YR (P61, gamemd.exe 0x00519B90-0x00519CD9): the player's repair is a radar event
 						**	(RADAREVENT_BRIDGE_REPAIRED), announced only when the event is made (a repeat close by is
 						**	suppressed); the rules' RepairBridgeSound plays at the hut; a low (wood) bridge overlay
 						**	(74-101) near the hut counts as the train bridge tiles do.
@@ -331,7 +331,7 @@ void InfantryClass::Per_Cell_Process(PCPType why)
 					**	enemy building is.
 					*/
 					/*
-					**	YR (lane P61, gamemd.exe 0x00519D47-0x00519D7C, 0x00519FA2-0x00519FF6): a neutral house's
+					**	YR (P61, gamemd.exe 0x00519D47-0x00519D7C, 0x00519FA2-0x00519FF6): a neutral house's
 					**	garrisonable building (IsMultiplayPassive, CanBeOccupied) is repaired as an ally's is, and a
 					**	building at full strength sends the engineer away (not used up).
 					*/
@@ -355,7 +355,7 @@ void InfantryClass::Per_Cell_Process(PCPType why)
 							tech->Take_Damage(damage, 0, Rule->C4Warhead, this, true);
 						} else if (iscapturable) {
 							/*
-							**	YR (lane P61, gamemd.exe 0x00519EB2-0x00519F2C): a building being sold, or warped
+							**	YR (P61, gamemd.exe 0x00519EB2-0x00519F2C): a building being sold, or warped
 							**	out by a chrono weapon, is not captured: the engineer is sent away.
 							*/
 							if (tech->Get_Mission() == MISSION_DECONSTRUCTION || tech->IsBeingWarpedOut()) {
@@ -378,7 +378,7 @@ void InfantryClass::Per_Cell_Process(PCPType why)
 					}
 				} else {
 					/*
-					**	YR (lane P61, gamemd.exe 0x00519FF8-0x0051A06E): a spy infiltrates (BuildingClass::Infiltrate
+					**	YR (P61, gamemd.exe 0x00519FF8-0x0051A06E): a spy infiltrates (BuildingClass::Infiltrate
 					**	speaks its own EVA lines); any other soldier is sent away, not deleted as in TibSun's text.
 					*/
 					if (Class->IsAgent) {
@@ -445,7 +445,7 @@ void InfantryClass::Per_Cell_Process(PCPType why)
 			if (techno->RTTI == RTTI_BUILDING) {
 				if (techno == Get_Cell_Ptr()->Cell_Building() && Transmit_Message(RADIO_IM_IN) == RADIO_ROGER) {
 					/*
-					**	YR (lane P61, gamemd.exe 0x0051A2AD-0x0051A39D): the soldier drops its weapon state and any
+					**	YR (P61, gamemd.exe 0x0051A2AD-0x0051A39D): the soldier drops its weapon state and any
 					**	mind control; a bio reactor (InfantryAbsorb) plays EnterBioReactorSound and marks it
 					**	Absorbed; a soldier counted as its house's infantry (CountedAsOwnedSpecial) stops counting
 					**	(the building's sale counts it again: Do_MISSION_DECONSTRUCTION, lane P57); the bio reactor
@@ -519,7 +519,7 @@ void InfantryClass::Per_Cell_Process(PCPType why)
 		**	sabotage, then sabotage it.
 		*/
 		/*
-		**	YR (lane P61, gamemd.exe 0x0051A4BF-0x0051A664): only a bomber (IsBomber) sabotages; an iron-curtained
+		**	YR (P61, gamemd.exe 0x0051A4BF-0x0051A664): only a bomber (IsBomber) sabotages; an iron-curtained
 		**	building takes no charge; a charge already set sends the soldier away; the soldier stops (AbortMotion,
 		**	where TibSun's text cleared NavCom).
 		*/
@@ -604,13 +604,13 @@ void InfantryClass::Per_Cell_Process(PCPType why)
 		/*
 		**	When the infantry reaches the center of the cell, it may begin a new mission.
 		*/
-		if (MissionQueue == MISSION_NONE && NavCom == NULL && TarCom == NULL && !HasAnyLink()) {	// YR: any link (gamemd.exe 0x0051A8AA)
+		if (MissionQueue == MISSION_NONE && NavCom == NULL && TarCom == NULL && !HasAnyLink()) {	// YR (P61): any link (gamemd.exe 0x0051A8AA)
 			Enter_Idle_Mode();
 		}
 		Commence();
 
 		/*
-		**	YR (lane P61, gamemd.exe 0x0051A8CB-0x0051A925, as UnitClass::Per_Cell_Process's matched text): the
+		**	YR (P61, gamemd.exe 0x0051A8CB-0x0051A925, as UnitClass::Per_Cell_Process's matched text): the
 		**	sight moves by vt_entry_48C (the last sight taken back) and UpdateSight, and the cells around are
 		**	revealed by RevealArea3 out to the sight range + 3. TibSun's text called Look (RevealArea1).
 		*/
@@ -633,7 +633,7 @@ void InfantryClass::Per_Cell_Process(PCPType why)
 			return;
 		}
 
-		// YR (lane P61): no Tiberium damage here (gamemd.exe goes from the cell's land test to FootClass::Per_Cell_Process,
+		// YR (P61): no Tiberium damage here (gamemd.exe goes from the cell's land test to FootClass::Per_Cell_Process,
 		// 0x0051A9EB); TibSun's text hurt a soldier standing on ore and could make a visceroid of it.
 	}
 

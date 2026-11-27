@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "slavemgr.h"	// YR (lane P57): SlaveManagerClass (Exit_Object's Deploy2, the deconstruction's FUN_006B0DB0 and SetOwner)
-#include "airctype.h"	// YR (lane P61): AircraftTypeClass (Exit_Object's IsAirportBound)
+#include "airctype.h"	// YR (P61): AircraftTypeClass (Exit_Object's IsAirportBound)
 
 // ---------------------------------------------------------------------------------------------
 // NON-EXACT NATIVE DRAFT (lane Y4), appended to the building unit: BuildingClass::Exit_Object
@@ -39,7 +39,7 @@ int BuildingClass::Exit_Object(TechnoClass * base, Cell preferred)	// NATIVE: YR
 			House->BuildAircraft = AIRCRAFT_NONE;
 
 			/*
-			**	YR (lane P61, gamemd.exe 0x00443CB4-0x00444091): an aircraft goes onto a free pad (RadioClass::HasFreeLink:
+			**	YR (P61, gamemd.exe 0x00443CB4-0x00444091): an aircraft goes onto a free pad (RadioClass::HasFreeLink:
 			**	any empty link, so an Airforce Command's four pads each take one), tethered to it (RADIO_TETHER to the
 			**	aircraft itself), its position set to the pad's docking point and the pad noted (DockNowHeadingTo); an
 			**	airport-bound aircraft (IsAirportBound) is not sent to the rally point and, with no free pad, is not
@@ -124,7 +124,7 @@ int BuildingClass::Exit_Object(TechnoClass * base, Cell preferred)	// NATIVE: YR
 				/*
 				 * If a unit is already exiting and this building doesn't allow more than
 				 * one exit at a time, then refuse the exit attempt for now.
-				 * YR (lane P61, gamemd.exe 0x004440BC): refused only when every radio link is taken (HasFreeLink).
+				 * YR (P61, gamemd.exe 0x004440BC): refused only when every radio link is taken (HasFreeLink).
 				 */
 				if (!Class->IsArmory && !Class->IsWeaponsFactory && !HasFreeLink()) {
 					return(1);
@@ -147,7 +147,7 @@ int BuildingClass::Exit_Object(TechnoClass * base, Cell preferred)	// NATIVE: YR
 				if (Class->IsWeaponsFactory && Class->Naval) {
 
 					/*
-					**	YR (lane P61, gamemd.exe 0x00444167-0x0044448F): a naval yard puts the boat straight onto the water:
+					**	YR (P61, gamemd.exe 0x00444167-0x0044448F): a naval yard puts the boat straight onto the water:
 					**	from the yard's centre cell towards the rally point (ArchiveTarget) to the first cell outside the
 					**	yard; that cell when it is open water inside the visible map, else the nearest place the boat can
 					**	go (MapClass::Nearby_Location for its SpeedType); the boat faces east, is sent to the rally
@@ -214,7 +214,7 @@ int BuildingClass::Exit_Object(TechnoClass * base, Cell preferred)	// NATIVE: YR
 						return(2);
 					}
 
-				} else if (Class->ToBuild != RTTI_INFANTRYTYPE && !Class->IsHospital && !Class->IsArmory && !Class->Cloning) {	// YR: not a cloning vat (0x0044462A)
+				} else if (Class->ToBuild != RTTI_INFANTRYTYPE && !Class->IsHospital && !Class->IsArmory && !Class->Cloning) {	// YR (P61): not a cloning vat (0x0044462A)
 
 					Cell exitcell = Find_Exit_Cell(base, preferred);
 					if (exitcell == CELL_NONE) {
@@ -251,7 +251,7 @@ int BuildingClass::Exit_Object(TechnoClass * base, Cell preferred)	// NATIVE: YR
 					if (Class->IsNODBarracks && exitcell.X == x + 2 && exitcell.Y == y + 2) {
 						exitcoord = exitcoord + Class->ExitCoordinate;
 					}
-					// YR (lane P61, gamemd.exe 0x00444857, 0x00444C2C): Yuri's barracks' door is at + 2,1
+					// YR (P61, gamemd.exe 0x00444857, 0x00444C2C): Yuri's barracks' door is at + 2,1
 					if (Class->IsYuriBarracks && exitcell.X == x + 2 && exitcell.Y == y + 1) {
 						exitcoord = exitcoord + Class->ExitCoordinate;
 					}
@@ -288,7 +288,7 @@ int BuildingClass::Exit_Object(TechnoClass * base, Cell preferred)	// NATIVE: YR
 					}
 
 					/*
-					**	YR (lane P61, gamemd.exe 0x004449D9-0x00444A51): a soldier leaving a barracks (not a cloning vat)
+					**	YR (P61, gamemd.exe 0x004449D9-0x00444A51): a soldier leaving a barracks (not a cloning vat)
 					**	is copied by each of the house's Cloning Vats: a new one of its type for the vat's house, put
 					**	out of the vat by its own Exit_Object. TibSun's text had no cloning: the vats never cloned.
 					*/
@@ -331,7 +331,7 @@ int BuildingClass::Exit_Object(TechnoClass * base, Cell preferred)	// NATIVE: YR
 					if (Class->IsNODBarracks && exitcell.X == x + 2 && exitcell.Y == y + 2) {
 						exitcoord = exitcoord + Class->ExitCoordinate;
 					}
-					// YR (lane P61, gamemd.exe 0x00444857, 0x00444C2C): Yuri's barracks' door is at + 2,1
+					// YR (P61, gamemd.exe 0x00444857, 0x00444C2C): Yuri's barracks' door is at + 2,1
 					if (Class->IsYuriBarracks && exitcell.X == x + 2 && exitcell.Y == y + 1) {
 						exitcoord = exitcoord + Class->ExitCoordinate;
 					}

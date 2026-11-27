@@ -14,7 +14,7 @@ Through the menus into a skirmish (yr_standins.py's route), harness orders (glue
   frame 70    the player's money and the reactor's state (`absorb YAPOWR`: passengers, power, drain, infantry count);
   frame 75    the player's first GI is sent into the grinder as its click sends it (`enter E1 YAGRND eaten`);
   frame 400   money: more by the GI's refund; that GI gone;
-  frame 410   the next GI is sent into the reactor (`enter E1 YAPOWR own`); 700 the reactor has a passenger and more power.
+  frame 410   the player's first GI (from the start, so perhaps far away) is sent into the reactor (`enter E1 YAPOWR own`); 1200 the reactor has a passenger and more power.
 
   yr_grinder.py --binary <yr-native> --data-dir <game folder> --work <dir>
 Skipped (77) without the installed game (gamemd.exe in --data-dir) and for the Windows build.
@@ -34,7 +34,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 standins = importlib.import_module('yr_standins')
 ORDERS = ('60 spawn YAGRND 6 0; 61 spawn YAPOWR 0 6; 62 spawn E1 near YAGRND 3 0; 63 spawn E1 near YAPOWR 3 0; '
           '70 money; 71 absorb YAPOWR; 72 owner E1; 75 enter E1 YAGRND eaten; '
-          '400 money; 401 owner E1; 410 enter E1 YAPOWR own; 700 absorb YAPOWR; 701 owner E1')
+          '400 money; 401 owner E1; 410 enter E1 YAPOWR own; 1200 absorb YAPOWR; 1201 owner E1')
 BAD = re.compile(r'unrecovered|\btrap\b|signal \d+|SIG(SEGV|BUS|ILL|ABRT|FPE)|crash:', re.I)
 
 
@@ -49,7 +49,7 @@ def main():
     ap.add_argument('--binary', required=True)
     ap.add_argument('--data-dir', default='')
     ap.add_argument('--work', required=True)
-    ap.add_argument('--seconds', type=int, default=100)
+    ap.add_argument('--seconds', type=int, default=200)
     a = ap.parse_args()
     if not a.data_dir or not os.path.exists(os.path.join(a.data_dir, 'gamemd.exe')):
         print('skipped: no Yuri\'s Revenge install (gamemd.exe) in --data-dir')
@@ -98,7 +98,7 @@ def main():
     if sent and any(addr == sent.group(1) for _, addr in gis(401)):
         failures.append('the GI sent into the grinder is still there at frame 400')
 
-    r0, r1 = absorb(71), absorb(700)
+    r0, r1 = absorb(71), absorb(1200)
     print('bio reactor: (passengers, power, drain, infantry) %s -> %s' % (r0, r1))
     if not re.search(r'^harness-enter E1 &\S+ -> YAPOWR ', text, re.M):
         failures.append('the bio reactor order did not run')
