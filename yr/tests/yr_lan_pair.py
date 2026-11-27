@@ -54,8 +54,15 @@ def typed(anchor, start, word):
 
 
 def host_script(frames):
+    # The host's Start Game only starts once every guest has accepted (netdlg2.cpp: a guest not yet accepted gets
+    # "press the flashing Accept" and the press is undone), so it must come after Bravo's Accept (its s3+20000).
+    # Bravo's guest screen is shown about 14 s after Alpha's host screen, and since lane P64 upstream's matched
+    # DecodePubGameopt refreshes the guest's slot and option controls on every options packet (as gamemd.exe
+    # does), which under load keeps the screen from settling ("s3") for up to about 16 s more: at s3+40000 the
+    # host's press came first in a loaded run and both games stayed in the lobby. Lane P66: s3+60000.
+
     return (['s1+1500 click ' + NETWORK, 's2+1500 click ' + NEW, 's3+26000 click ' + CHAT] + typed('s3', 26500, 'alphachat')
-            + ['s3+40000 click ' + START, '%d quit' % frames])
+            + ['s3+60000 click ' + START, '%d quit' % frames])
 
 
 def guest_script():

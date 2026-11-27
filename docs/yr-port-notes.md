@@ -2286,3 +2286,32 @@ as P61 expected); all03, all05, sov02 and sov03 reach their recorded win tick wi
 crash, no fault). P61 expected all01 and all03 to fail; all05, sov02 and sov03 now diverge too, which the pin move explains
 (152 drafts replaced by matched code changes the simulation); none showed a crash.
 
+
+## Lane P66 (2026-11-27): the five P64 failures
+
+* **yr-native-interface-size** (port gap: pointer width, plus a record layout). Upstream's matched
+  OwnerDraw::ComboDropWindowHandler (FUN_0060D540) keeps an item's CB_GETITEMDATA in an `int` and reads it as a
+  `WinNode` (text at +8 on i686, +0x10 on arm64): the cut pointer faulted at +3752 in the drop list's paint. A
+  fixups.json row keeps it as LRESULT. The port's combo draft (ComboBoxHandler, kept) stored its own record
+  {Reserved, Data, Text, Next} as the item data, whose text was at +8 natively; its fields now follow WinNode's order
+  (next, id, text, data), with a static_assert on the text offset. Passes.
+* **yr-native-planning** (an upstream difference, gamemd.exe's behaviour; no hook was missing). Upstream's matched
+  Execute_DoList gathers a frame's MEGAMISSION events and spreads a group's orders to one cell over the cells around
+  it (FUN_0064CDA0), planning events included; the TibSun-text draft it replaced had no group move. Five selected
+  tanks therefore plan 15 nodes, one path each, and gamemd.exe's hover test FUN_0063AC70 refuses a node that is not on
+  every selected tank's path (5), so no node was hovered or picked up. Checked with a temporary trace: the drawn-nodes
+  list and the hit test work (the mouse on node 0's lead box finds it; FUN_0063AC70 refuses it). The test now plans
+  with one tank (`select MTNK 0`). Passes.
+* **yr-native-lan-pair** (a test timing race the matched code makes tighter; the real start wait works). The host's
+  Start Game starts only once every guest has accepted (a guest not yet accepted is told to press Accept and the press
+  is undone, netdlg2.cpp); the script pressed it at s3+40000 and the guest accepted at its own s3+20000, about 14 s
+  later on the wall clock. Upstream's matched DecodePubGameopt refreshes the guest's slot and option controls on every
+  options packet (gamemd.exe's code), which under ctest -j4 kept the guest screen from settling for 16 s more, so the
+  host pressed first and both stayed in the lobby. Unloaded the same build passes (3,000 frames, CRCs equal): upstream's
+  Wait_For_Players_To_Load and Wait_For_Players run natively; no stub or hook needed. The host now presses at s3+60000.
+* **yr-native-campaign-soviet** and **yr-native-member-aliases**: rerun, see the checks below.
+
+**Checks** (Mac, -j4, with lane P65's RA2 campaign replays running beside them): the yr-native suite without the won
+replays, 44 of 44 (lan-pair-wine skipped: no Windows build given), interface-size, planning, lan-pair, campaign-soviet
+(with P64's credits row) and member-aliases among them; ra2-quick 15/15; check_tree clean. The yr-ubsan labels were not
+run (they need a separate RA2_NATIVE_UBSAN_FLOAT build and run the soaks and won replays).

@@ -43,12 +43,16 @@ LRESULT YR_Original(HWND window, UINT message, WPARAM wparam, LPARAM lparam)
 	return CallWindowProc(proc, window, message, wparam, lparam);
 }
 
+// Laid out as OwnerDraw::WinNode (next, id, text, data): upstream's matched drop list
+// (OwnerDraw::ComboDropWindowHandler, FUN_0060D540) reads an item's text as a WinNode's at the
+// native offset, so the fields keep WinNode's order at every pointer width (lane P66).
 struct YRComboItem {
-	int Reserved;
-	int Data;
-	wchar_t *Text;
 	YRComboItem *Next;
+	int Reserved;
+	wchar_t *Text;
+	int Data;
 };
+static_assert(offsetof(YRComboItem, Text) == offsetof(OwnerDraw::WinNode, text), "YRComboItem is read as a WinNode");
 YRComboItem *YRComboItems = NULL;
 struct { HWND Combo; HWND Drop; } YRComboDrops[16];
 

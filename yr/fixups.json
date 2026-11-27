@@ -509,6 +509,12 @@
   },
   {
    "file": "src/ownrdraw.cpp",
+   "old": "\t\t\t\tint item = CallWindowProcA(proc, owner, 0x199, index, 0);",
+   "new": "\t\t\t\tLRESULT item = CallWindowProcA(proc, owner, 0x199, index, 0);",
+   "why": "Lane P66: OwnerDraw::ComboDropWindowHandler (FUN_0060D540, matched upstream since ac45ee9e) keeps the item's CB_GETITEMDATA (a WinNode pointer) in a 32-bit int; natively that cut the pointer and the drop list's paint faulted (yr-native-interface-size). Kept at pointer width (LRESULT); CB_ERR and 0 compare the same."
+  },
+  {
+   "file": "src/ownrdraw.cpp",
    "append": "ownrdraw_combo_native.inc",
    "why": "OwnerDraw::ComboBoxHandler (0x00617250) and the ComboDropWin procedure FUN_0060D540 (0x0060D540), unmatched in the YR tree; native drafts from the RA2 tree's rewrite and matched twin with gamemd.exe's globals (lane Y3)."
   },

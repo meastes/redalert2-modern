@@ -9,8 +9,12 @@ the drawn-nodes list each frame (it had kept deleted nodes).
 
 Through the menus into a skirmish (yr_standins.py's route), with scripted clicks (`@cmd=PlanningMode`,
 glue/yr_app_hooks.cpp) and harness orders (glue/yr_harness.cpp select/plan/plans/where):
-  frame 100  every tank selected; 102 the view centred on them (`centermap`: the planned nodes on the view);
-             110 PlanningMode clicked (planning mode on);
+  frame 100  the first tank selected; 102 the view centred on it (`centermap`: the planned nodes on the view);
+             110 PlanningMode clicked (planning mode on). One tank (lane P66): a group's orders to one cell are
+             spread over the cells around it by Execute_DoList's group move (FUN_0064CDA0, matched upstream since
+             ac45ee9e; the TibSun-text draft it replaced had no group move), planning events too, so each tank
+             gets its own nodes, and gamemd.exe's hover test (FUN_0063AC70) refuses a node that is not on every
+             selected tank's path: a group would plan 15 nodes and hover none;
   frame 130, 140, 150  three orders as map clicks give them (`plan`, the cells -3,0, -3,3 and 0,3 from the first
              tank's; Player_Assign_Mission, the click's path): three planned waypoints (nodes);
   frame 160  plans: planning mode on, three nodes;
@@ -22,7 +26,7 @@ glue/yr_app_hooks.cpp) and harness orders (glue/yr_harness.cpp select/plan/plans
              the left button down (FUN_0063A5A0 picks the node up; planloop at 188: picked 0) and up
              (FUN_0063A8E0 connects the paths to it: a closed loop; planloop at 192-196: loop start 0 over 3
              nodes, still three nodes);
-  frame 200  PlanningMode clicked again: the plan is committed (planning mode off) and the tanks set out;
+  frame 200  PlanningMode clicked again: the plan is committed (planning mode off) and the tank sets out;
   frame 300  plans and where: planning mode off, the first tank moved from where it was at frame 100.
 On the build before lane N23 (FUN_0063AB60 / FUN_0063A5A0 returning false) the first node is hovered but not
 picked up and no loop is closed: the test fails there.
@@ -48,7 +52,7 @@ SCRIPT = standins.SCRIPT + ''.join(l + '\n' for l in (
     '170 move @node=1', '174 ldown @node=1', '176 lup @node=1',
     '182 move @node=0', '186 ldown @node=0', '190 lup @node=0',
     '200 click @cmd=PlanningMode'))
-ORDERS = ('100 select MTNK all; 101 where MTNK; 102 centermap; 105 plans; 130 plan -3 0; 140 plan -3 3; 150 plan 0 3; '
+ORDERS = ('100 select MTNK 0; 101 where MTNK; 102 centermap; 105 plans; 130 plan -3 0; 140 plan -3 3; 150 plan 0 3; '
           '160 plans; 165 planloop; 180 plans; 181 planloop; 184 planloop; 188 planloop; 192 planloop; 194 planloop; '
           '196 planloop; 198 plans; 300 plans; 300 where MTNK')
 PLANS = re.compile(r'^harness-plans mode (\d) tokens \d+ nodes (\d+)$', re.M)
