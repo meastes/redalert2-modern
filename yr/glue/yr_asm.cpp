@@ -201,3 +201,7 @@ void FUN_007DEBBA(void *palette, void *translator, int red, int green, int blue,
     Adjust_Color(palette, translator, red, green, blue, intensity, mask, 0xFC, 8, 0xF8, 2, 0xF8, 3);   // 655
 }
 }
+
+// set_control_word (cmathstuff.asm, P64): WinMain records the x87 control word in FPU_FLAG for the
+// asm maths; natively there is no x87 state and nothing reads FPU_FLAG, so it does nothing.
+extern "C" void set_control_word(void) {}

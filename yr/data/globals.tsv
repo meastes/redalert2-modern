@@ -2875,3 +2875,15 @@ DAT_00B78168	0x00B78168	?DAT_00B78168@@3PAXA
 DAT_00B7816C	0x00B7816C	?DAT_00B7816C@@3HA
 DAT_00B78170	0x00B78170	?DAT_00B78170@@3_NA
 DAT_00B785C0	0x00B785C0	?DAT_00B785C0@@3PADA
+CameoDrawer	0x0087F6B0	?CameoDrawer@@3PAVConvertClass@@A
+CustomSeed	0x00A8ED98	?CustomSeed@@3HA
+DefaultCameraAngle	0x007E1E6C	?DefaultCameraAngle@@3MB
+DefaultLightAngle	0x007E1E68	?DefaultLightAngle@@3MB
+Keys	0x007E1A80	?Keys@@3QBDB
+NoExceptionHandler	0x00A8F7AC	?NoExceptionHandler@@3_NA
+SidebarDrawer	0x0087F6CC	?SidebarDrawer@@3PAVConvertClass@@A
+TerrainDrawer	0x0087F6B8	?TerrainDrawer@@3PAVConvertClass@@A
+g_ConnectionLost	0x00B77DC2	?g_ConnectionLost@@3_NA
+ObjectTypeClass::PipShapes	0x00AC147C	?PipShapes@ObjectTypeClass@@2PBXB
+LocomotionClass::CLSIDs::Drive	0x007E9A30	?Drive@CLSIDs@LocomotionClass@@3U_GUID@@B
+LocomotionClass::CLSIDs::Tunnel	0x007E9A50	?Tunnel@CLSIDs@LocomotionClass@@3U_GUID@@B

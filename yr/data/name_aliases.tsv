@@ -120,3 +120,6 @@ __ZN14SpotlightClassD1Ev	__ZN14SpotLightClassD1Ev
 # The random map generator's water regions (lane N8): the tree's Create_Water_Regions asks Is_Tile_Swamp where
 # gamemd.exe 0x0058CFE9 calls CellClass::Is_Tile_Clear_To_Green_LAT (0x004867B0), as RA2 does (0x0056E100).
 __ZNK9CellClass13Is_Tile_SwampEv	__ZNK9CellClass26Is_Tile_Clear_To_Green_LATEv
+# Main_Game calls Init_Game(argc, argv) (lane P64): upstream matches Init_Game (0x0052BA60) as int Init_Game(void), which
+# retired the port's draft (yr/glue/init_game_native.inc); the arguments go unread, as in gamemd.exe.
+__Z9Init_GameiPPc	__Z9Init_Gamev

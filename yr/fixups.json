@@ -196,19 +196,28 @@
    "why": "WinsockInterfaceClass::Build_Packet_CRC / Passes_CRC_Check: gamemd.exe's virtuals are matched in wsproto.cpp as free functions of the packet; the members (called by wspudp.cpp, wspipx.cpp) call them (lane YW, LAN)."
   },
   {
-   "file": "src/multiplayer.cpp",
-   "append": "mpgamemode_native.inc",
-   "why": "MultiplayerGameMode's base virtuals the YR tree leaves undefined (vt_entry_0C .. vt_entry_BC), from gamemd.exe's vtable 0x007EED60 (lane YW, LAN)."
-  },
-  {
-   "file": "src/ipxmgr.cpp",
-   "append": "ipxmgr_native.inc",
-   "why": "IPXManagerClass::Service (0x00541820) is unmatched in the YR tree; a native draft from the RA2 tree's twin (lane YW, LAN)."
+   "file": "src/startup.cpp",
+   "old": "\t_controlfp(_RC_CHOP, MCW_RC);\n",
+   "new": "\t_controlfp(0x300, 0x300);   /* NATIVE: _RC_CHOP, MCW_RC (MSVC float.h values) */\n",
+   "why": "P64: upstream matches WinMain (0x006BB9A0), which retires the port's draft (yr/glue/startup_winmain.inc, lane Y2). The host headers have no _RC_CHOP/MCW_RC; the values are the ones the draft passed."
   },
   {
    "file": "src/startup.cpp",
-   "append": "startup_winmain.inc",
-   "why": "WinMain (0x006BB9A0) is unmatched in the YR tree; a native draft from the RA2 tree's WinMain and gamemd.exe's code (lane Y2), appended to the startup unit."
+   "old": "\t\t\t__try {\n\t\t\t\tFUN_004068E0(\"Main_Game\\n\");\n\t\t\t\tMain_Game(argc, argv);\n\t\t\t} __except(Exception_Handler(GetExceptionCode(), GetExceptionInformation())) {}\n",
+   "new": "\t\t\t{   /* NATIVE: no SEH frame on this target; the port's fault handler reports a crash */\n\t\t\t\tFUN_004068E0(\"Main_Game\\n\");\n\t\t\t\tMain_Game(argc, argv);\n\t\t\t}\n",
+   "why": "P64: clang has no __try/__except for arm64 Mach-O; as the port's WinMain draft did, Main_Game runs without the x86 exception frame (the port's own fault handler reports and ends)."
+  },
+  {
+   "file": "src/startup.cpp",
+   "old": "\t\t\tRect(0, 0, SidebarWidth, VisibleRect.Height), false);\n",
+   "new": "\t\t\tRect(0, 0, SidebarWidth, Yr_Sidebar_Height(VisibleRect.Height)), false);   /* NATIVE (lane N19) */\n",
+   "why": "Native addition (lane N19, Game interface size; not original behaviour), carried from the retired WinMain draft: the sidebar surface is made tall enough for the interface size (glue/yr_interface_size.cpp)."
+  },
+  {
+   "file": "src/startup.cpp",
+   "old": "// FUNCTION: GAMEMD 0x006BB9A0\n",
+   "new": "extern \"C\" unsigned int _controlfp(unsigned int value, unsigned int mask);   // NATIVE: the port's (as the retired WinMain draft declared it)\nint Yr_Sidebar_Height(int screen_height);   // NATIVE (lane N19, Game interface size): glue/yr_interface_size.cpp\n// FUNCTION: GAMEMD 0x006BB9A0\n",
+   "why": "The declaration for the row above."
   },
   {
    "file": "src/wwmous.cpp",
@@ -235,11 +244,6 @@
    "file": "src/ccini.cpp",
    "append": "ccini_native.inc",
    "why": "CCINIClass::ReadCCFile (0x004741F0) is the function ccini.h also declares as Load(FileClass &, bool, bool); both names bound to the one definition."
-  },
-  {
-   "file": "src/init.cpp",
-   "append": "init_game_native.inc",
-   "why": "Init_Game (0x0052BA60) is unmatched in the YR tree; a native draft from the RA2 tree's and gamemd.exe's code (lane Y2)."
   },
   {
    "file": "src/voxel.cpp",
@@ -303,12 +307,6 @@
    "old": "static DoStruct const MasterDoControls[DO_COUNT];",
    "new": "static DoStruct const MasterDoControls[42];   /* NATIVE: Yuri's Revenge's 42 infantry actions (DOINFO_COUNT in infatype.cpp), not TibSun's DO_COUNT (21) */",
    "why": "The header comes from TibSun's text, where DoType has 21 actions (do.hh DO_COUNT); Yuri's Revenge has 42 (infatype.cpp's DOINFO_COUNT and SequenceName; gamemd.exe's table at 0x007EAF7C is 42 four-byte entries, the deploy, deployed, undeploy, cheer, paradrop, panic and the rest after the first 21). yr_data.py sized the storage from the declaration, so only the first 21 were loaded and every later action read the next global's bytes: the deploy action (0x1B) had rate 0, its animation never advanced and a deployer (Guardian GI, GI, Desolator) stood in its deploy frame for ever (the user's Duo fault, 2026-11-19; lane N13). The declared size is the original's."
-  },
-  {
-   "file": "hdr/mouse.h",
-   "old": "static MouseStruct MouseControl[MOUSE_COUNT];",
-   "new": "static MouseStruct MouseControl[86];   /* NATIVE: Yuri's Revenge's 86 cursors, not TibSun's MOUSE_COUNT (66) */",
-   "why": "As MasterDoControls (lane N13): the header's bound is TibSun's MouseType count (mouse.hh, 66), but gamemd.exe's cursor table at 0x0082D028 has 86 seven-int entries (the YR cursors after TibSun's, which the tree uses, e.g. (MouseType)0x4C/0x4D), so yr_data.py loaded only the first 66 and the later cursors' frames, counts and rates were the next global's bytes. The declared size is the original's."
   },
   {
    "file": "hdr/tooltip.h",
@@ -438,24 +436,13 @@
   },
   {
    "file": "src/sidebar.cpp",
-   "old": "extern MouseSlots * DAT_00887640;",
-   "new": "#include \"wwmous.h\"\nextern WWMouseClass * DAT_00887640;",
-   "why": "Blit_Sidebar reaches the mouse (DAT_00887640, gamemd.exe's WWMouseClass) through a stand-in class whose 16th virtual slot is Draw_Mouse in the MSVC layout (one destructor slot). The Itanium layout gives the destructor two slots, so natively that slot is Set_Mouse_Point: every sidebar blit moved the mouse to (the surface pointer's low half, 1), the edge scroll ran north-west for good and the cursor jumped. Natively the mouse is declared as the WWMouseClass it is (winstub.cpp declares it so), the same Draw_Mouse call (lane Y4)."
-  },
-  {
-   "file": "src/sidebar.cpp",
    "append": "sidebar_native.inc",
    "why": "SidebarClass::Reposition_Sidebar (0x006ABD30) is unmatched in the YR tree; a native draft from the RA2 twin (src/recovered/sidebar.cpp 0x006819A0) and gamemd.exe's code (lane Y3)."
   },
   {
-   "file": "src/ionblast.cpp",
-   "append": "ionblast_native.inc",
-   "why": "IonBlastClass::One_Time (0x0053D330) is unmatched in the YR tree; a native draft from the RA2 tree's draft (0x00521A90, TibSun's text) with gamemd.exe's surface sizes (lane Y3)."
-  },
-  {
-   "file": "src/techtype.cpp",
-   "append": "techtype_native.inc",
-   "why": "TechnoTypeClass::TechnoTypeClass(char const *, SpeedType) (0x00710AF0) is unmatched in the YR tree; a native draft from gamemd.exe's stores mapped to the tree's field offsets (lane Y3)."
+   "file": "src/multiplayer.cpp",
+   "append": "mpgamemode_native.inc",
+   "why": "MultiplayerGameMode's base virtuals (gamemd.exe vtable 0x007EED60), which the tree defines only for MultiplayerBattle (the same code at the same addresses); lane YW."
   },
   {
    "file": "src/multiplayer.cpp",
@@ -468,59 +455,11 @@
    "why": "UI::StandardWndProc (0x00622B50) and the other unmatched owner-draw functions the menus reach; native drafts from gamemd.exe's code and the RA2 tree's counterparts (lane Y3)."
   },
   {
-   "file": "src/srfcache.cpp",
-   "append": "pcx_native.inc",
-   "why": "Read_PCX_File (0x00630310) is unmatched in the YR tree; TibSun's text (gamemd.exe repeats it), adopted with attribution (lane Y3)."
-  },
-  {
-   "file": "src/ownrdraw.cpp",
-   "old": "// FUNCTION: GAMEMD 0x0060C4E0\nint __fastcall FUN_0060C4E0(HWND dialog)",
-   "new": "// NATIVE (lane Y11): the backdrop art's three pointers, kept by dialog window at pointer width\n// (a small table: the shell has a few dialogs open at once; a reused window gets its slot back).\nstruct Yr_Dialog_Art { HWND Window; intptr_t Convert; intptr_t Shape800; intptr_t Shape; };\nstatic Yr_Dialog_Art &Yr_Dialog_Art_Of(HWND dialog)\n{\n\tstatic Yr_Dialog_Art art[64];\n\tstatic int next = 0;\n\tfor (int i = 0; i < 64; ++i) {\n\t\tif (art[i].Window == dialog) return art[i];\n\t}\n\tYr_Dialog_Art &slot = art[next];\n\tnext = (next + 1) % 64;\n\tslot.Window = dialog;\n\tslot.Convert = slot.Shape800 = slot.Shape = 0;\n\treturn slot;\n}\n\n// FUNCTION: GAMEMD 0x0060C4E0\nintptr_t __fastcall FUN_0060C4E0(HWND dialog)",
-   "why": "Lane Y11: the dialog's backdrop art (FUN_0060CF00 sets, FUN_0060C4E0/FUN_0060CE40/FUN_0060CEA0 read, OwnerDraw::Paint draws through FUN_0072E730) is a ConvertClass and two SHPStruct pointers the unit keeps as ints at the record's 32-bit offsets 0x74, 0xE0 and 0xE4. Natively those were truncated to 32 bits (and FUN_0060CF00 read the dialog id from the record start, not the Dialog view), so the YR Options and Enhancements backdrop drew from garbage pointers: black on iOS, noise on the Mac. The three pointers are kept by window at pointer width (a small side table, as the RA2 tree's rewrite keeps the control records' pointers)."
-  },
-  {
-   "file": "src/ownrdraw.cpp",
-   "old": "return *(int *)((char *)data + 0x74);",
-   "new": "return Yr_Dialog_Art_Of(dialog).Convert;",
-   "why": "Lane Y11: the dialog's backdrop art (FUN_0060CF00 sets, FUN_0060C4E0/FUN_0060CE40/FUN_0060CEA0 read, OwnerDraw::Paint draws through FUN_0072E730) is a ConvertClass and two SHPStruct pointers the unit keeps as ints at the record's 32-bit offsets 0x74, 0xE0 and 0xE4. Natively those were truncated to 32 bits (and FUN_0060CF00 read the dialog id from the record start, not the Dialog view), so the YR Options and Enhancements backdrop drew from garbage pointers: black on iOS, noise on the Mac. Read back at pointer width."
-  },
-  {
-   "file": "src/ownrdraw.cpp",
-   "old": "int __fastcall FUN_0060CE40(HWND dialog)\n{",
-   "new": "intptr_t __fastcall FUN_0060CE40(HWND dialog)\n{",
-   "why": "Lane Y11: the dialog's backdrop art (FUN_0060CF00 sets, FUN_0060C4E0/FUN_0060CE40/FUN_0060CEA0 read, OwnerDraw::Paint draws through FUN_0072E730) is a ConvertClass and two SHPStruct pointers the unit keeps as ints at the record's 32-bit offsets 0x74, 0xE0 and 0xE4. Natively those were truncated to 32 bits (and FUN_0060CF00 read the dialog id from the record start, not the Dialog view), so the YR Options and Enhancements backdrop drew from garbage pointers: black on iOS, noise on the Mac. Returned at pointer width."
-  },
-  {
-   "file": "src/ownrdraw.cpp",
-   "old": "return *(int *)((char *)data + 0xe0);",
-   "new": "return Yr_Dialog_Art_Of(dialog).Shape800;",
-   "why": "Lane Y11: the dialog's backdrop art (FUN_0060CF00 sets, FUN_0060C4E0/FUN_0060CE40/FUN_0060CEA0 read, OwnerDraw::Paint draws through FUN_0072E730) is a ConvertClass and two SHPStruct pointers the unit keeps as ints at the record's 32-bit offsets 0x74, 0xE0 and 0xE4. Natively those were truncated to 32 bits (and FUN_0060CF00 read the dialog id from the record start, not the Dialog view), so the YR Options and Enhancements backdrop drew from garbage pointers: black on iOS, noise on the Mac. Read back at pointer width."
-  },
-  {
-   "file": "src/ownrdraw.cpp",
-   "old": "int __fastcall FUN_0060CEA0(HWND dialog)\n{",
-   "new": "intptr_t __fastcall FUN_0060CEA0(HWND dialog)\n{",
-   "why": "Lane Y11: the dialog's backdrop art (FUN_0060CF00 sets, FUN_0060C4E0/FUN_0060CE40/FUN_0060CEA0 read, OwnerDraw::Paint draws through FUN_0072E730) is a ConvertClass and two SHPStruct pointers the unit keeps as ints at the record's 32-bit offsets 0x74, 0xE0 and 0xE4. Natively those were truncated to 32 bits (and FUN_0060CF00 read the dialog id from the record start, not the Dialog view), so the YR Options and Enhancements backdrop drew from garbage pointers: black on iOS, noise on the Mac. Returned at pointer width."
-  },
-  {
-   "file": "src/ownrdraw.cpp",
-   "old": "return *(int *)((char *)data + 0xe4);",
-   "new": "return Yr_Dialog_Art_Of(dialog).Shape;",
-   "why": "Lane Y11: the dialog's backdrop art (FUN_0060CF00 sets, FUN_0060C4E0/FUN_0060CE40/FUN_0060CEA0 read, OwnerDraw::Paint draws through FUN_0072E730) is a ConvertClass and two SHPStruct pointers the unit keeps as ints at the record's 32-bit offsets 0x74, 0xE0 and 0xE4. Natively those were truncated to 32 bits (and FUN_0060CF00 read the dialog id from the record start, not the Dialog view), so the YR Options and Enhancements backdrop drew from garbage pointers: black on iOS, noise on the Mac. Read back at pointer width."
-  },
-  {
    "file": "src/ownrdraw.cpp",
    "old": "int __cdecl (FUN_0072[B-D][0-9A-F]{3})\\(void\\);",
    "regex": true,
    "new": "intptr_t __cdecl \\1(void);",
    "why": "Lane Y11: the dialog's backdrop art (FUN_0060CF00 sets, FUN_0060C4E0/FUN_0060CE40/FUN_0060CEA0 read, OwnerDraw::Paint draws through FUN_0072E730) is a ConvertClass and two SHPStruct pointers the unit keeps as ints at the record's 32-bit offsets 0x74, 0xE0 and 0xE4. Natively those were truncated to 32 bits (and FUN_0060CF00 read the dialog id from the record start, not the Dialog view), so the YR Options and Enhancements backdrop drew from garbage pointers: black on iOS, noise on the Mac. The palette converters FUN_0060CF00 stores return ConvertClass pointers (txtlabel2.cpp); declared at pointer width here."
-  },
-  {
-   "file": "src/ownrdraw.cpp",
-   "old": "\nint (FUN_0072E280|FUN_0072D450)\\(void\\);",
-   "regex": true,
-   "new": "\nintptr_t \\1(void);",
-   "why": "Lane Y11: FUN_0072E280 and FUN_0072D450 return ConvertClass pointers (txtlabel2.cpp); the unit's earlier int declarations truncated them where FUN_0060CF00 stores them as the dialog's backdrop converter."
   },
   {
    "file": "src/ownrdraw.cpp",
@@ -532,41 +471,29 @@
   {
    "file": "src/ownrdraw.cpp",
    "old": "\tchar *p = (char *)data;\n\tint type = *(int *)(p + 0x6c);",
-   "new": "\tchar *p = (char *)&data->Dialog - 0x28;\n\tint type = *(int *)(p + 0x6c);\n\tYr_Dialog_Art &art = Yr_Dialog_Art_Of(dialog);",
-   "why": "Lane Y11: the dialog's backdrop art (FUN_0060CF00 sets, FUN_0060C4E0/FUN_0060CE40/FUN_0060CEA0 read, OwnerDraw::Paint draws through FUN_0072E730) is a ConvertClass and two SHPStruct pointers the unit keeps as ints at the record's 32-bit offsets 0x74, 0xE0 and 0xE4. Natively those were truncated to 32 bits (and FUN_0060CF00 read the dialog id from the record start, not the Dialog view), so the YR Options and Enhancements backdrop drew from garbage pointers: black on iOS, noise on the Mac. The dialog id is read through the Dialog view, as FUN_0060D2C0 stores it."
+   "new": "\tchar *p = (char *)data;\n\tint type = data->DialogID;",
+   "why": "Lane Y11: the dialog's backdrop art (FUN_0060CF00 sets, FUN_0060C4E0/FUN_0060CE40/FUN_0060CEA0 read, OwnerDraw::Paint draws through FUN_0072E730) is a ConvertClass and two SHPStruct pointers the unit keeps as ints at the record's 32-bit offsets 0x74, 0xE0 and 0xE4. Natively those were truncated to 32 bits (and FUN_0060CF00 read the dialog id from the record start, not the Dialog view), so the YR Options and Enhancements backdrop drew from garbage pointers: black on iOS, noise on the Mac. The dialog id is read through the Dialog view, as FUN_0060D2C0 stores it. P64: upstream ac45ee9e names WinData's fields (StaticShapeDrawer +0x74, DialogBackground +0xE0, DialogBackgroundEx +0xE4, DialogID +0x6C), so the raw 32-bit offsets left in FUN_0060CF00/FUN_00602490 are written as those members."
   },
   {
    "file": "src/ownrdraw.cpp",
-   "old": "\\*\\(int \\*\\)\\(p \\+ 0x74\\) = ",
+   "old": "\\*\\(int \\*\\)\\(p \\+ 0x74\\) = (?:\\(int\\))?",
    "regex": true,
-   "new": "art.Convert = (intptr_t)",
-   "why": "Lane Y11: the dialog's backdrop art (FUN_0060CF00 sets, FUN_0060C4E0/FUN_0060CE40/FUN_0060CEA0 read, OwnerDraw::Paint draws through FUN_0072E730) is a ConvertClass and two SHPStruct pointers the unit keeps as ints at the record's 32-bit offsets 0x74, 0xE0 and 0xE4. Natively those were truncated to 32 bits (and FUN_0060CF00 read the dialog id from the record start, not the Dialog view), so the YR Options and Enhancements backdrop drew from garbage pointers: black on iOS, noise on the Mac. Stored at pointer width."
+   "new": "data->StaticShapeDrawer = (ConvertClass *)",
+   "why": "Lane Y11: the dialog's backdrop art (FUN_0060CF00 sets, FUN_0060C4E0/FUN_0060CE40/FUN_0060CEA0 read, OwnerDraw::Paint draws through FUN_0072E730) is a ConvertClass and two SHPStruct pointers the unit keeps as ints at the record's 32-bit offsets 0x74, 0xE0 and 0xE4. Natively those were truncated to 32 bits (and FUN_0060CF00 read the dialog id from the record start, not the Dialog view), so the YR Options and Enhancements backdrop drew from garbage pointers: black on iOS, noise on the Mac. Stored at pointer width. P64: upstream ac45ee9e names WinData's fields (StaticShapeDrawer +0x74, DialogBackground +0xE0, DialogBackgroundEx +0xE4, DialogID +0x6C), so the raw 32-bit offsets left in FUN_0060CF00/FUN_00602490 are written as those members."
   },
   {
    "file": "src/ownrdraw.cpp",
-   "old": "\\*\\(int \\*\\)\\(p \\+ 0xe0\\) = ",
+   "old": "\\*\\(int \\*\\)\\(p \\+ 0xe0\\) = (?:\\(int\\))?",
    "regex": true,
-   "new": "art.Shape800 = (intptr_t)",
-   "why": "Lane Y11: the dialog's backdrop art (FUN_0060CF00 sets, FUN_0060C4E0/FUN_0060CE40/FUN_0060CEA0 read, OwnerDraw::Paint draws through FUN_0072E730) is a ConvertClass and two SHPStruct pointers the unit keeps as ints at the record's 32-bit offsets 0x74, 0xE0 and 0xE4. Natively those were truncated to 32 bits (and FUN_0060CF00 read the dialog id from the record start, not the Dialog view), so the YR Options and Enhancements backdrop drew from garbage pointers: black on iOS, noise on the Mac. Stored at pointer width."
+   "new": "data->DialogBackground = (SHPStruct *)",
+   "why": "Lane Y11: the dialog's backdrop art (FUN_0060CF00 sets, FUN_0060C4E0/FUN_0060CE40/FUN_0060CEA0 read, OwnerDraw::Paint draws through FUN_0072E730) is a ConvertClass and two SHPStruct pointers the unit keeps as ints at the record's 32-bit offsets 0x74, 0xE0 and 0xE4. Natively those were truncated to 32 bits (and FUN_0060CF00 read the dialog id from the record start, not the Dialog view), so the YR Options and Enhancements backdrop drew from garbage pointers: black on iOS, noise on the Mac. Stored at pointer width. P64: upstream ac45ee9e names WinData's fields (StaticShapeDrawer +0x74, DialogBackground +0xE0, DialogBackgroundEx +0xE4, DialogID +0x6C), so the raw 32-bit offsets left in FUN_0060CF00/FUN_00602490 are written as those members."
   },
   {
    "file": "src/ownrdraw.cpp",
-   "old": "\\*\\(int \\*\\)\\(p \\+ 0xe4\\) = ",
+   "old": "\\*\\(int \\*\\)\\(p \\+ 0xe4\\) = (?:\\(int\\))?",
    "regex": true,
-   "new": "art.Shape = (intptr_t)",
-   "why": "Lane Y11: the dialog's backdrop art (FUN_0060CF00 sets, FUN_0060C4E0/FUN_0060CE40/FUN_0060CEA0 read, OwnerDraw::Paint draws through FUN_0072E730) is a ConvertClass and two SHPStruct pointers the unit keeps as ints at the record's 32-bit offsets 0x74, 0xE0 and 0xE4. Natively those were truncated to 32 bits (and FUN_0060CF00 read the dialog id from the record start, not the Dialog view), so the YR Options and Enhancements backdrop drew from garbage pointers: black on iOS, noise on the Mac. Stored at pointer width."
-  },
-  {
-   "file": "src/ownrdraw.cpp",
-   "old": "void __fastcall FUN_0072E730(Surface * surface, Rect * rect, int a, int b, int c);",
-   "new": "class ConvertClass;\nstruct SHPStruct;\nvoid __fastcall FUN_0072E730(Surface * surface, Rect const * area, ConvertClass * convert, SHPStruct * shape800, SHPStruct * shape);",
-   "why": "Lane Y11: the dialog's backdrop art (FUN_0060CF00 sets, FUN_0060C4E0/FUN_0060CE40/FUN_0060CEA0 read, OwnerDraw::Paint draws through FUN_0072E730) is a ConvertClass and two SHPStruct pointers the unit keeps as ints at the record's 32-bit offsets 0x74, 0xE0 and 0xE4. Natively those were truncated to 32 bits (and FUN_0060CF00 read the dialog id from the record start, not the Dialog view), so the YR Options and Enhancements backdrop drew from garbage pointers: black on iOS, noise on the Mac. Declared as txtlabel2.cpp defines it, so the pointers pass at full width (the int declaration reached it through an alias with the upper halves undefined)."
-  },
-  {
-   "file": "src/ownrdraw.cpp",
-   "old": "\t\t\t\tint a = FUN_0060C4E0(window);\n\t\t\t\tint b = FUN_0060CE40(window);\n\t\t\t\tint c = FUN_0060CEA0(window);",
-   "new": "\t\t\t\tConvertClass * a = (ConvertClass *)FUN_0060C4E0(window);\n\t\t\t\tSHPStruct * b = (SHPStruct *)FUN_0060CE40(window);\n\t\t\t\tSHPStruct * c = (SHPStruct *)FUN_0060CEA0(window);",
-   "why": "Lane Y11: the dialog's backdrop art (FUN_0060CF00 sets, FUN_0060C4E0/FUN_0060CE40/FUN_0060CEA0 read, OwnerDraw::Paint draws through FUN_0072E730) is a ConvertClass and two SHPStruct pointers the unit keeps as ints at the record's 32-bit offsets 0x74, 0xE0 and 0xE4. Natively those were truncated to 32 bits (and FUN_0060CF00 read the dialog id from the record start, not the Dialog view), so the YR Options and Enhancements backdrop drew from garbage pointers: black on iOS, noise on the Mac. Passed at pointer width."
+   "new": "data->DialogBackgroundEx = (SHPStruct *)",
+   "why": "Lane Y11: the dialog's backdrop art (FUN_0060CF00 sets, FUN_0060C4E0/FUN_0060CE40/FUN_0060CEA0 read, OwnerDraw::Paint draws through FUN_0072E730) is a ConvertClass and two SHPStruct pointers the unit keeps as ints at the record's 32-bit offsets 0x74, 0xE0 and 0xE4. Natively those were truncated to 32 bits (and FUN_0060CF00 read the dialog id from the record start, not the Dialog view), so the YR Options and Enhancements backdrop drew from garbage pointers: black on iOS, noise on the Mac. Stored at pointer width. P64: upstream ac45ee9e names WinData's fields (StaticShapeDrawer +0x74, DialogBackground +0xE0, DialogBackgroundEx +0xE4, DialogID +0x6C), so the raw 32-bit offsets left in FUN_0060CF00/FUN_00602490 are written as those members."
   },
   {
    "file": "src/ownrdraw.cpp",
@@ -576,57 +503,9 @@
   },
   {
    "file": "src/ownrdraw.cpp",
-   "old": "(char *)data + 0x",
-   "new": "((char *)&data->Dialog - 0x28) + 0x",
-   "why": "The unit reaches some WinData fields at their 32-bit offsets ((char *)data + 0x6c, 0xbc, ...), others by name. Natively the record's leading pointers are 8 bytes, so a raw offset from the record start lands elsewhere; taken from the union's pointer-free Dialog view (which starts at 32-bit offset 0x28) the raw and named accesses agree again (lane Y3)."
-  },
-  {
-   "file": "src/ownrdraw.cpp",
-   "old": "(unsigned char *)data + ",
-   "new": "((unsigned char *)&data->Dialog - 0x28) + ",
-   "why": "Lane P15 (the user's Duo report 2026-11-24: the skirmish screen's map labels sat over the column's first button slot): the dialog flags at 32-bit offsets 0xD5..0xD8 (FUN_0060C8D0..FUN_0060CE00: 0xD5 the map preview frame, 0xD6 the label box under it, 0xD7 the main screen piece, 0xD8) are set and read as (unsigned char *)data + 0xd5 / + 213, which the (char *) rule above does not cover. Natively they landed 0x20 bytes early, so OwnerDraw::Paint (Dialog.HasTopPanelAnimation, Dialog.HasButtonAnimation, by name) and the slide (YR_REC 0xD5..0xD7) never saw them: the skirmish, LAN host and guest and Choose Map screens drew the plain column (the main menu's monitor ring and an empty first slot) where gamemd.exe draws the preview frame and the label box. Taken through the Dialog view, the setters and the named readers agree."
-  },
-  {
-   "file": "src/ownrdraw.cpp",
-   "old": "*(BitFont **)((char *)this + 0x64) = BitFont::Instance;",
-   "new": "Wide.font = BitFont::Instance;",
-   "why": "The record constructor sets the font at its 32-bit offset 0x64, which is Wide.font: natively a pointer member placed after 8-byte pointers, so it is set by name (lane Y3)."
-  },
-  {
-   "file": "src/ownrdraw.cpp",
-   "old": "*(int *)((char *)this + 0x40) = 0;",
-   "new": "Wide.caretIndex = 0;",
-   "why": "32-bit offset 0x40 is Wide.caretIndex; set by name natively (lane Y3)."
-  },
-  {
-   "file": "src/ownrdraw.cpp",
-   "old": "(char *)this + 0x",
-   "new": "((char *)&this->Dialog - 0x28) + 0x",
-   "why": "The record constructor's other raw 32-bit offsets, taken through the pointer-free Dialog view as for (char *)data (lane Y3)."
-  },
-  {
-   "file": "src/globals.cpp",
-   "old": "DynamicVectorClass<SideClass *> Sides;",
-   "new": "/* native: Sides is SideClass::Array's storage (one address), bound by yr_aliases.py */",
-   "why": "gamemd.exe has one vector at this address, which the tree defines twice (Sides here, SideClass::Array in its class unit); natively two definitions were two vectors (rules filled one, the skirmish dialog read the other), so this name becomes an alias of the class array (lane Y3)."
-  },
-  {
-   "file": "src/globals.cpp",
-   "old": "DynamicVectorClass<HouseTypeClass *> HouseTypes;",
-   "new": "/* native: HouseTypes is HouseTypeClass::Array's storage (one address), bound by yr_aliases.py */",
-   "why": "gamemd.exe has one vector at this address, which the tree defines twice (HouseTypes here, HouseTypeClass::Array in its class unit); natively two definitions were two vectors (rules filled one, the skirmish dialog read the other), so this name becomes an alias of the class array (lane Y3)."
-  },
-  {
-   "file": "src/globals.cpp",
-   "old": "DynamicVectorClass<TeamTypeClass *> TeamTypes;",
-   "new": "/* native: TeamTypes is TeamTypeClass::Array's storage (one address), bound by yr_aliases.py */",
-   "why": "gamemd.exe has one vector at this address, which the tree defines twice (TeamTypes here, TeamTypeClass::Array in its class unit); natively two definitions were two vectors (rules filled one, the skirmish dialog read the other), so this name becomes an alias of the class array (lane Y3)."
-  },
-  {
-   "file": "src/globals.cpp",
-   "old": "DynamicVectorClass<TechnoTypeClass *> TechnoTypes;",
-   "new": "/* native: TechnoTypes is TechnoTypeClass::Array's storage (one address), bound by yr_aliases.py */",
-   "why": "gamemd.exe has one vector at this address, which the tree defines twice (TechnoTypes here, TechnoTypeClass::Array in its class unit); natively two definitions were two vectors (rules filled one, the skirmish dialog read the other), so this name becomes an alias of the class array (lane Y3)."
+   "old": "type = *(int *)((char *)data + 0x6c);",
+   "new": "type = data->DialogID;",
+   "why": "FUN_00602490 reads the dialog id at its 32-bit offset 0x6C; natively the record's leading pointers are 8 bytes, so it is read by name (lane Y3; since P64 upstream names WinData's fields and this is the one raw read left)."
   },
   {
    "file": "src/ownrdraw.cpp",
@@ -635,18 +514,22 @@
   },
   {
    "file": "src/ownrdraw.cpp",
+   "regex": true,
+   "old": "\\nLRESULT CALLBACK OwnerDraw::ListBoxHandler\\(HWND window, UINT message, WPARAM wparam, LPARAM lparam\\)\\n\\{\\n[\\s\\S]*?\\n\\}\\n",
+   "new": "\n// native: upstream's unmatched draft of OwnerDraw::ListBoxHandler (0x00618D40) left out; yr/glue/ownrdraw_list_native.inc has the port's\n",
+   "why": "P64: upstream ac45ee9e carries an unmatched draft of OwnerDraw::ListBoxHandler (0x00618D40, not in its manifest; the TEMPLATE marker above it is ArrayList<CellData>::shrinkVector's); the port keeps its own draft (lane Y12), which the played checks have run on."
+  },
+  {
+   "file": "src/ownrdraw.cpp",
    "append": "ownrdraw_list_native.inc",
    "why": "OwnerDraw::ListBoxHandler (0x00618D40, the campaign dialog's and the load dialog's lists) is unmatched in the YR tree; a native draft from the RA2 tree's list rewrite, drawn as the YR combo's drop list (lane Y12), appended after the combo draft whose helpers it uses."
   },
   {
-   "file": "src/ownrdraw.cpp",
-   "append": "ui_register_native.inc",
-   "why": "UI::RegisterWindow (0x00622820, the network dialogs' preparation) is unmatched in the YR tree; a native draft from gamemd.exe's code and lane Y3's StandardWndProc draft (lane YW, LAN)."
-  },
-  {
-   "file": "src/srfcache.cpp",
-   "append": "srfcache_native.inc",
-   "why": "SurfaceCacheClass::Draw (0x006BA3E0) and DrawMasked, unmatched in the YR tree; TibSun's text, adopted with attribution (lane Y3)."
+   "file": "src/map.cpp",
+   "regex": true,
+   "old": "\\nvoid MapClass::Set_Map_Dimensions\\(Rect const & rect, bool reset_cells, int cell_height, bool refresh_map\\)\\n\\{\\n[\\s\\S]*?\\n\\}\\n",
+   "new": "\n// native: upstream's unmatched draft of MapClass::Set_Map_Dimensions (0x00565C10) left out; yr/glue/map_native.inc has the port's\n",
+   "why": "P64: upstream ac45ee9e carries an unmatched draft of Set_Map_Dimensions (0x00565C10, not in its manifest, no FUNCTION marker); the port keeps its own draft (TibSun's text, lane Y3), which the played checks have run on."
   },
   {
    "file": "src/map.cpp",
@@ -657,16 +540,6 @@
    "file": "src/map.cpp",
    "append": "map_zones_native.inc",
    "why": "MapClass's zone and pathfinding functions, Place_Down/Pick_Up, threat, bridge repair and fog tests, unmatched in the YR tree; TibSun's text, adopted with attribution (lane Y3)."
-  },
-  {
-   "file": "src/ldprgmgr.cpp",
-   "append": "ldprgmgr_native.inc",
-   "why": "LoadProgressManager::Draw (0x00552D60) is unmatched in the YR tree and has no RA2 twin; a partial behaviour draft (the skirmish loading picture) from gamemd.exe's code (lane Y3)."
-  },
-  {
-   "file": "src/progress2.cpp",
-   "append": "progress_native.inc",
-   "why": "ProgressScreenClass::Draw_Player (0x00643720) is unmatched in the YR tree; a native draft from gamemd.exe's code (lane Y3)."
   },
   {
    "file": "src/palette.cpp",
@@ -684,36 +557,6 @@
    "old": "\t\tif (tileset->Tiles[i] != NULL) {\n\t\t\tunsigned char * ptr = (unsigned char *)ImageData;\n\t\t\t// Only fix up pointers that have not been converted already. The file\n\t\t\t// has just been read fresh, so none of them ever have been.\n\t\t\tif ((void *)tileset->Tiles[i] < ptr) {\n\t\t\t\ttileset->Tiles[i] = (IsoTileRecord *)(ptr + (unsigned int)tileset->Tiles[i]);\n\t\t\t}",
    "new": "\t\tif (tileset->Tiles[i].Ref != 0) {   // NATIVE: the raw slot (an unresolved offset reads back as no record)\n\t\t\tunsigned char * ptr = (unsigned char *)ImageData;\n\t\t\t// Only fix up pointers that have not been converted already. The file\n\t\t\t// has just been read fresh, so none of them ever have been.\n\t\t\ttileset->Tiles[i].Resolve(ptr);   // NATIVE: offset -> record reference",
    "why": "The tile set's record offsets resolved through the native slot (lane Y3)."
-  },
-  {
-   "file": "src/power.cpp",
-   "old": "extern int DAT_00886F90;",
-   "new": "extern Rect SidebarRect;\n#define DAT_00886F90 (SidebarRect.X)",
-   "why": "DAT_00886F90 is SidebarRect.X (gamemd.exe's SidebarRect at 0x00886F90): natively the name reads the unit's SidebarRect, not a separate zero-filled store the link closure would make (lane Y4)."
-  },
-  {
-   "file": "src/power.cpp",
-   "old": "extern int DAT_00886F94;",
-   "new": "extern Rect SidebarRect;\n#define DAT_00886F94 (SidebarRect.Y)",
-   "why": "DAT_00886F94 is SidebarRect.Y (gamemd.exe's SidebarRect at 0x00886F90): natively the name reads the unit's SidebarRect, not a separate zero-filled store the link closure would make (lane Y4)."
-  },
-  {
-   "file": "src/sidebar.cpp",
-   "old": "extern int DAT_00886F94;",
-   "new": "extern Rect SidebarRect;\n#define DAT_00886F94 (SidebarRect.Y)",
-   "why": "DAT_00886F94 is SidebarRect.Y (gamemd.exe's SidebarRect at 0x00886F90): natively the name reads the unit's SidebarRect, not a separate zero-filled store the link closure would make (lane Y4)."
-  },
-  {
-   "file": "src/sidebar.cpp",
-   "old": "extern int DAT_00886F98;",
-   "new": "extern Rect SidebarRect;\n#define DAT_00886F98 (SidebarRect.Width)",
-   "why": "DAT_00886F98 is SidebarRect.Width (gamemd.exe's SidebarRect at 0x00886F90): natively the name reads the unit's SidebarRect, not a separate zero-filled store the link closure would make (lane Y4)."
-  },
-  {
-   "file": "src/sidebar.cpp",
-   "old": "extern int DAT_00886F9C;",
-   "new": "extern Rect SidebarRect;\n#define DAT_00886F9C (SidebarRect.Height)",
-   "why": "DAT_00886F9C is SidebarRect.Height (gamemd.exe's SidebarRect at 0x00886F90): natively the name reads the unit's SidebarRect, not a separate zero-filled store the link closure would make (lane Y4)."
   },
   {
    "file": "src/radar.cpp",
@@ -736,19 +579,9 @@
   {
    "file": "src/mpscore.cpp",
    "regex": true,
-   "old": "qsort\\(DAT_00ABF958, ([^,]+), 4, FUN_005C9AE0\\)",
-   "new": "qsort(DAT_00ABF958, \\1, sizeof(DAT_00ABF958[0]), FUN_005C9AE0)",
+   "old": "qsort\\(DAT_00ABF958, ([^,]+), 4, (\\w+)\\)",
+   "new": "qsort(DAT_00ABF958, \\1, sizeof(DAT_00ABF958[0]), \\2)",
    "why": "The score screen sorts its table of score pointers with an element size of 4 (a 32-bit pointer); natively a pointer is 8 bytes, so the size is the element's (lane Y4)."
-  },
-  {
-   "file": "src/combat.cpp",
-   "append": "combat_native.inc",
-   "why": "The area damage (0x00489280) is unmatched in the YR tree; TibSun's Explosion_Damage text (lane Y4)."
-  },
-  {
-   "file": "src/bounce.cpp",
-   "append": "bounce_native.inc",
-   "why": "BounceClass::AI is unmatched in the YR tree; TibSun's text (lane Y4)."
   },
   {
    "file": "src/xsurface.cpp",
@@ -761,11 +594,6 @@
    "why": "BuildingClass::Exit_Object is unmatched in the YR tree; TibSun's text (lane Y4)."
   },
   {
-   "file": "src/astar.cpp",
-   "append": "astar_native.inc",
-   "why": "AStarClass::Find_Path_Regular is unmatched in the YR tree; TibSun's text (lane Y4)."
-  },
-  {
    "file": "src/walk.cpp",
    "append": "walk_native.inc",
    "why": "WalkLocomotionClass::Movement_AI is unmatched in the YR tree; TibSun's text (lane Y4)."
@@ -776,29 +604,9 @@
    "why": "FootClass::Active_Click_With(ActionType, ObjectClass *, bool) is unmatched in the YR tree; TibSun's text with gamemd.exe's cases (lane Y4)."
   },
   {
-   "file": "src/infantry.cpp",
-   "append": "infantry_native.inc",
-   "why": "InfantryClass::Assign_Destination is unmatched in the YR tree; TibSun's text with gamemd.exe's changes (lane Y4)."
-  },
-  {
-   "file": "src/ahandle2.cpp",
-   "append": "ahandle2_native.inc",
-   "why": "AircraftTrackerClass::FillCurrentVector, unmatched in the YR tree; written from gamemd.exe's code (lane Y6)."
-  },
-  {
    "file": "src/super.cpp",
    "append": "super_native.inc",
    "why": "SuperClass::Launch, unmatched in the YR tree; the RA2 twin's Place text with YR's super weapons read from gamemd.exe (lane Y6)."
-  },
-  {
-   "file": "src/slavemanager.cpp",
-   "append": "slavemanager_native.inc",
-   "why": "The slave miner's two state machines (SlaveManagerClass FUN_006AF6C0, FUN_006AFD60), unmatched in the YR tree; written from gamemd.exe's code (lane Y6)."
-  },
-  {
-   "file": "src/partsys.cpp",
-   "append": "partsys_native.inc",
-   "why": "ParticleSystemClass::Smoke_AI and Spark_AI, unmatched in the YR tree; the RA2 twins' text checked against gamemd.exe (lane Y6)."
   },
   {
    "file": "src/particle.cpp",
@@ -821,24 +629,9 @@
    "why": "Attaches_To(TActionType) is unmatched in the YR tree; TibSun's text with gamemd.exe's case list (lane Y3)."
   },
   {
-   "file": "src/scenario.cpp",
-   "append": "scenario_native.inc",
-   "why": "Wait_For_Players_To_Load is unmatched in the YR tree; a partial native draft from gamemd.exe's code (lane Y3)."
-  },
-  {
    "file": "src/tactical.cpp",
    "append": "tactical_native.inc",
    "why": "Tactical functions unmatched in the YR tree; TibSun's text adjusted to gamemd.exe as native drafts (lane Y3)."
-  },
-  {
-   "file": "src/builtype.cpp",
-   "append": "builtype_native.inc",
-   "why": "BuildingTypeClass functions unmatched in the YR tree; TibSun's text as native drafts (lane Y3)."
-  },
-  {
-   "file": "src/alphashp.cpp",
-   "append": "alphashp_native.inc",
-   "why": "AlphaShapeClass::Draw_All is unmatched in the YR tree; TibSun's text as a native draft (lane Y3)."
   },
   {
    "file": "src/abuffer.cpp",
@@ -922,31 +715,6 @@
    "old": "int zbuffer_offset = 0;\n\tint abuffer_offset = 0;",
    "new": "intptr_t zbuffer_offset = 0;\n\tintptr_t abuffer_offset = 0;",
    "why": "RLE_Blit and Buffer_To_Surface_With_Z keep the depth and alpha buffer positions (addresses from Get_Buffer_Offset) in ints; pointer-width natively (lane Y3)."
-  },
-  {
-   "file": "src/techno.cpp",
-   "append": "techno_native.inc",
-   "why": "TechnoClass functions unmatched in the YR tree; TibSun's text adjusted to gamemd.exe as native drafts (lane Y3)."
-  },
-  {
-   "file": "src/techno.cpp",
-   "append": "fire_at_native.inc",
-   "why": "TechnoClass::Fire_At (0x006FDD50) is unmatched in the YR tree (the first shot of a long game reached its trap); a native draft from Red Alert 2's text and gamemd.exe's YR changes (lane Y11b)."
-  },
-  {
-   "file": "src/bullet.cpp",
-   "append": "bullet_native.inc",
-   "why": "BulletClass::Unlimbo (0x00468670), BulletClass::AI (0x004666E0), BulletClass::Shrapnel (0x0046A310) and Projectile_Motion (0x005B20F0) are unmatched in the YR tree; native drafts from the RA2 twins and TibSun's text with gamemd.exe's YR changes (lane Y11)."
-  },
-  {
-   "file": "src/team.cpp",
-   "append": "team_native.inc",
-   "why": "TeamClass::AI (0x006E9140) is unmatched in the YR tree; a native draft from gamemd.exe's code and the RA2 twin, appended to the team unit so it reaches the unit's TMission_* handlers (lane Y11)."
-  },
-  {
-   "file": "src/credits.cpp",
-   "append": "credits_native.inc",
-   "why": "CreditClass::Graphic_Logic is unmatched in the YR tree; a native draft from gamemd.exe's code (lane Y3)."
   },
   {
    "file": "src/radar.cpp",
@@ -1067,11 +835,6 @@
    "why": "lane Y7: the game loop is over (won, lost or aborted): the host's in-play mark is cleared (glue/yr_app_hooks.cpp), so the touch toolbar leaves with the game; nothing else changes."
   },
   {
-   "file": "src/fly.cpp",
-   "append": "fly_native.inc",
-   "why": "FlyLocomotionClass::Nearing_Target (0x004CEFB0) is unmatched in the YR tree; a native draft from the RA2 tree's twin and gamemd.exe's code (lane Y7), appended to the fly unit."
-  },
-  {
    "file": "src/scroll.cpp",
    "old": "\t\t\t\tMap.Mouse_Left_Release(coord, cell, object, What_Action(cell, object, false));\n",
    "new": "\t\t\t\tActionType Yr_Modern_Left_Up(ObjectClass *&object, ActionType action, bool band);\n\t\t\t\tvoid Yr_Modern_Left_Done();\n\t\t\t\tMap.Mouse_Left_Release(coord, cell, object, Yr_Modern_Left_Up(object, What_Action(cell, object, false), IsRubberBand));\n\t\t\t\tYr_Modern_Left_Done();\n",
@@ -1171,54 +934,6 @@
    "old": "struct AudioChannel\n{\n\tListNode nd;\n\tint Type;\n\tAudioAttribs ChannelAttribs;\n\tchar pad88[8];\n\tAudioAttribs * SfxAttribs;\n\tAudioAttribs * GroupAttribs;\n\tAudioAttribs * CompAttribs;\n\tAudioAttribs * FadeAttribs;\n\tchar padA0[0x10];\n\tint (__fastcall * CB_NextFrame)(AudioChannel * chan);\n\tchar padB4[4];\n\tint (__fastcall * CB_SampleDone)(AudioChannel * chan);\n\tint (__fastcall * CB_Stop)(AudioChannel * chan);\n\tvoid * Data;\n\tchar padC4[0xac];\n\tchar * frameData;\n\tint bytesInFrame;\n\tint bytesRemaining;\n\tchar pad17C[0x2c];\n\tTimeStamp frameTime;\n\tTimeStamp bufferTime;\n};\n\n",
    "new": "struct AudioChannel\t\t// NATIVE (lane Y8): audchan.h's AudioChannel at native widths, this unit's names\n{\n\tListNode nd;\n\tint Type;\n\tAudioAttribs ChannelAttribs;\n\tchar pad88[8];\n\tAudioAttribs * SfxAttribs;\n\tAudioAttribs * GroupAttribs;\n\tAudioAttribs * CompAttribs;\n\tAudioAttribs * FadeAttribs;\n\tint ControlPriority;\n\tvolatile unsigned ControlStatus;\n\tvolatile int ControlLoopCount;\n\tvoid * Device;\n\tint (__fastcall * CB_NextFrame)(AudioChannel * chan);\n\tvoid * CB_NextSample;\n\tint (__fastcall * CB_SampleDone)(AudioChannel * chan);\n\tint (__fastcall * CB_Stop)(AudioChannel * chan);\n\tvoid * Data;\n\tchar padC4[0x10];\n\tvoid * driver;\n\tAudioAttribs attribs;\n\tunsigned pad150[2];\n\tvoid * drvData;\n\tvoid * drvCBNextFrame;\n\tvoid * drvCBNextSample;\n\tvoid * drvCBSampleDone;\n\tvoid * sample;\n\tvoid * frame;\n\tchar * frameData;\n\tint bytesInFrame;\n\tint bytesRemaining;\n\tAudioFormat current_format;\n\tint format_changed;\n\tint drv_format_changed;\n\tunsigned pad1A4;\n\tTimeStamp frameTime;\n\tTimeStamp bufferTime;\n\tchar pad1B8[8];\n};\n\n",
    "why": "lane Y8: audplay.cpp's own view of AudioChannel spelled the members it does not use as 32-bit byte pads, so natively its CB_Stop, Data and the frame fields sat at other offsets than audchan.h's (AudioChannelStop called a heap address once the device opened). Spelled as audchan.h's members at native widths with this unit's names."
-  },
-  {
-   "file": "src/theme.cpp",
-   "old": "extern void __fastcall FUN_00407B40(AudioStream * stream, int value);",
-   "new": "extern void __fastcall FUN_00407B40(AudioStream * stream, intptr_t value);",
-   "why": "lane Y8: the streamer's attribute setters (AudioStreamerSetAttribs / SetFadeAttribs, gamemd.exe 0x00407B40 / 0x00407B50) take an AudioAttribs pointer, and the attribute globals hold pointers (wpaudio/audio.cpp FUN_00406B10 points them at its AudioAttribs data); this unit declared both as int, so natively the music and EVA streams got their attributes cut to 32 bits (AudioAttribsApply faulted at 0x01800C7E once wpaudio's device opened). Pointer-sized."
-  },
-  {
-   "file": "src/theme.cpp",
-   "old": "extern void __fastcall FUN_00407B50(AudioStream * stream, int value);",
-   "new": "extern void __fastcall FUN_00407B50(AudioStream * stream, intptr_t value);",
-   "why": "lane Y8: the streamer's attribute setters (AudioStreamerSetAttribs / SetFadeAttribs, gamemd.exe 0x00407B40 / 0x00407B50) take an AudioAttribs pointer, and the attribute globals hold pointers (wpaudio/audio.cpp FUN_00406B10 points them at its AudioAttribs data); this unit declared both as int, so natively the music and EVA streams got their attributes cut to 32 bits (AudioAttribsApply faulted at 0x01800C7E once wpaudio's device opened). Pointer-sized."
-  },
-  {
-   "file": "src/theme.cpp",
-   "old": "extern int AudioScoreAttribs;",
-   "new": "extern intptr_t AudioScoreAttribs;",
-   "why": "lane Y8: the streamer's attribute setters (AudioStreamerSetAttribs / SetFadeAttribs, gamemd.exe 0x00407B40 / 0x00407B50) take an AudioAttribs pointer, and the attribute globals hold pointers (wpaudio/audio.cpp FUN_00406B10 points them at its AudioAttribs data); this unit declared both as int, so natively the music and EVA streams got their attributes cut to 32 bits (AudioAttribsApply faulted at 0x01800C7E once wpaudio's device opened). Pointer-sized."
-  },
-  {
-   "file": "src/theme.cpp",
-   "old": "extern int AudioFadeAttribs;",
-   "new": "extern intptr_t AudioFadeAttribs;",
-   "why": "lane Y8: the streamer's attribute setters (AudioStreamerSetAttribs / SetFadeAttribs, gamemd.exe 0x00407B40 / 0x00407B50) take an AudioAttribs pointer, and the attribute globals hold pointers (wpaudio/audio.cpp FUN_00406B10 points them at its AudioAttribs data); this unit declared both as int, so natively the music and EVA streams got their attributes cut to 32 bits (AudioAttribsApply faulted at 0x01800C7E once wpaudio's device opened). Pointer-sized."
-  },
-  {
-   "file": "src/vox.cpp",
-   "old": "extern void __fastcall FUN_00407B40(AudioStream * stream, int value);",
-   "new": "extern void __fastcall FUN_00407B40(AudioStream * stream, intptr_t value);",
-   "why": "lane Y8: the streamer's attribute setters (AudioStreamerSetAttribs / SetFadeAttribs, gamemd.exe 0x00407B40 / 0x00407B50) take an AudioAttribs pointer, and the attribute globals hold pointers (wpaudio/audio.cpp FUN_00406B10 points them at its AudioAttribs data); this unit declared both as int, so natively the music and EVA streams got their attributes cut to 32 bits (AudioAttribsApply faulted at 0x01800C7E once wpaudio's device opened). Pointer-sized."
-  },
-  {
-   "file": "src/vox.cpp",
-   "old": "extern void __fastcall FUN_00407B50(AudioStream * stream, int value);",
-   "new": "extern void __fastcall FUN_00407B50(AudioStream * stream, intptr_t value);",
-   "why": "lane Y8: the streamer's attribute setters (AudioStreamerSetAttribs / SetFadeAttribs, gamemd.exe 0x00407B40 / 0x00407B50) take an AudioAttribs pointer, and the attribute globals hold pointers (wpaudio/audio.cpp FUN_00406B10 points them at its AudioAttribs data); this unit declared both as int, so natively the music and EVA streams got their attributes cut to 32 bits (AudioAttribsApply faulted at 0x01800C7E once wpaudio's device opened). Pointer-sized."
-  },
-  {
-   "file": "src/vox.cpp",
-   "old": "extern int AudioVoiceAttribs;",
-   "new": "extern intptr_t AudioVoiceAttribs;",
-   "why": "lane Y8: the streamer's attribute setters (AudioStreamerSetAttribs / SetFadeAttribs, gamemd.exe 0x00407B40 / 0x00407B50) take an AudioAttribs pointer, and the attribute globals hold pointers (wpaudio/audio.cpp FUN_00406B10 points them at its AudioAttribs data); this unit declared both as int, so natively the music and EVA streams got their attributes cut to 32 bits (AudioAttribsApply faulted at 0x01800C7E once wpaudio's device opened). Pointer-sized."
-  },
-  {
-   "file": "src/vox.cpp",
-   "old": "extern int AudioGroupAttribs2;",
-   "new": "extern intptr_t AudioGroupAttribs2;",
-   "why": "lane Y8: the streamer's attribute setters (AudioStreamerSetAttribs / SetFadeAttribs, gamemd.exe 0x00407B40 / 0x00407B50) take an AudioAttribs pointer, and the attribute globals hold pointers (wpaudio/audio.cpp FUN_00406B10 points them at its AudioAttribs data); this unit declared both as int, so natively the music and EVA streams got their attributes cut to 32 bits (AudioAttribsApply faulted at 0x01800C7E once wpaudio's device opened). Pointer-sized."
   },
   {
    "file": "hdr/shapeset.h",
@@ -1396,8 +1111,8 @@
   },
   {
    "file": "src/ownrdraw.cpp",
-   "old": "\t\tif (FUN_00609BC0(parent, window)) {\n\t\t\tdata->Dialog.LayoutBand = 1;\n",
-   "new": "\t\tif (FUN_00609BC0(parent, window) || GetDlgCtrlID(window) == 0x7F5E) {\t// NATIVE (lane C23, Y11): the one-game toggle\n\t\t\tdata->Dialog.LayoutBand = 1;\n",
+   "old": "\t\tif (FUN_00609BC0(parent, window)) {\n\t\t\tdata->LayoutBand = 1;\n",
+   "new": "\t\tif (FUN_00609BC0(parent, window) || GetDlgCtrlID(window) == 0x7F5E) {\t// NATIVE (lane C23, Y11): the one-game toggle\n\t\t\tdata->LayoutBand = 1;\n",
    "why": "Native addition: the one-game app's toggle (port/src/user32.cpp, id 0x7F5E, a clone of the main menu's Exit Game 0x3EE) is drawn and animated as the main menu's sidebar buttons (WinData +0xB0 = 1, as FUN_00609BC0 gives Exit Game), as RA2's twin 0x005E7EB0 gives it (port/fixups.json). FUN_00609BC0 knows only the listed dialogs' ids. Lane Y11 (user request 2026-11-17, adopted by the owner): the toggle is a regular main-menu sidebar button in the slot directly above Exit Game, so it takes the sidebar buttons' kind as Exit Game does (record +0xB0 = 1) instead of the dialogs' push buttons' (3)."
   },
   {
@@ -1447,11 +1162,6 @@
    "why": "ShipLocomotionClass::Draw_Matrix and While_Moving (and its track tables) are unmatched in the YR tree; gamemd.exe's ship locomotor is a clone of the drive locomotor, so the drive drafts' text under the ship's name (lane Y12)."
   },
   {
-   "file": "src/hover.cpp",
-   "append": "hover_native.inc",
-   "why": "HoverLocomotionClass::Process, While_Moving and Start_Of_Move are unmatched in the YR tree; TibSun's text (lane Y12)."
-  },
-  {
    "file": "hdr/rocket.h",
    "old": "\t\tvirtual HRESULT STDMETHODCALLTYPE Save(IStream * stream, BOOL cleardirty) override;\n",
    "new": "",
@@ -1470,16 +1180,6 @@
    "why": "gamemd.exe's RocketLocomotionClass vtables (ILocomotion 0x007F0A90.., IPersistStream 0x007F0BE8) hold LocomotionClass's own Save (0x0055AA60), Do_Turn (0x0055AC30) and Mark_All_Occupation_Bits (0x004B6620): the rocket does not override them. The tree declared overrides it never defines (link-closure traps; a Soviet mission's save reached Save, lane Y12); the declarations go, so the class inherits them as the original does."
   },
   {
-   "file": "src/vanim.cpp",
-   "append": "vanim_native.inc",
-   "why": "VoxelAnimClass's main constructor (0x007493B0) is unmatched in the YR tree; TibSun's text with gamemd.exe's audio and particle changes (lane Y12)."
-  },
-  {
-   "file": "src/rocket.cpp",
-   "append": "rocket_native.inc",
-   "why": "RocketLocomotionClass::Process (gamemd.exe 0x006622C0) is unmatched in the YR tree: Red Alert 2's text with gamemd.exe's YR changes (lane Y13)."
-  },
-  {
    "file": "src/map.cpp",
    "old": "extern int DAT_00ABDE88;\n",
    "new": "#define DAT_00ABDE88 LEVEL_LEPTON_H   // the map unit's own copy of geometry.h's LEVEL_LEPTON_H (gamemd.exe 0x00ABDE88, set by its initialiser 0x005617E0)\n",
@@ -1493,20 +1193,8 @@
   },
   {
    "file": "src/team.cpp",
-   "old": "void __cdecl LightningStorm_RequestStop(void);",
-   "new": "void FUN_0053A090(void);",
-   "why": "The team script's ion storm actions (TMission_ION_STORM_START 0x006EE0A0, _END 0x006EE0E0) call gamemd.exe's LightningStorm::Start (0x00539EB0) and ::RequestStop (0x0053A090), which ion.cpp matches as FUN_00539EB0(int, int, Cell, HouseClass *) and FUN_0053A090; team.cpp declared them under other names (link-closure traps on a campaign's play path) and Start with (int center, bool flag), where gamemd.exe pushes the cell DAT_00B0E948 as a dword and a null owner. The calls name the matched functions with their types (lane Y14)."
-  },
-  {
-   "file": "src/team.cpp",
    "old": "LightningStorm_Start(mission->Data.Value, Rule->LightningDeferment, DAT_00B0E948, false);",
    "new": "FUN_00539EB0(mission->Data.Value, Rule->LightningDeferment, *(Cell const *)&DAT_00B0E948, NULL);",
-   "why": "The team script's ion storm actions (TMission_ION_STORM_START 0x006EE0A0, _END 0x006EE0E0) call gamemd.exe's LightningStorm::Start (0x00539EB0) and ::RequestStop (0x0053A090), which ion.cpp matches as FUN_00539EB0(int, int, Cell, HouseClass *) and FUN_0053A090; team.cpp declared them under other names (link-closure traps on a campaign's play path) and Start with (int center, bool flag), where gamemd.exe pushes the cell DAT_00B0E948 as a dword and a null owner. The calls name the matched functions with their types (lane Y14)."
-  },
-  {
-   "file": "src/team.cpp",
-   "old": "\t\tLightningStorm_RequestStop();",
-   "new": "\t\tFUN_0053A090();",
    "why": "The team script's ion storm actions (TMission_ION_STORM_START 0x006EE0A0, _END 0x006EE0E0) call gamemd.exe's LightningStorm::Start (0x00539EB0) and ::RequestStop (0x0053A090), which ion.cpp matches as FUN_00539EB0(int, int, Cell, HouseClass *) and FUN_0053A090; team.cpp declared them under other names (link-closure traps on a campaign's play path) and Start with (int center, bool flag), where gamemd.exe pushes the cell DAT_00B0E948 as a dword and a null owner. The calls name the matched functions with their types (lane Y14)."
   },
   {
@@ -1552,23 +1240,8 @@
    "why": "gamemd.exe's table at 0x00823FD4 holds 4 pointers followed by the strings they point to (TXT_WORST_CONNECTION .. TXT_BEST_CONNECTION). Declared without a bound, yr_data.py gave it the extent to the next known global and loaded those strings as pointer slots too, so the elements pointing at the strings reached the converted (doubled) pointer storage instead of the text: the network options' connection label. The bound is the table's own (lane Y15)."
   },
   {
-   "file": "src/mech.cpp",
-   "append": "mech_native.inc",
-   "why": "Unmatched routines on play paths, drafted from gamemd.exe and Red Alert 2's text (lane Y15)."
-  },
-  {
-   "file": "src/wave.cpp",
-   "append": "wave_native.inc",
-   "why": "Unmatched routines on play paths, drafted from gamemd.exe and Red Alert 2's text (lane Y15)."
-  },
-  {
    "file": "src/dsurface.cpp",
    "append": "dsurface_native.inc",
-   "why": "Unmatched routines on play paths, drafted from gamemd.exe and Red Alert 2's text (lane Y15)."
-  },
-  {
-   "file": "src/radbeam.cpp",
-   "append": "radbeam_native.inc",
    "why": "Unmatched routines on play paths, drafted from gamemd.exe and Red Alert 2's text (lane Y15)."
   },
   {
@@ -1611,14 +1284,11 @@
    "why": "lane N3: the Save dialog's new file name (SAVExxxx.SAV) was a char array declared inside the else block and used after it (filename points at it): VC6 kept the stack slot, the native compile reuses it, and the game saved under a garbage name and then reported 'Error saving' (the user's Mac report, 2026-11-19; reproduced through the menus in the packaged app). The same array, declared in the enclosing block."
   },
   {
-   "file": "src/radar.cpp",
-   "append": "radar_native.inc",
-   "why": "lane N5: RadarClass::FUN_00658330 (gamemd.exe 0x00658330, one player's row of the Diplomacy dialog) is unmatched in the YR tree and was a link-closure trap: Tab in a skirmish (Keyboard_Process -> FUN_006ABC40 -> SpecialDialog 8 -> FUN_006586D0) opens the Diplomacy dialog, whose first fill called it. A NON-EXACT stand-in from gamemd.exe's instructions, appended to the unit (it uses the unit's static control-id tables)."
-  },
-  {
-   "file": "src/link2.cpp",
-   "append": "link2_native.inc",
-   "why": "lane N5: LineTrail::LineTrail (gamemd.exe 0x00556A20) is unmatched in the YR tree and was a link-closure trap: ObjectClass::Unlimbo makes one for a type with UseLineTrail=yes. A NON-EXACT stand-in from gamemd.exe's instructions, appended to the unit."
+   "file": "src/mapgen.cpp",
+   "regex": true,
+   "old": "\\nvoid MapGeneratorClass::Generate_Random_Map\\(bool full_init, HWND dialog\\)\\n\\{\\n[\\s\\S]*?\\n\\}\\n",
+   "new": "\n// native: upstream's unmatched draft of MapGeneratorClass::Generate_Random_Map (0x00598960) left out; yr/glue/mapgen_native.inc has the port's\n",
+   "why": "P64: upstream ac45ee9e carries an unmatched draft of Generate_Random_Map (0x00598960, not in its manifest); the port keeps its own draft (lane N8)."
   },
   {
    "file": "src/mapgen.cpp",
@@ -1693,9 +1363,15 @@
   },
   {
    "file": "src/tactical.cpp",
-   "old": "\tPoint2D pt1(TacticalRect.Width - width - 3, TacticalRect.Height - (font->field_1C + 2) * (index + 1));\n\tPrint_Timer(buf2, pt1, scheme);\n\n\tPoint2D pt2(TacticalRect.Width - 3, TacticalRect.Height - (font->field_1C + 2) * (index + 1));\n",
-   "new": "\tint corner_w = TacticalRect.Width, corner_h = TacticalRect.Height;\n\tYr_Timer_Corner(&corner_w, &corner_h);   /* NATIVE (lane P18): glue/yr_map_zoom.cpp */\n\tPoint2D pt1(corner_w - width - 3, corner_h - (font->field_1C + 2) * (index + 1));\n\tPrint_Timer(buf2, pt1, scheme);\n\n\tPoint2D pt2(corner_w - 3, corner_h - (font->field_1C + 2) * (index + 1));\n",
-   "why": "Native addition (lane P18, Map zoom and Zoom gestures; not original behaviour): Tactical::DrawTimer 0x006D4B50 puts the countdowns (the mission timer, the superweapons on show, the power blackouts) at the view's bottom right corner (TacticalRect's width and height). While the map is zoomed the view is the part shown rounded up to whole cells, and the host shows only the part shown (glue/yr_map_zoom.cpp Yr_Map_View), so the corner lay outside it: on the iPhone and iPad, where Pinch zoom starts on (render scale 2), the countdowns were cut off or hidden (the user's Duo report, 2026-11-24: no Psychic Dominator countdown in Yuri's Revenge Allied 1). Yr_Timer_Corner answers the shown part's bottom right corner while zoomed; unzoomed (the default on the Mac and Windows, and the Original preset) the view's, as the original."
+   "old": "\tPoint2D pt1(TacticalRect.Width - width - 3, TacticalRect.Height - (font->field_1C + 2) * (index + 1));\n",
+   "new": "\tint corner_w = TacticalRect.Width, corner_h = TacticalRect.Height;\n\tYr_Timer_Corner(&corner_w, &corner_h);   /* NATIVE (lane P18): glue/yr_map_zoom.cpp */\n\tPoint2D pt1(corner_w - width - 3, corner_h - (font->field_1C + 2) * (index + 1));\n",
+   "why": "Native addition (lane P18, Map zoom and Zoom gestures; not original behaviour): Tactical::DrawTimer 0x006D4B50 puts the countdowns (the mission timer, the superweapons on show, the power blackouts) at the view's bottom right corner (TacticalRect's width and height). While the map is zoomed the view is the part shown rounded up to whole cells, and the host shows only the part shown (glue/yr_map_zoom.cpp Yr_Map_View), so the corner lay outside it: on the iPhone and iPad, where Pinch zoom starts on (render scale 2), the countdowns were cut off or hidden (the user's Duo report, 2026-11-24: no Psychic Dominator countdown in Yuri's Revenge Allied 1). Yr_Timer_Corner answers the shown part's bottom right corner while zoomed; unzoomed (the default on the Mac and Windows, and the Original preset) the view's, as the original. (P64: upstream prints both halves with Fancy_Text_Print_Wide; this row moves pt1, the next pt2.)"
+  },
+  {
+   "file": "src/tactical.cpp",
+   "old": "\tPoint2D pt2(TacticalRect.Width - 3, TacticalRect.Height - (font->field_1C + 2) * (index + 1));\n",
+   "new": "\tPoint2D pt2(corner_w - 3, corner_h - (font->field_1C + 2) * (index + 1));\n",
+   "why": "Native addition (lane P18): the timer value at the same corner as its label (the row above)."
   },
   {
    "file": "src/sidebar.cpp",
@@ -1867,8 +1543,8 @@
   },
   {
    "file": "src/mainopt.cpp",
-   "old": "\tFUN_0072E1B0(Drawing::RenderWidth, Drawing::RenderHeight);\n\tMap.Init_IO();\n",
-   "new": "\tFUN_0072E1B0(Drawing::RenderWidth, Drawing::RenderHeight);\n\tYr_Art_Relayout();   // NATIVE (lane N20)\n\tMap.Init_IO();\n",
+   "old": "\tFUN_0072E1B0(VideoModeWidth, VideoModeHeight);\n\tMap.Init_IO();\n",
+   "new": "\tFUN_0072E1B0(VideoModeWidth, VideoModeHeight);\n\tYr_Art_Relayout();   // NATIVE (lane N20)\n\tMap.Init_IO();\n",
    "why": "Native addition (lane N20, Map zoom below 1x, Red Alert 2's lane C16 carried to Yuri's Revenge; not original behaviour): Change_Display_Mode, after its backdrop layout: the interface art layout (FUN_0072FC60: the in-play sidebar column's and the command bar's pieces), made once at Init_Game for Options' size, is made again for the game mode's size when that differs (render scale 2: the command bar at the larger screen's bottom), and back (glue/yr_map_zoom.cpp Yr_Art_Relayout). Never at the render scale 1."
   },
   {
@@ -1915,14 +1591,14 @@
   },
   {
    "file": "src/conquer.cpp",
-   "old": "\t\twhile (Game::SpecialDialog != SDLG_NONE) {\n",
-   "new": "\t\tYr_Dialog_Screen(true);   /* NATIVE (lane N20): glue/yr_map_zoom.cpp */\n\t\twhile (Game::SpecialDialog != SDLG_NONE) {\n",
+   "old": "\t\twhile (SpecialDialog != SDLG_NONE) {\n",
+   "new": "\t\tYr_Dialog_Screen(true);   /* NATIVE (lane N20): glue/yr_map_zoom.cpp */\n\t\twhile (SpecialDialog != SDLG_NONE) {\n",
    "why": "Native addition (lane N20, Map zoom below 1x, Red Alert 2's lane C16 carried to Yuri's Revenge; not original behaviour): with Zoom gestures on the game's screen is twice the window's in its map column, and the in-game dialogs (the in-game menu, Abort Mission, Save/Load, Game Controls, Diplomacy, the message boxes) are laid out for the screen size (Drawing::RenderWidth x RenderHeight); for their time the screen size is the window's, so each is laid out as the original lays it out at the window's size and the host shows it at the window's scale (glue/yr_map_zoom.cpp Yr_Dialog_Screen, RA2's Native_Dialog_Screen). Off (the default and the Original preset): nothing changes. This row: Ingame_Menu_Dialog 0x0048C8B0 before its dialog loop."
   },
   {
    "file": "src/conquer.cpp",
-   "old": "\t\tUpdateWindow(Game::hWnd);\n",
-   "new": "\t\tYr_Dialog_Screen(false);   /* NATIVE (lane N20) */\n\t\tUpdateWindow(Game::hWnd);\n",
+   "old": "\t\tUpdateWindow(MainWindow);\n",
+   "new": "\t\tYr_Dialog_Screen(false);   /* NATIVE (lane N20) */\n\t\tUpdateWindow(MainWindow);\n",
    "why": "Native addition (lane N20, Map zoom below 1x, Red Alert 2's lane C16 carried to Yuri's Revenge; not original behaviour): Ingame_Menu_Dialog after its dialog loop: the screen size and the layouts restored (Yr_Dialog_Screen)."
   },
   {
@@ -2015,6 +1691,36 @@
    "old": "const Cell CELL_NONE(0, 0);",
    "new": "alignas(4) const Cell CELL_NONE(0, 0);   /* native (lane P54): every unit's copy 4-byte aligned */",
    "why": "Lane P54 (the float-cast-overflow build's link): geometry.h defines CELL_NONE (a Cell, two shorts, 2-byte aligned) in every unit that includes it, and tools/weaken_duplicates.py keeps one definition (astar.cpp's). clang may raise the alignment of a unit's own copy to 4 and load the Cell with one 32-bit LDR (logic.cpp's LogicClass::AI under -fsanitize=float-cast-overflow), which ld64 refuses when the kept copy lands on a 2-byte boundary (arm64_lo12 fixup error); the release build linked by where the kept copy happened to fall. With every copy declared 4-byte aligned the kept one is too. The value and the layout of Cell are unchanged."
+  },
+  {
+   "file": "src/map.cpp",
+   "old": "#include \"cast.h\"\n",
+   "new": "#include \"cast.h\"\ntemplate<> bool HashTableClass<unsigned int, SubzoneConnectionStruct>::Add_Object(int bucket_index, ObjectType const & object);   // NATIVE: declared before its first use\n",
+   "why": "P64: VC6 accepts an explicit specialization defined after the member was used (map.cpp defines HashTableClass<unsigned, SubzoneConnectionStruct>::Add_Object at 0x00589E20 after the zone code calls it); clang requires it declared first. The declaration changes nothing else."
+  },
+  {
+   "file": "src/srfcache.cpp",
+   "old": "#include <new>\n",
+   "new": "#include <new>\ntemplate<> char Dictionary<Wstring, SurfaceCacheEntry>::remove(Wstring &key);   // NATIVE: declared before its first use\n",
+   "why": "P64: as map.cpp's Add_Object: the explicit specialization of Dictionary<Wstring, SurfaceCacheEntry>::remove is used before its definition; clang requires it declared first."
+  },
+  {
+   "file": "src/ownrdraw.cpp",
+   "old": "\t\t\tdata->editText->truncate(wparam);\n",
+   "new": "\t\t\tdata->editText->truncate((unsigned int)wparam);   /* NATIVE: WPARAM is 64-bit here */\n",
+   "why": "P64: EM_LIMITTEXT truncates the edit text to wparam characters; natively WPARAM is 64 bits, so the call is ambiguous between WideWstring::truncate(unsigned int) and truncate(wchar_t). The 32-bit length is the one VC6 passes."
+  },
+  {
+   "file": "src/team.cpp",
+   "old": "#define INVOKE_YR(n, e) case (TeamMissionType)n:",
+   "new": "#define INVOKE_YR(n, e) case n:",
+   "why": "P64: TeamClass::AI's YR missions 0x39-0x40 are cast to TeamMissionType, whose enumerators span -64..63 for clang, so case 0x40 (GARRISON_STRUCTURE) is not a constant expression; the integer case value compares the same."
+  },
+  {
+   "file": "src/init.cpp",
+   "old": "\tif (!CCFileClass::Is_There_Search_Drives()) {\n\t\tFUN_004068E0(\"Calling Force_CD_Available\\n\");",
+   "new": "\tif (!CCFileClass::Is_There_Search_Drives() && !CD::Is_Override_Swap()) {   /* NATIVE: -CD. (lane P64) */\n\t\tFUN_004068E0(\"Calling Force_CD_Available\\n\");",
+   "why": "P64: upstream matches Init_Game (0x0052BA60) with Init_CDROM_Access inline, which retired the port's draft. The native host passes -CD. (user decision 2026-11-08: no CD check); natively \".\" adds no search drive, so the original would ask for the disk. With -CD given (CD::Override_Swap), the -CD branch runs, as the retired draft did; --cd-check (no -CD) keeps the original check."
   }
  ]
 }

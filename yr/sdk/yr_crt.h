@@ -63,6 +63,9 @@ char *_strrev(char *s);
 char *_strdup(const char *s);
 char *_strncpy(char *d, const char *s, size_t n);
 char *_itoa(int value, char *out, int radix);
+#ifndef __MINGW32__   /* (Windows: the C library's own) */
+unsigned short *_itow(int value, unsigned short *out, int radix);   /* lane P64: sidebar.cpp's diplomacy rows */
+#endif
 void _splitpath(const char *path, char *drive, char *dir, char *fname, char *ext);
 void _makepath(char *out, const char *drive, const char *dir, const char *fname, const char *ext);
 int _open(const char *name, int flags, ...);
