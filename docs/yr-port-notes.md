@@ -2334,3 +2334,28 @@ private/campaign_saves/yr/<mission>/p68 and scripts/p68.
 | Allied 3 (ALL03UMD) | shelved at the cap | 1.5 | P52's recording parts by 3,043: P52's nuke took the war factory at 2,700, here it stands; then the Weather Control Device has no power and the Lightning Storm never recharges (3,086 ticks left). The two six-tank reinforcements come only after the army moves west (about 7,800 and 17,000). Four tries along y 96 (P52's party_legs, the reinforcements gathered at 90-100,96, focus fire on the gattlings at 56,89 and 56,94): the leg from 78,94 to 66-68,92 costs half the army (initiates and Yuris from 57-77,79, mind control), and the silo never fell below 868. Next: snipers or GGIs on the Yuris and initiates first, from the 23,200 unspent credits (the barracks stand) |
 | Soviet 3 (SOV03UMD) | shelved at the cap | 1.4 | P63's recording holds to the beacon (5,512) and the gather (11,004), and parts on the west road (one HTNK at 46,41 at 14,818 where P63 had 13). From 11,004 P63's s3w, s3q and s3r: about ten tanks at 47,42 by 22,000 and Boris walked to 52-53,29-31. Each time Boris dies 50-100 ticks after he calls the strike (four BPLN come), before it lands; killing the gattling at 56,29 first did not help. The six initiates at 54-57,25-29 (they come back) are the likely cause. Next: clear them, or paint from further west. sov03-try1.replay preloads to 24,682 with Boris at 47,44 |
 | Allied 5 (ALL05UMD) | shelved | 1.1 | The recording parts at its opening (credits 7,336 at 3,520 against P52's 11,061). Its placements then miss and the base is gone by about 15,500, with 16,775 credits unspent. A fresh start with P52's a5a.py and a5b.py holds: four war factories and 20 SREF by 33,365. a5war.py along 75,95 - 95,98 - 110,100 - 128,100 - 120,82 razes BadGuy2 by 43,377 (8 SLAV and 2 SMIN left, 23 SREF). A sweep of the nearest objects (a5y.py, after P63's a5x.py) then lost every prism tank to the garrisoned civilian buildings at 101-120,114-127. Next: from all05-try1.replay --until 43377, build 60 or more SREF (P63 won with about 87), then BadGuy1 by P60's east route, leaving the garrisoned buildings alone |
+## Lane P69 (2026-11-27): Allied 5's early credits on the new pin are gamemd's (the Chrono Miner drives out)
+
+P68 found that Allied 5's recorded commands give 7,336 credits at tick 3,520 on the new pin (ra2-decomp ac45ee9e)
+against 11,061 on the old one (8719494, main at 86bd477). Both pins were stepped side by side through two step servers
+(yr/tests/campaign/all05.replay, `state` every 20 ticks, frame clock), and both reproduce those two numbers.
+
+The game parts at the first frame, before any command: the map's two CMIN (ALL05UMD [Units] 4 and 5, Harvest at 52,93
+and 52,95, the refinery GAREFN at 50,94) stand at 55,99 and 56,99 on the old pin at loop frame 0, but at 52,93 and
+52,95 on the new one. On the old pin each Chrono Miner teleported out to the ore every trip (after each unload at the
+dock, 51,94, it is at the ore 20 ticks later) and back when full: an unload about every 120 ticks a miner. On the new
+pin it drives out (about one cell every 20 ticks, 52,95 to 55,101) and teleports back when full: an unload about every
+380 ticks a miner. First credit difference: tick 480 (10,500 against 10,000, the old pin's first unload). The object
+IDs part too (12 fewer by tick 60, 210 by tick 1,603: the old pin's extra chrono warp animations), so a recording's
+"@^ID" points made on one pin do not name the same object on the other.
+
+Cause: CMIN's Locomotor is the teleport one (rulesmd.ini [CMIN] Locomotor={4A582747-...}, Teleporter=yes). Upstream's
+matched UnitClass::Assign_Destination (gamemd.exe 0x00741970, 6,167 B, in vendor/ra2-decomp/data/manifest.csv) has the
+Teleporter block: a teleporter given any destination but an unload dock's free cell ends its teleport and rides a Drive
+locomotor piggybacked on it (gamemd.exe: the Teleporter byte test at 0x007424BD, the CLSID_TeleportLocomotion compare at
+0x007424E9, the CLSID_DriveLocomotion compare at 0x007425EB and the Drive locomotor made at 0x00742688). The old pin's
+glue draft (yr/glue/unit_native.inc, TibSun's text, retired by P64) had no such block, so the miner kept its teleport
+locomotor for the trip out. rulesmd.ini's own comment on ChronoHarvTooFarDistance ("teleport super far and drive super
+far back") says the same. Do_MISSION_HARVEST's LOOKING state is the same in the draft and upstream. Verdict: gamemd's
+behaviour, not a port fault. Nothing changed in fixups or glue; the Allied 5 recording must be re-recorded (P68). The
+Soviet missions' miners are not Chrono Miners, so this does not explain Soviet 2 or Soviet 3.
