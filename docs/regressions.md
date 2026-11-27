@@ -258,6 +258,7 @@ yr/tests/campaign/, checked by `yr-native-campaign-won-*` (label yr-campaign-won
 | YR Allied 1 (ALL01UMD) | won at tick 33,939 (re-recorded by lane P52 after lane P44's facing fix; P50's recording won at 24,522 and goes another way under it) | yr-native-campaign-won-all01 (about two minutes) |
 | YR Allied 3 (ALL03UMD) | won at tick 12,952 (lane P52) | yr-native-campaign-won-all03 (about a minute) |
 | YR Allied 5 (ALL05UMD) | won at tick 112,634 (lane P60, resuming lane P52's recording at tick 90,439 after the fixes of lanes P55 and P56) | yr-native-campaign-won-all05 (about ten and a half minutes) |
+| YR Soviet 2 (SOV02UMD) | won at tick 8,320 (lane P60) | yr-native-campaign-won-sov02 (under a minute) |
 ## Yuri's Revenge under AddressSanitizer (lane P44, 2026-11-26)
 
 Lane P35's RA2 sweep on Yuri's Revenge: an RA2_NATIVE_ASAN=ON, RA2_NATIVE_YR=ON build (build/asan-yr), whose yr-native
