@@ -633,27 +633,8 @@ void InfantryClass::Per_Cell_Process(PCPType why)
 			return;
 		}
 
-		if (!Class->IsTiberiumProof && !Has_Ability(ABILITY_TIBERIUM_PROOF) && Strength > 0) {
-			TiberiumType tiberium = Map[Get_Coord()].Tiberium_Type_Here();
-			if (tiberium != TIBERIUM_NONE) {
-				int damage = Tiberiums[tiberium]->Power / 10;
-				if (damage <= 1) damage = 1;
-				Coord coord = Get_Coord();
-				if (Take_Damage(damage, 0, Rule->C4Warhead, NULL, true) == RESULT_DESTROYED) {
-					if (Scen->IsTiberiumDeathToVisceroid) {
-						UnitClass * visceroid = new UnitClass(Rule->SmallVisceroid, House_From_HousesType(HouseTypeClass::From_Name("Neutral")));
-						if (visceroid) {
-							Coord cell_coord = Map[coord].Cell_Coord();
-							if ((Map[cell_coord].Flag.Composite & 0x020) == 0) {
-								ScenarioInit++;
-								visceroid->Unlimbo(coord);
-								ScenarioInit--;
-							}
-						}
-					}
-				}
-			}
-		}
+		// YR (lane P61): no Tiberium damage here (gamemd.exe goes from the cell's land test to FootClass::Per_Cell_Process,
+		// 0x0051A9EB); TibSun's text hurt a soldier standing on ore and could make a visceroid of it.
 	}
 
 	if (IsActive) {
