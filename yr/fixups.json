@@ -423,6 +423,48 @@
    "why": "The tooltip label's pointer stored whole (ToolTip::Text is intptr_t natively; lane Y3)."
   },
   {
+   "file": "src/sidebar.cpp",
+   "old": "tooltip.Text = (int)\"",
+   "new": "tooltip.Text = (intptr_t)\"",
+   "why": "The sell and repair buttons' tooltip labels (TXT_SELL_MODE, TXT_REPAIR_MODE; SidebarClass, new on the ac45ee9e pin) stored whole: ToolTip::Text is intptr_t natively, and the 32-bit cast cut the pointer, so ToolTipManager::Process passed a cut address to StringTable::LoadString and the game faulted (signal 11 in its bsearch) as the pointer rested on the sell button (lane P71, YR Soviet 5; gamemd.exe 0x00724AD0 reads the label pointer at +0x14 and passes it whole)."
+  },
+  {
+   "file": "*",
+   "old": "vt_entry_5C(unsigned a, unsigned b, unsigned c)",
+   "new": "vt_entry_5C(unsigned a, unsigned b, uintptr_t c)",
+   "why": "LAN co-op's campaign info (DecodePubGameopt 0x005E3D10's 'Setting/Handling Campaign info' branches) passes a pointer through a 32-bit virtual argument; MPCooperative::vt_entry_5C reads it back as MPlayerScoreType * and vt_entry_74 strtoks it as char *, so natively the pointer was cut. The argument is pointer-wide natively (uintptr_t; yr/glue/mpgamemode_native.inc's base definitions follow); the vtable slots are unchanged (lane P71's pointer-cast sweep; gamemd.exe passes the 32-bit address whole)."
+  },
+  {
+   "file": "*",
+   "old": "vt_entry_74(unsigned a, unsigned b)",
+   "new": "vt_entry_74(unsigned a, uintptr_t b)",
+   "why": "LAN co-op's campaign info (DecodePubGameopt 0x005E3D10's 'Setting/Handling Campaign info' branches) passes a pointer through a 32-bit virtual argument; MPCooperative::vt_entry_5C reads it back as MPlayerScoreType * and vt_entry_74 strtoks it as char *, so natively the pointer was cut. The argument is pointer-wide natively (uintptr_t; yr/glue/mpgamemode_native.inc's base definitions follow); the vtable slots are unchanged (lane P71's pointer-cast sweep; gamemd.exe passes the 32-bit address whole)."
+  },
+  {
+   "file": "src/netshare.cpp",
+   "old": "vt_entry_5C(a, b, (unsigned)stats);",
+   "new": "vt_entry_5C(a, b, (uintptr_t)stats);",
+   "why": "LAN co-op's campaign info (DecodePubGameopt 0x005E3D10's 'Setting/Handling Campaign info' branches) passes a pointer through a 32-bit virtual argument; MPCooperative::vt_entry_5C reads it back as MPlayerScoreType * and vt_entry_74 strtoks it as char *, so natively the pointer was cut. The argument is pointer-wide natively (uintptr_t; yr/glue/mpgamemode_native.inc's base definitions follow); the vtable slots are unchanged (lane P71's pointer-cast sweep; gamemd.exe passes the 32-bit address whole)."
+  },
+  {
+   "file": "src/netshare.cpp",
+   "old": "vt_entry_74(string[1] - '0', (unsigned)&string[2]);",
+   "new": "vt_entry_74(string[1] - '0', (uintptr_t)&string[2]);",
+   "why": "LAN co-op's campaign info (DecodePubGameopt 0x005E3D10's 'Setting/Handling Campaign info' branches) passes a pointer through a 32-bit virtual argument; MPCooperative::vt_entry_5C reads it back as MPlayerScoreType * and vt_entry_74 strtoks it as char *, so natively the pointer was cut. The argument is pointer-wide natively (uintptr_t; yr/glue/mpgamemode_native.inc's base definitions follow); the vtable slots are unchanged (lane P71's pointer-cast sweep; gamemd.exe passes the 32-bit address whole)."
+  },
+  {
+   "file": "src/session.cpp",
+   "old": "(int)slot < (int)&Session.Slots[8]",
+   "new": "(intptr_t)slot < (intptr_t)&Session.Slots[8]",
+   "why": "The slot loops (0x0069BC60 and its neighbour) compare two pointers into Session.Slots through int casts; natively the casts cut both, which goes wrong if the array straddles a 4 GB line. Compared pointer-wide (lane P71's pointer-cast sweep)."
+  },
+  {
+   "file": "src/wpaudio/audtimer.cpp",
+   "old": "(unsigned int)&time + 4)",
+   "new": "(uintptr_t)&time + 4)",
+   "why": "failsafeGetTime (0x004093F0, the timer used when QueryPerformanceFrequency fails) keeps the timestamp's high word's address through an unsigned int, which cuts the pointer natively; pointer-wide (lane P71's pointer-cast sweep; latent, the port's QueryPerformanceFrequency succeeds)."
+  },
+  {
    "file": "src/tab.cpp",
    "old": "tip.Text = (int)text;",
    "new": "tip.Text = (intptr_t)text;",

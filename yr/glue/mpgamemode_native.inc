@@ -14,11 +14,11 @@ void MultiplayerGameMode::vt_entry_24(void) {}                                  
 void MultiplayerGameMode::vt_entry_38(HWND dialog) {}                                           // 0x005C0E80
 bool MultiplayerGameMode::vt_entry_54(int index, DynamicVectorClass<int> picks) { return false; }     // 0x005C0EB0
 bool MultiplayerGameMode::vt_entry_58(int index, DynamicVectorClass<int> picks, char const * map, char const * name) { return false; }   // 0x005C0E90
-bool MultiplayerGameMode::vt_entry_5C(unsigned a, unsigned b, unsigned c) { return true; }            // 0x005C0ED0
+bool MultiplayerGameMode::vt_entry_5C(unsigned a, unsigned b, uintptr_t c) { return true; }            // 0x005C0ED0
 bool MultiplayerGameMode::vt_entry_60(void) { return true; }                                          // 0x005D6320
 bool MultiplayerGameMode::vt_entry_64(void) { return true; }                                          // 0x005D6330
 bool MultiplayerGameMode::vt_entry_68(void) { return true; }                                          // 0x005C0EE0
-void MultiplayerGameMode::vt_entry_74(unsigned a, unsigned b) {}                                      // 0x005C0EF0
+void MultiplayerGameMode::vt_entry_74(unsigned a, uintptr_t b) {}                                      // 0x005C0EF0
 void MultiplayerGameMode::vt_entry_78(HWND dialog) {}                                                 // 0x005C0F00
 void MultiplayerGameMode::vt_entry_90(void) {}                                                        // 0x005C0F10
 void MultiplayerGameMode::vt_entry_94(void) {}                                                        // 0x005C0F20
