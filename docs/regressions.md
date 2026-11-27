@@ -256,6 +256,22 @@ new tick; the other 22 and ra2-native-walls hold at their recorded ticks. Yuri's
 at 0x006FEAD4), also pi, so its draft now uses pi; yr-native-campaign-won-all01 and -all03 and
 yr-native-campaign-crash-all05 still pass under it.
 
+## Lane P65: the step server clicks map points only inside the tactical view (2026-11-27)
+
+Red Alert 2's resolver (ra2/glue/harness_input_native.inc RB_Resolve) had the gap Yuri's Revenge's lane P56 closed:
+"@=X,Y" and "@ID+dx,dy" went through Tactical::Coord_To_Pixel, which answers true up to 180 pixels below the view and
+360 beside it, so a cell the view could not be centred on was clicked on the command bar (1.006 has its Planning Mode
+button too) or the sidebar, or off the window. Such points now give no point ("step: @<spec> is at x,y, outside the
+tactical view"); the step server logs planning mode on and off (news `planning on|off`, `state` line `planning 0|1`).
+ctest `ra2-native-planning-click` (ra2/tests/ra2_planning_click.py, label ra2-step): clicks below and beside the view
+refused, planning mode by its button holds a move and releases it, a plain move works.
+
+Recordings with refused points: Soviet 1 (78 cells at 109-119,136-146 from tick 1,393, lane P22's commander trying
+power-plant places at the map's south edge) still wins at its tick; Soviet 12 (@=165,150 at tick 28,031, on the command
+bar) still wins at 64,413; **Soviet 11 no longer wins**: its click at @=22,82 (tick 17,071, after `key 9`, repeated every
+8,000 ticks) resolves 120 pixels left of the view, off the window, and that click was part of the win (it wins without
+the rule at 35,900). It needs re-recording (or the point given another way); ra2-native-campaign-won-sov11 fails until then.
+
 ## Lane P50: Yuri's Revenge missions played to a real win through its step server (2026-11-27)
 
 yr/glue/yr_stepserver.cpp (Red Alert 2's step server on the YR tree; docs/yr-port-notes.md lane P50), replays in

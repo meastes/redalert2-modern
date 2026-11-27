@@ -69,6 +69,7 @@
 #include "_rect.h"
 #include "rules.h"
 #include "overtype.h"
+#include "planning.h"
 
 extern "C" int ra2port_step_listen(const char * path);          // platform/sdl/host.cpp (POSIX; 0 elsewhere)
 extern "C" int ra2port_step_getline(char * buffer, int size);   // blocks for the next command line; -1 when no server
@@ -150,6 +151,14 @@ int rb_step_techno_count = -1;
 
 void RB_Step_Watch(int frame)
 {
+	// Planning mode on or off (lane P65, as Yuri's Revenge's step server since lane P56: a click resolved below the
+	// tactical view pressed the command bar's Planning Mode button, and from then on every order was a planned waypoint).
+	static int planning = -1;
+	if ((PlanningNodeClass::PlanningModeActive ? 1 : 0) != planning) {
+		planning = PlanningNodeClass::PlanningModeActive ? 1 : 0;
+		fprintf(stderr, "step: planning mode %s at tick %d\n", planning ? "on" : "off", frame);
+		RB_Step_News("news %d planning %s", frame, planning ? "on" : "off");
+	}
 	static RB_Step_Trigger now[512];
 	int count = 0;
 	for (int i = 0; i < Triggers.Count() && count < 512; ++i) {
@@ -258,6 +267,7 @@ void RB_Step_State(int frame)
 	RB_Step_Out("scenario %s loop %d game %d over %d win %d lose %d clock %u", Scen ? (char const *)Scen->ScenarioName : "?", frame,
 		Frame, PlayerWins || PlayerLoses ? 1 : 0, PlayerWins ? 1 : 0, PlayerLoses ? 1 : 0, (unsigned)(ra2port_game_ns() / 16000000u));
 	if (Scen != NULL && Scen->MissionTimer.Is_Active()) RB_Step_Out("timer %ld frames", (long)Scen->MissionTimer.Value());
+	RB_Step_Out("planning %d", PlanningNodeClass::PlanningModeActive ? 1 : 0);   // lane P65
 	if (PlayerPtr != NULL) {
 		RB_Step_Out("player %s credits %ld power %d drain %d input %s", RB_House_Name(PlayerPtr), (long)PlayerPtr->Available_Money(),
 			PlayerPtr->Power, PlayerPtr->Drain, IgnoreInput ? "locked" : "open");
