@@ -634,12 +634,12 @@
   {
    "file": "src/xsurface.cpp",
    "append": "xsurface_native.inc",
-   "why": "XSurface::Plot_Line is unmatched in the YR tree; TibSun's text (lane Y4)."
+   "why": "XSurface::Draw_Ellipse is unmatched in the YR tree; Red Alert 2's draft of its twin (lane N3). (Plot_Line, lane Y4's TibSun text, retired by lane P81: matched upstream at cb43f59e.)"
   },
   {
    "file": "src/building.cpp",
    "append": "building_native.inc",
-   "why": "BuildingClass::Exit_Object is unmatched in the YR tree; TibSun's text (lane Y4)."
+   "why": "BuildingClass::ForceCreate is unmatched in the YR tree; written from gamemd.exe (lane N3). (Exit_Object, lane Y4's TibSun text with P61/P74's fixes, retired by lane P81: matched upstream at cb43f59e.)"
   },
   {
    "file": "src/walk.cpp",
