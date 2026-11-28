@@ -5,7 +5,8 @@
 // (bool), unmatched in ra2-decomp. TibSun's text (TibSun archive code/walk.cpp; SPDX
 // GPL-3.0-or-later, Copyright 2025 Electronic Arts Inc. and OpenTS contributors, EA's GPL section
 // 7 terms; THIRD_PARTY.md); native changes are marked NATIVE. Behaviour code for the native build
-// only; gamemd.exe's version is not compared yet.
+// only. Compared step by step with gamemd.exe 0x0075AEC0 (4,988 bytes) by lane P74: the same steps but for
+// the two marked "YR (P74)".
 // ---------------------------------------------------------------------------------------------
 void WalkLocomotionClass::Movement_AI(bool first_pass)
 {
@@ -45,12 +46,17 @@ void WalkLocomotionClass::Movement_AI(bool first_pass)
 									}
 								}
 
+								/*
+								**	YR (P74, gamemd.exe 0x0075B1A2-0x0075B2B6): the target's and the walker's destinations are
+								**	asked with the walker as the docker (Destination_Coord(LinkedTo), Is_Moving_Onto_Bridge(LinkedTo));
+								**	TibSun's text asked with none.
+								*/
 								if (LinkedTo->TarCom != NULL) {
-									Cell tar_dest = LinkedTo->TarCom->Destination_Coord().As_Cell();
+									Cell tar_dest = LinkedTo->TarCom->Destination_Coord(LinkedTo).As_Cell();
 									if (LinkedTo->IsInPlayfield /* NATIVE: YR's name of TibSun's IsLocked */) {
 										if (LinkedTo->TarCom != NULL) {
-											Cell nav_dest = LinkedTo->Destination_Coord().As_Cell();
-											if (!Map.Is_Same_Cell_Zone(nav_dest, tar_dest, LinkedTo->TClass->MZone, LinkedTo->Is_Moving_Onto_Bridge(), Map[tar_dest].IsUnderBridge, LinkedTo->Is_Allowed_To_Leave_Map())) {
+											Cell nav_dest = LinkedTo->Destination_Coord(LinkedTo).As_Cell();
+											if (!Map.Is_Same_Cell_Zone(nav_dest, tar_dest, LinkedTo->TClass->MZone, LinkedTo->Is_Moving_Onto_Bridge(LinkedTo), Map[tar_dest].IsUnderBridge, LinkedTo->Is_Allowed_To_Leave_Map())) {
 												LinkedTo->Assign_Target(NULL);
 											}
 										}
@@ -132,7 +138,7 @@ void WalkLocomotionClass::Movement_AI(bool first_pass)
 					} else {
 						int dist = LinkedTo->Center_Coord().Distance_To(DestinationCoord);
 						if (dist < Rule->CloseEnoughDistance &&
-							!LinkedTo->In_Radio_Contact() &&
+							!LinkedTo->HasAnyLink() &&	// YR (P74, gamemd.exe 0x0075B773): any radio link (TibSun: the first)
 							abs(DestinationCoord.Z - LinkedTo->Get_Coord().Z) < 2 * LEVEL_LEPTON_H &&
 							Map[LinkedTo->Get_Coord()].Land_Type() != LAND_TUNNEL) {
 
