@@ -380,7 +380,8 @@ void Tactical::Render(Surface & surface, bool fullredraw, int drawpass)
 // NON-EXACT NATIVE DRAFT (lane Y4): Tactical::Draw_Tiles(Cell const &, Rect const &), unmatched in
 // ra2-decomp. TibSun's text (TibSun archive code/tactical.cpp; SPDX GPL-3.0-or-later, Copyright 2025
 // Electronic Arts Inc. and OpenTS contributors, EA's GPL section 7 terms; THIRD_PARTY.md).
-// Behaviour code for the native build only; gamemd.exe's version is not compared yet.
+// Behaviour code for the native build only. Compared with gamemd.exe 0x006D7F20 (824 bytes) by lane P74:
+// the same steps but the elevation test marked "YR (P74)".
 // ---------------------------------------------------------------------------------------------
 void Tactical::Draw_Tiles(Cell const & cell, Rect const & cliprect)
 {
@@ -416,19 +417,24 @@ void Tactical::Draw_Tiles(Cell const & cell, Rect const & cliprect)
 					overlap = true;
 				}
 
+				/*
+				**	YR (P74, gamemd.exe 0x006D8078-0x006D80C9): a raised cell below this level is drawn when its
+				**	elevation reaches it: the side columns compare height - level, the middle one height - level + 1.
+				**	TibSun's text compared one less in both (height - level - 1, height - level).
+				*/
 				if (cellptr->Elevation > 0 && !draw) {
-					int diff = height - level - 1;
+					int diff = height - level;
 					if (col != 1) {
 						if (diff < 0 && cellptr->Elevation + diff >= 0) {
 							draw = true;
 						} else {
 							draw = overlap;
 						}
-					} else if (height - level > 0) {
+					} else if (diff + 1 > 0) {
 						draw = overlap;
 					} else {
 						draw = true;
-						if (cellptr->Elevation + height - level <= 0) {
+						if (cellptr->Elevation + diff + 1 <= 0) {
 							draw = overlap;
 						}
 					}
