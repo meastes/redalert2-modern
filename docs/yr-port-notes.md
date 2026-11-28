@@ -2691,3 +2691,27 @@ was changed. No crash, trap or assertion in any P80 run.
 
 Checks: yr-native-campaign-won-all01, -all03, -all04, -all05, -sov01, -sov02, -sov03, -sov06, -sov07 and
 yr-native-factory-exits pass (10 of 10); tools/check_tree.py is clean. Calibration used: no.
+
+## Lane P81 (2026-11-28): the vendor pin moved to ra2-decomp cb43f59e; three drafts retired
+
+`vendor/ra2-decomp` is gibbo101/ra2-decomp `cb43f59e092f9460365ecab2e6b414df7c1c26b4` (28 commits after ac45ee9e), copied
+by `tools/update_yr_vendor.sh` from redalert2-decomp ce18e2bd9d (its yr/ra2-decomp archived unchanged from the local
+reference clone; branch p81-yr-pin there). vendor/tibsun unchanged; licences unchanged; THIRD_PARTY.md and yr/README.md
+in redalert2-decomp record the pin. Upstream now has 19,329 of 19,353 functions.
+
+**Retired** (upstream matched): BuildingClass::Exit_Object (0x00443C60), Tactical::Draw_Tiles(Cell, Rect) (0x006D7F20),
+XSurface::Plot_Line (0x007BAB90). Re-checked against upstream's text: every P61/P74 Exit_Object step is in it (pads by
+HasFreeLink, the naval yard's water exit, Yuri's barracks door at +2,1, the cloning vats, the no-NavCom soldier's
+RADIO_UNLOAD, the FUN_0050B730 human test and the hospital's GUARD_AREA, the preferred cell for vehicles only); P74's
+Draw_Tiles elevation test is upstream's. **Kept** (still unmatched upstream, unchanged there): Tactical::Render, walk
+Movement_AI, ForceCreate, Draw_Ellipse and the rest of P64's list. P71's sell-tooltip row (sidebar.cpp, unchanged
+upstream) still applies; P75's commander select and place_legal are harness code (commander-select, commander-place pass).
+
+**Fix**: one-game-toggle's YR press (docs/regressions.md, lane P81): a row restores lane C23's BST_PUSHED step on
+upstream's OwnerDrawButtonHandler.
+
+**Checks** (Mac, -j5, configured with RB_DATA_DIR and RA2_NATIVE_YR_DATA_DIR on the installed game): the full suite 144 of
+145 before the fix (one-game-toggle, failing the same on the ac45ee9e pin; yr-native-lan-pair-wine skipped), all 24
+ra2-native-campaign-won-* and all 9 yr-native-campaign-won-* winning at their ticks: no re-record needed. After the fix
+every yr-* and one-* check, 58 of 58 (lan-pair-wine skipped), the nine won replays among them; check_tree clean.
+Calibration used: no.

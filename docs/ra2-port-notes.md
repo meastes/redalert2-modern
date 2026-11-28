@@ -1312,3 +1312,16 @@ SW_SHOW row (P12-loaderr) kept with its flag and comment.
   the view after `look 22 82`); won at 35,900 at the first try.
 
 Re-recorded saves in the decompilation repository's private/campaign_saves/ (sov03/, sov11/, sov12/p67/).
+
+## Lane P81 (2026-11-28, PIN fb75cb398f): re-pin after the YR campaign sweep
+
+vendor/ra2-rebuild moved from b106008ae4 to redalert2-decomp fb75cb398f (public snapshot a88ca638) by
+tools/update_rebuild.sh. Newly exact upstream: walk Movement_AI (0x71E220), foot Search_For_Tiberium_Weighted, missile
+Projectile_Motion, XSurface::Plot_Line; count anchors moved declarations in ownrdraw, queue and wonline. No row or glue
+sat on the newly exact functions. Two rows re-anchored: the map-zoom row of SidebarClass::Recalc_Horizontal_Layout (the
+function is now written on SidebarRect.X, ra2-decomp's form) and the parked Control_Proc draft's IsPlaying row (the draft
+now spells the byte WinData::Reserved_94[0xA8 - 0x94], the i686 offset; natively it stays the animation state's flag).
+Pointer-width sweep (-Wpointer-to-int-cast, -Wint-to-pointer-cast, -Wvoid-pointer-to-int-cast, -Wshorten-64-to-32) of
+the changed units, warnings on new lines only: none. All 24 RA2 won replays pass at their ticks; nothing re-recorded.
+Configure note: the played checks need -DRB_DATA_DIR (or RA2_DATA_DIR) as well as -DRA2_NATIVE_YR_DATA_DIR; without it
+every ra2-native-campaign-won-* and the one-game checks skip and report "Passed".
