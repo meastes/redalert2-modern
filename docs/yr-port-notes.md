@@ -2533,3 +2533,67 @@ No crash, trap or assertion in any P76 run. One observation, not compared with g
 ordered into the north bridge's east repair hut (CABHUT 169,70) got no order while the bridge's west end was down;
 InfantryClass::What_Action gives the repair action only when Map.Can_Repair_Bridge(the hut's cell) holds, so this is
 taken as the game's rule. The west hut (154,66) repaired it.
+
+## Lane P74 (2026-11-27): the port's remaining own drafts against gamemd.exe
+
+The drafts P64 kept (upstream ra2-decomp ac45ee9e lacks the function, or only declares it), compared with gamemd.exe the way
+lanes P57 and P61 did: each one disassembled with yr/tools/yr_dis.py (capstone; names from vendor/ra2-decomp's manifest),
+its control flow followed step by step against the glue's text, member offsets checked against upstream's headers and
+vtable slots against the calls upstream's matched code makes. Fixes are marked "YR (P74)" in the glue; nothing in vendor/.
+
+| Function (gamemd.exe) | Glue | Result |
+| --- | --- | --- |
+| BuildingClass::Exit_Object (0x00443C60, 6,759 B) | building | **fixed in the lane's last commit**, which lands with the re-recorded wins (see "Exit_Object" below) |
+| BuildingClass::ForceCreate (0x00458A80, 809 B) | building | matches (overlay cleared per foundation cell, occupiers lifted and put back, Nearby_Location with the defaults) |
+| WalkLocomotionClass::Movement_AI (0x0075AEC0, 4,988 B) | walk | **fixed**: two steps, see below; the rest (path delay, blocked and moving-block paths, tubes, gates, destroyable blockers, the cloak shimmer, the cell crossing, bridges, veins) the same |
+| Tactical::Render (0x006D3D10, 3,643 B) | tactical | **fixed**: five foreground steps the draft left out, see below; the background pass (pan, wipe, the eight Render_ layers, dirty areas, blit) and the timers the same |
+| Tactical::Draw_Tiles(Cell, Rect) (0x006D7F20, 824 B) | tactical | **fixed**: the elevation test, see below |
+| MapClass::Set_Map_Dimensions (0x00565C10, 5,374 B) | map | matches on the path every caller takes (reset_cells true: scenario load, the random map, the display and mouse resizes); the copy-and-shift path (reset_cells false) is reached by no caller and was not compared |
+| MapClass::Is_Same_Cell_Zone (0x0056D100, 290 B) | map_zones | matches (In_Local_Radar(cell, true), the inline In_Radar, the leave-map case, Get_Cell_Zone) |
+| CellClass::FindInfantrySubposition / Closest_Free_Spot (0x00481180, 795 B) | cell | matches (the spot tables 0x0081CC84/0x0081CC98, the gate test, Scen's random alternate, Get_Height_GL and the bridge height); the cell origin is rounded down by masking in gamemd.exe and by division in Coord_Whole, the same for map coordinates (never negative) |
+| FUN_0064BDD0 Extract_Compressed_Events (1,455 B) | queue | matches (FRAMESYNC/FRAMEINFO/MEGAMISSION/RESPONSE_TIME/ADDPLAYER, the unit-list cache by house and slot, the debug lines); the port's bounds checks on malformed packets are kept (no effect on a well-formed packet) |
+| OwnerDraw::ResetControlDrawModeAndTimerProc (0x0060A5B0, 1,184 B) | ownrdraw | matches (typed text, special and animated controls, the timers), with Get_Static_Drawer (0x006035F0) and FUN_00603870's tables, which the glue repeats natively |
+| FUN_0060B950 (1,895 B) | ownrdraw | matches (every dialog and control table, the 0x103 typed lines' render-height nudge) |
+| MultiplayerGameMode's base virtuals (vtable 0x007EED60) | mpgamemode | match (all 24 slots: their constants and argument sizes) |
+| MapGeneratorClass::Generate_Random_Map (0x00598960, 3,018 B) | mapgen | matches in its call sequence (progress, previews, regions, starting points, tiberium, hills, vegetation, cleanup); N8's per-step notes stand |
+| XSurface::Plot_Line (0x007BAB90, 511 B) | xsurface | matches |
+| MapClass::Update_Cell_Zone, Cell_Threat, Place_Down, Pick_Up | map_zones | the same as what gamemd.exe calls at their call sites (ResetZones 0x0056D460, GetThreatPosed 0x0056BCD0, AddContentAt/RemoveContentAt for foot objects); HouseClass::Can_Build_Here the same as FUN_0050B760 |
+| OwnerDraw::DefaultHandler (0x00610CA0, 7,265 B), ComboBoxHandler (0x00617250, 6,895 B), ListBoxHandler (0x00618D40, 14,666 B) | ownrdraw, _combo, _list | **not compared in full** (time box): DefaultHandler's opening (IME, SubclassProcs, WM_SYSKEYUP Tab to MainWindow, the statics, ActiveWindows' filter) checked; the combo and list handlers keep their items in native records (P66), so a step comparison would be against a different storage; the shell-frames, save-dialog, choose-map and interface-size checks play them |
+| Draw_Shroud_Or_Fog_Shape, isotype Draw_Tile, DSurface::Draw_Depth_Antialiased_Line, XSurface::Draw_Ellipse, Drawing::Intersect, Attaches_To, All_To_Look, Set_Cursor_Shape, Is_Route_Broken | various | not compared this lane (written from gamemd.exe by lanes Y8/N3 or drawing only) |
+
+**Movement_AI** (Walk, the infantry locomotor):
+* When pathing fails and the walker gives up, its target is dropped if the target's destination is not in the walker's zone;
+  gamemd.exe asks both destinations with the walker as the docker (TarCom->Destination_Coord(LinkedTo),
+  LinkedTo->Destination_Coord(LinkedTo), Is_Moving_Onto_Bridge(LinkedTo); 0x0075B1A2-0x0075B2B6). TibSun asked with none
+  (a helipad's, repair depot's or bunker's docking point differs from its centre).
+* A walker blocked by a friend (MOVE_TEMP) close to its destination stops there only when it has no radio link at all
+  (RadioClass::HasAnyLink, 0x0075B773); TibSun tested the first link only.
+
+**Render** (the foreground pass, 0x006D45F2-0x006D4B37; the helpers are matched upstream since the ac45ee9e pin):
+* Draw_Radial_Indicators after the beams (0x006D467F);
+* for every techno not the player's, a powered Psychic Sensor of the player's covering its target or destination
+  (FUN_0043B150) draws its intent line (FootClass::FUN_004DC340), in planning mode too (0x006D4764);
+* the airstrike designator's laser onto the building it paints (0x006D47FB: TechnoClass::FUN_00705860 from its fire
+  coordinate to a point circling the building's centre, timeGetTime() >> DAT_00842900, 15 leptons);
+* in planning mode the planned nodes (FUN_0063B2F0, 0x006D491A); Draw_Sparkles over the view (0x006D492B).
+  The loop order is gamemd.exe's: the player's technos skip the rest in planning mode, others after the intent line.
+
+**Draw_Tiles** (0x006D8078-0x006D80C9): a raised cell below the current level is drawn when its elevation reaches it; the
+side columns compare height - level and the middle one height - level + 1. TibSun's text compared one less in both, so a
+ramp's overhang one level up could be left undrawn (or drawn one level early).
+
+**Checks.** ctest `yr-native-render-steps` (yr/tests/yr_render_steps.py; harness orders `airstrike <ID>` and
+`rendercounts`): Boris ordered onto an enemy power plant paints it (his airstrike's target is GAPOWR) and the foreground pass
+draws his laser; enemy Rhinos near the player's powered Psychic Sensor get their intent lines drawn (the draft drew neither).
+The yr-native suite (46 tests without the won replays and the Wine, ubsan and asan labels) passes with all four P74 fixes
+in (yr-native-factory-exits after its hospital placement fix); all six YR won replays (all01, all05, sov02, sov03, sov06,
+sov07) win at their ticks with the Walk, Render and Draw_Tiles fixes; ra2-quick not run (no RA2 code changed); check_tree is
+clean. Calibration used: no.
+
+**gamemd.exe addresses used** (every fix): Movement_AI 0x0075B1A2-0x0075B2B6 (Destination_Coord(LinkedTo) on TarCom,
+0x0075B216; on the walker, 0x0075B214; Is_Moving_Onto_Bridge(LinkedTo), 0x0075B27F) and 0x0075B773 (HasAnyLink);
+Render 0x006D467F (Draw_Radial_Indicators), 0x006D4764-0x006D478E (FUN_0043B150, the Is_Foot and IsInLimbo tests,
+FUN_004DC340), 0x006D47FB-0x006D48F1 (the airstrike laser: Airstrike at TechnoClass+0x294, Owner +0x4C, Target +0x50,
+DAT_00842900 = 7, 15.0 at 0x007ECE60, 0.37 at 0x007F43B0, Fire_Coord vtable +0xB0, FUN_00705860), 0x006D491A (FUN_0063B2F0),
+0x006D492B (Draw_Sparkles); Draw_Tiles 0x006D8078-0x006D80C9.
+
