@@ -209,7 +209,6 @@
 static unsigned int GameCRC;
 
 // RA2: file-level state of the reconnect dialog and the stop test (addresses from meastes' Queue.CPP)
-int ReconnectResult; // RA2: 0x00AB5ED0; the dialog's answer (-1 while open, 2 = cancel)
 bool ReconnectMouseCaptured; // RA2: 0x00AB5ED8; the mouse was captured when the dialog opened
 bool ReconnectSavedTactical; // RA2: 0x00AB62FC; TacticalActive before the dialog
 HWND ReconnectDialog; // RA2: 0x00A780D4; the open reconnect dialog
@@ -365,8 +364,6 @@ static int Connection_Index(int player);
 static inline Vector3 Normalized(Vector3 const & v);
 void __fastcall Calc_Frames_Behind(FrameSyncStruct *their, int index); // RA2: 0x0062E5C0, a player's latency in frames
 void Draw_Sync_Bars(HWND window); // RA2: 0x00626CB0, paints the reconnect dialog's response bars
-void Queue_Ipx_Set(void); // RA2: 0x00623260, switches the global channel to routed sending in an internet game
-void Queue_Ipx_Clear(void); // RA2: 0x00623280, switches it back
 void Reset_Reconnect_Pings(void); // RA2: 0x00627330, clears the reconnect dialog's ping counters
 void __fastcall Send_Port_Unreachable(void); // RA2: 0x0062E840, tells the router connections this port is unreachable
 bool __fastcall Add_Outgoing_Event(EventClass event); // RA2: 0x0062E670
@@ -2995,7 +2992,7 @@ static int Add_Compressed_Events(void *buf, int bufsize, int frame_delay,
  * HISTORY:                                                                *
  *   11/21/1995 DRD : Created.                                             *
  *=========================================================================*/
-#ifdef RA2_NON_MATCHING // not exact: 36 bytes differ against the image-derived bound 006282d0 (1,455 body bytes; ours 1,455 B, the frame 0x9c, 11 of 11 calls and 414 = 414 instructions) (lane F87, 2026-11-26: the two megamission runs as ra2-decomp's bank for the identical Yuri's Revenge twin 0x64BDD0 has them (branch banked-forms 41d009df, banks/0x0064BDD0.cpp; flag reference-borne if it lands): the run locals at function scope, while loops under the count test, the packed unit assigned ahead of the counters and saved with its cursor stepped in the copy. Left: two adjacent stores in the new run, the image stores numunits (0x628581) ahead of the first four bytes of Whom, this text the reverse; the bank records the same residue on the twin. Lane F97 (2026-11-27), the block read as a labelled sequence of loads and stores: the stores left at the end of the block follow the order of the definitions (24 orders), so the image has numunits defined ahead of Whom and Whom ahead of units, with count in edx; with Whom assigned from *src every order that defines numunits first stores one of the two at once and takes another register for count, and the archive's copy sized by datasize keeps both stores at the end in the image's order but moves the registers of the whole run (958 and up; 224 variants, b_log_f97). Not moved here: 87 orders of the five statements with the unit copied by assignment or memcpy and saved from the event or from the packet (best 76), the copies sized by datasize (965), a char cursor stepped by datasize (same code), the decrement in the test (850), the save and its step as two statements (1,342), the list saved first and the event read back from it as mischa85 writes it (1,296 and up); was 791: was 921; each packed target of a newly saved run copied as sizeof(*list), as the RA2 1.001 decoder does; before that 923; the saved run decrements numunits before counting the event, as the RA2 1.001 decoder does (RobinDigitalPro/ra2-1001-decomp 1510aed; the Yuri's Revenge cache's count-first order gave 923); the saved run's list index and unit count computed before the stream advance, a statement order no reference shows: flag spelling if it lands; TibSun queue.cpp sets the first event pointer after the frame-info data size; the megamission Slot byte and the flat saved-count table as ra2-decomp's event.h and queue.cpp have them); main: best 57.62, tried 6 times (register, frame, inline)
+#ifdef RA2_NON_MATCHING // not exact: 6 bytes differ by position, 2 instruction lines in 2 hunks (stack offsets blind), ours 1,455 B of 1,455, with 7 references bound by the image's aligned sites (lane O107 prep, 2026-11-28: the draft compiles with this guard and the MegamissionUnitLists guard above it open); before: 36 bytes differ against the image-derived bound 006282d0 (1,455 body bytes; ours 1,455 B, the frame 0x9c, 11 of 11 calls and 414 = 414 instructions) (lane F87, 2026-11-26: the two megamission runs as ra2-decomp's bank for the identical Yuri's Revenge twin 0x64BDD0 has them (branch banked-forms 41d009df, banks/0x0064BDD0.cpp; flag reference-borne if it lands): the run locals at function scope, while loops under the count test, the packed unit assigned ahead of the counters and saved with its cursor stepped in the copy. Left: two adjacent stores in the new run, the image stores numunits (0x628581) ahead of the first four bytes of Whom, this text the reverse; the bank records the same residue on the twin. Lane F97 (2026-11-27), the block read as a labelled sequence of loads and stores: the stores left at the end of the block follow the order of the definitions (24 orders), so the image has numunits defined ahead of Whom and Whom ahead of units, with count in edx; with Whom assigned from *src every order that defines numunits first stores one of the two at once and takes another register for count, and the archive's copy sized by datasize keeps both stores at the end in the image's order but moves the registers of the whole run (958 and up; 224 variants, b_log_f97). Not moved here: 87 orders of the five statements with the unit copied by assignment or memcpy and saved from the event or from the packet (best 76), the copies sized by datasize (965), a char cursor stepped by datasize (same code), the decrement in the test (850), the save and its step as two statements (1,342), the list saved first and the event read back from it as mischa85 writes it (1,296 and up); was 791: was 921; each packed target of a newly saved run copied as sizeof(*list), as the RA2 1.001 decoder does; before that 923; the saved run decrements numunits before counting the event, as the RA2 1.001 decoder does (RobinDigitalPro/ra2-1001-decomp 1510aed; the Yuri's Revenge cache's count-first order gave 923); the saved run's list index and unit count computed before the stream advance, a statement order no reference shows: flag spelling if it lands; TibSun queue.cpp sets the first event pointer after the frame-info data size; the megamission Slot byte and the flat saved-count table as ra2-decomp's event.h and queue.cpp have them); main: best 57.62, tried 6 times (register, frame, inline)
 int Extract_Compressed_Events(void * buf, int bufsize)
 {
 	int pos = 0;                // current buffer parsing position
@@ -5074,6 +5071,9 @@ void __fastcall Enqueue_Event(EventClass * event) // RA2: 0x0062E6E0
 }
 
 
+void Queue_Ipx_Set(void); // RA2: 0x00623260, switches the global channel to routed sending in an internet game
+void Queue_Ipx_Clear(void); // RA2: 0x00623280, switches it back
+
 /// <summary>
 /// Tells the other players of an internet game that this port cannot be reached.
 /// A NET_PORT_UNREACHABLE packet goes to every player the packet router knows by name, except
@@ -5653,6 +5653,8 @@ static inline void Close_Reconnect_Dialog()
 	}
 }
 
+
+int ReconnectResult; // RA2: 0x00AB5ED0; the dialog's answer (-1 while open, 2 = cancel)
 
 /***************************************************************************
  * Process_Reconnect_Dialog -- processes the reconnection dialog           *

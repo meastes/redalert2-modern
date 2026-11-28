@@ -634,12 +634,12 @@
   {
    "file": "src/xsurface.cpp",
    "append": "xsurface_native.inc",
-   "why": "XSurface::Plot_Line is unmatched in the YR tree; TibSun's text (lane Y4)."
+   "why": "XSurface::Draw_Ellipse is unmatched in the YR tree; Red Alert 2's draft of its twin (lane N3). (Plot_Line, lane Y4's TibSun text, retired by lane P81: matched upstream at cb43f59e.)"
   },
   {
    "file": "src/building.cpp",
    "append": "building_native.inc",
-   "why": "BuildingClass::Exit_Object is unmatched in the YR tree; TibSun's text (lane Y4)."
+   "why": "BuildingClass::ForceCreate is unmatched in the YR tree; written from gamemd.exe (lane N3). (Exit_Object, lane Y4's TibSun text with P61/P74's fixes, retired by lane P81: matched upstream at cb43f59e.)"
   },
   {
    "file": "src/walk.cpp",
@@ -1775,6 +1775,12 @@
    "old": "\t\t\tdata->editText->truncate(wparam);\n",
    "new": "\t\t\tdata->editText->truncate((unsigned int)wparam);   /* NATIVE: WPARAM is 64-bit here */\n",
    "why": "P64: EM_LIMITTEXT truncates the edit text to wparam characters; natively WPARAM is 64 bits, so the call is ambiguous between WideWstring::truncate(unsigned int) and truncate(wchar_t). The 32-bit length is the one VC6 passes."
+  },
+  {
+   "file": "src/ownrdraw.cpp",
+   "old": "\tint state = data->Button.state;\n",
+   "new": "\tint state = data->Button.state;\n\t// NATIVE (lane C23, as RA2's Paint_Button): the port's Win32 layer sends no WM_DRAWITEM, so a held button is also\n\t// the button's own BST_PUSHED (BM_GETSTATE bit 2): the menu buttons' pressed frame, the one-game toggle's among them.\n\tif (message == WM_PAINT && (CallWindowProc(original, window, BM_GETSTATE, 0, 0) & BST_PUSHED)) state |= 1;\n",
+   "why": "Lane P81: lane C23's native step, which lived in the port's OwnerDrawButtonHandler draft and went with it when lane P64 retired the draft for upstream's matched one (gamemd.exe 0x00612B70) (not carried as a row then): OwnerDraw::OwnerDrawButtonHandler draws a button pressed from data->Button.state, which the dialog's WM_DRAWITEM sets; the port sends no WM_DRAWITEM, so no YR push button drew its pressed frame. As ra2/fixups.json's Owner_Button_Proc row (lane P13). Found by one-game-toggle (\"engine 1: the toggle shows no press\"), failing since P64."
   },
   {
    "file": "src/team.cpp",

@@ -1330,9 +1330,9 @@
   },
   {
    "file": "src/sidebar.cpp",
-   "old": "\tint x = Options.IsSidebarOnRight ? TacticalRect.X + TacticalRect.Width : 0;",
-   "new": "\tint x = Options.IsSidebarOnRight ? RB_Sidebar_X(TacticalRect.X + TacticalRect.Width) : 0; /* native (C4) */",
-   "why": "Lane P8 (the feature audit): Map zoom (main's lane C4 rows, link/native_map_zoom.cpp; glue/zoom_native.inc): SidebarClass::Recalc_Horizontal_Layout 0x0067BA60 places the sidebar at the view's right edge: the tactical rectangle's while zoomed."
+   "old": "\t\tSidebarRect.X = TacticalRect.X + TacticalRect.Width;",
+   "new": "\t\tSidebarRect.X = RB_Sidebar_X(TacticalRect.X + TacticalRect.Width); /* native (C4) */",
+   "why": "Lane P8 (the feature audit): Map zoom (main's lane C4 rows, link/native_map_zoom.cpp; glue/zoom_native.inc): SidebarClass::Recalc_Horizontal_Layout 0x0067BA60 places the sidebar at the view's right edge: the tactical rectangle's while zoomed. Re-anchored by lane P81 (pin fb75cb398f: the function is written on SidebarRect.X, ra2-decomp's form)."
   },
   {
    "file": "src/sidebar.cpp",
@@ -2192,9 +2192,9 @@
   },
   {
    "file": "src/ownrdraw.cpp",
-   "old": "if (changed && data->PictureMode == 1 && data->IsPlaying) {\n\t\t\t\t\t\tKillTimer(window, 0);\n\t\t\t\t\t\tdata->IsPlaying = false;",
+   "old": "if (changed && data->PictureMode == 1 && data->Reserved_94[0xA8 - 0x94]) {\n\t\t\t\t\t\tKillTimer(window, 0);\n\t\t\t\t\t\tdata->Reserved_94[0xA8 - 0x94] = false;",
    "new": "if (changed && data->PictureMode == 1 && ((OwnerDraw::ControlAnimationState *)data->Animation)->IsPlaying) {   /* native: see the row */\n\t\t\t\t\t\tKillTimer(window, 0);\n\t\t\t\t\t\t((OwnerDraw::ControlAnimationState *)data->Animation)->IsPlaying = false;",
-   "why": "Lane P65 (re-pin to 782562d93c): the parked Control_Proc draft's text-change case reads and clears IsPlaying (+0xA8) on the WinData record, which declares no such member (the draft does not compile as written). The byte is the animation run's IsPlaying (ControlAnimationState over WinData::Animation at +0x78, as Init_Control_Animation reaches it; the static_assert of the StaticRecord row checks the two views agree natively)."
+   "why": "Lane P65 (re-pin to 782562d93c): the parked Control_Proc draft's text-change case reads and clears IsPlaying (+0xA8) on the WinData record, which declares no such member (the draft does not compile as written). The byte is the animation run's IsPlaying (ControlAnimationState over WinData::Animation at +0x78, as Init_Control_Animation reaches it; the static_assert of the StaticRecord row checks the two views agree natively). Lane P81 (pin fb75cb398f): the draft now spells the byte WinData::Reserved_94[0xA8 - 0x94], the i686 offset, which natively is not the animation's flag; re-anchored, same native form."
   },
   {
    "file": "src/ownrdraw.cpp",
