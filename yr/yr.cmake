@@ -471,6 +471,12 @@ add_test(NAME yr-native-factory-exits COMMAND "${Python3_EXECUTABLE}" -B "${CMAK
          --binary $<TARGET_FILE:yr-native> --data-dir "${RA2_NATIVE_YR_DATA_DIR}"
          --work "${CMAKE_CURRENT_BINARY_DIR}/yr-factory-exits")
 set_tests_properties(yr-native-factory-exits PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 300)
+# ctest yr-native-render-steps (lane P74): Tactical::Render's foreground pass draws the airstrike designator's laser and a
+# Psychic Sensor's intent lines (gamemd.exe 0x006D47FB, 0x006D4764; yr/tests/yr_render_steps.py)
+add_test(NAME yr-native-render-steps COMMAND "${Python3_EXECUTABLE}" -B "${CMAKE_CURRENT_SOURCE_DIR}/yr/tests/yr_render_steps.py"
+         --binary $<TARGET_FILE:yr-native> --data-dir "${RA2_NATIVE_YR_DATA_DIR}"
+         --work "${CMAKE_CURRENT_BINARY_DIR}/yr-render-steps")
+set_tests_properties(yr-native-render-steps PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 300)
 
 # ctest yr-native-mirage (lane N4): a Mirage tank's camouflage draws as a tree in the tree's colours (Techno_Draw_Object's
 # disguise converter; yr/tests/yr_mirage.py)

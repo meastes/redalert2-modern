@@ -15,10 +15,21 @@
 #include "super.h"
 #include "suprtype.h"
 #include "stringtable.h"
+#include "airstrike.h"
+#include "foot.h"
+#include "fastmath.h"
 
 bool __fastcall FUN_00637AA0(void);   // planning.cpp: planning mode is on
 void __fastcall FUN_0063B0A0(void);
 void __fastcall FUN_0063B150(void);
+void __fastcall FUN_0063B2F0(void);   // planmgr.cpp: planning mode's nodes (lane P74)
+bool __fastcall FUN_0043B150(TechnoClass * techno);   // building.cpp: a Psychic Sensor shows this techno's intent (lane P74)
+extern int DAT_00842900;   // the airstrike laser's phase shift (7; gamemd.exe's data, lane P74)
+// NATIVE (lane P74): how often the foreground pass drew an airstrike designator's laser and a Psychic Sensor's intent
+// line, for the harness's `rendercounts` (yr/tests/yr_render_steps.py); counting only.
+static int Yr_Render_Laser_Draws;
+static int Yr_Render_Intent_Draws;
+int Yr_Render_Draw_Count(int which) { return(which ? Yr_Render_Intent_Draws : Yr_Render_Laser_Draws); }
 extern BeaconManagerClass BeaconManager;
 extern DynamicVectorClass<SuperClass *> ShowTimers;
 
@@ -236,10 +247,13 @@ void Tactical::Render(Surface & surface, bool fullredraw, int drawpass)
 	if (drawpass == DRAW_PASS_FOREGROUND || drawpass == DRAW_PASS_FULL) {
 		/*
 		**	NATIVE: YR's foreground pass, read from gamemd.exe (0x006D45F2..0x006D4B37) on TibSun's
-		**	shape. Not written yet: the Tactical helper at 0x006DBE20 (after the beams), the
-		**	enemy units' FootClass::FUN_004DC340 lines behind the unnamed test 0x0043B150, the
-		**	airstrike designator's laser (0x00705860), the planning-mode nodes (0x0063B2F0) and
-		**	the Tactical helper at 0x006D7840 (TacticalRect, TacticalRect).
+		**	shape. YR (P74): the steps the draft left out, all matched upstream since the ac45ee9e pin:
+		**	Draw_Radial_Indicators after the beams (0x006D467F); for a techno not the player's, the
+		**	Psychic Sensor's line of its intent (FUN_0043B150, then FootClass::FUN_004DC340 for a
+		**	foot object on the map, 0x006D4764), drawn in planning mode too; the airstrike
+		**	designator's laser onto the building it paints (0x006D47FB, TechnoClass::FUN_00705860);
+		**	in planning mode the planned nodes (FUN_0063B2F0, 0x006D491A); Draw_Sparkles over the
+		**	view (0x006D492B).
 		*/
 		Add_Buildings_To_Selectable(TacticalRect);
 		composite->Lock();
@@ -256,6 +270,7 @@ void Tactical::Render(Surface & surface, bool fullredraw, int drawpass)
 		EBolt::FUN_004C2830();
 		LineTrail::Process_All();
 		RadBeam::Update_All();
+		Draw_Radial_Indicators();	// YR (P74, 0x006D467F)
 		BeaconManager.Draw(LogicalSurface, TacticalRect);
 
 		Draw_Rubber_Band();
@@ -271,11 +286,26 @@ void Tactical::Render(Surface & surface, bool fullredraw, int drawpass)
 
 		for (int i = 0; i < TechnoClass::Array.Count(); i++) {
 			TechnoClass * techno = TechnoClass::Array[i];
-			if (planning) {
-				continue;
-			}
-			if (techno->House->Is_Player_Control() && techno->IsSelected && TechnoClass::ActionLines) {
-				techno->Draw_Action_Line(false, 0);
+			if (techno->House->Is_Player_Control()) {
+				if (planning) {
+					continue;
+				}
+				if (techno->IsSelected && TechnoClass::ActionLines) {
+					techno->Draw_Action_Line(false, 0);
+				}
+			} else {
+				/*
+				**	YR (P74, gamemd.exe 0x006D4764): a Psychic Sensor of the player's in range shows the
+				**	enemy's intent (FUN_0043B150), drawn by FootClass::FUN_004DC340 for a foot object
+				**	on the map.
+				*/
+				if (FUN_0043B150(techno) && techno->Is_Foot() && !techno->IsInLimbo) {
+					((FootClass *)techno)->FUN_004DC340();
+					Yr_Render_Intent_Draws++;
+				}
+				if (planning) {
+					continue;
+				}
 			}
 			if (techno->Strength) {
 				if (techno->CaptureManager != NULL && techno->CaptureManager->NeedsToDrawLinks()) {
@@ -286,7 +316,31 @@ void Tactical::Render(Surface & surface, bool fullredraw, int drawpass)
 					techno->MindControlledBy->CaptureManager->DrawLinks();
 				}
 			}
+
+			/*
+			**	YR (P74, gamemd.exe 0x006D47FB-0x006D48F1): an airstrike designator painting a building
+			**	draws its laser from its fire coordinate to a point that circles the building's centre
+			**	(timeGetTime() >> DAT_00842900; 15 leptons: x by the cosine of 0.37 of the phase, z by
+			**	its sine).
+			*/
+			AirstrikeClass * airstrike = techno->Airstrike;
+			if (airstrike != NULL && airstrike->Owner == techno && airstrike->Target != NULL
+					&& airstrike->Target->Fetch_RTTI() == RTTI_BUILDING) {
+				double phase = (double)(unsigned __int64)(timeGetTime() >> DAT_00842900);
+				Coord center = airstrike->Target->Center_Coord();
+				int z = (int)(fastmath::sin(phase) * 15.0 + center.Z);
+				int x = (int)(fastmath::cos(phase * 0.37) * 15.0 + center.X);
+				Coord end(x, center.Y, z);
+				Coord start = techno->Fire_Coord(0, Point3D(0, 0, 0));
+				techno->FUN_00705860(start, end);
+				Yr_Render_Laser_Draws++;
+			}
 		}
+
+		if (planning) {
+			FUN_0063B2F0();	// YR (P74, 0x006D491A): the planned nodes
+		}
+		Draw_Sparkles(TacticalRect, TacticalRect);	// YR (P74, 0x006D492B)
 
 		LogicalSurface = savedlogical;
 		composite->Unlock();

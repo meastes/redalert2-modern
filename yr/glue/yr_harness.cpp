@@ -78,6 +78,9 @@
 //                   Do_MISSION_UNLOAD); logs `harness-produce <FACTORY> <ID> exit <result> &<addr>` (lane N3);
 //   produced        logs `harness-produced <ID> cell x,y factory x,y limbo <0|1> mission <m> factory-mission <m>` for
 //                   the last unit `produce` made (lane N3);
+//   rendercounts    logs `harness-rendercounts laser <n> intent <n>`: the airstrike lasers and Psychic Sensor intent lines
+//                   Tactical::Render's foreground pass drew (lane P74);
+//   airstrike <ID>  logs `harness-airstrike <ID> target <TYPE|-> rtti <n>`: the player's first <ID>'s airstrike target (lane P74);
 //   robots          logs `harness-robots centres <n> deactivated <0|1|-1> online <ID>:<0|1>[...]`: the player's
 //                   HouseClass::PoweredUnitCenters, the last unit `produce` made's UnitClass::IsDeactivated (-1: none or
 //                   not a unit), and for each of the player's buildings whose type has PowersUnit= its
@@ -198,6 +201,7 @@ namespace Unsorted { extern int CurrentFrame; }
 extern "C" double ra2_native_zoom(void);   // glue/yr_map_zoom.cpp: the map zoom in play (lane N32's `view`)
 LayerType Layer_From_Name(char const * name);
 #include "building.h"
+#include "airstrike.h"	// lane P74: the `airstrike` order
 #include "super.h"
 #include "suprtype.h"
 #include "wave.h"
@@ -285,6 +289,8 @@ extern "C" int yr_harness_thumb_point(int * x, int * y)
 extern BeaconManagerClass BeaconManager;   // beacon.cpp
 void FUN_00731A30(void);   // uicmnds.cpp: the Beacon command (beacon placement mode on or off)
 void __fastcall FUN_00539EB0(int duration, int deferment, Cell cell, HouseClass * owner);   // ion.cpp: LightningStorm::Start
+
+int Yr_Render_Draw_Count(int which);	// glue/tactical_native.inc (lane P74): the foreground pass's laser (0) and intent-line (1) draws
 
 namespace {
 
@@ -820,6 +826,24 @@ int Run_Order(int frame, char const * text)
 		Cell at = produced->Get_Cell(), home = produced_from->Get_Cell();
 		fprintf(stderr, "harness-produced %s cell %d,%d factory %d,%d limbo %d mission %d factory-mission %d\n", Type_Name(produced),
 			at.X, at.Y, home.X, home.Y, produced->IsInLimbo ? 1 : 0, (int)produced->Get_Mission(), (int)produced_from->Get_Mission());
+		return(1);
+	}
+	if (!strcmp(word[0], "rendercounts")) {
+		// logs `harness-rendercounts laser <n> intent <n>`: the airstrike designator lasers and the Psychic Sensor intent
+		// lines Tactical::Render's foreground pass has drawn so far (glue/tactical_native.inc, lane P74)
+		fprintf(stderr, "harness-rendercounts laser %d intent %d\n", Yr_Render_Draw_Count(0), Yr_Render_Draw_Count(1));
+		return(1);
+	}
+	if (!strcmp(word[0], "airstrike") && words >= 2) {
+		// logs `harness-airstrike <ID> target <TYPE|-> rtti <n>` for the player's first techno of type ID (lane P74)
+		TechnoClass * techno = First_Of(word[1], PlayerPtr);
+		if (techno == NULL || techno->Airstrike == NULL) {
+			fprintf(stderr, "harness-airstrike %s none\n", word[1]);
+			return(-1);
+		}
+		ObjectClass * target = techno->Airstrike->Target;
+		fprintf(stderr, "harness-airstrike %s target %s rtti %d\n", word[1], target ? Type_Name((TechnoClass *)target) : "-",
+			target ? (int)target->Fetch_RTTI() : -1);
 		return(1);
 	}
 	if (!strcmp(word[0], "robots")) {
