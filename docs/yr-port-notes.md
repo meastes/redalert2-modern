@@ -2621,3 +2621,28 @@ passes with it. **It breaks the YR won replays** (owner's ruling: gamemd.exe's b
 wins on top of it): all01 lost at tick 468,891, all05 lost at tick 16,249, sov02, sov03 and sov06 do not end (no game over by the 2,400 s limit), sov07 lost at tick 28,513; all04 (added to yr_won_all by lane P76 after these runs) was not run. No crash or trap in any log.
 On main (4117ecb), and with only the Walk, Render and Draw_Tiles fixes, all six win.
 
+
+## Lane P77 (2026-11-27): the YR won replays re-recorded on P74's Exit_Object
+
+P74's last commit (afe3bd4: a soldier without a NavCom waits at the barracks door for the radio unload, as gamemd.exe)
+parts every YR won recording. Two causes were seen: the object IDs part from the first frame in some missions (Soviet 7's
+MCV is 1037552 on afe3bd4 and 1037554 before it), so a recording's "@^ID" clicks name other objects; and the player's and
+the computer's soldiers stand elsewhere (a cosmonaut at the door no longer blocks a placement the old run retried, Soviet 6
+8,000; the enemy raids come at other times). Nothing in the game was changed. Two tools (private, scripts/p77r):
+lockstep.py replays a recording on main's binary and on afe3bd4 side by side, each "@^ID" click translated to the new run's
+object of the same type and house nearest where the old run's object stands (with SHADOW=1 the player's new soldiers are
+paired with the old run's by type and order of appearance and walked to their pair's place, the old exit-cell walk as a
+player order); and the recorded route's own scripts rerun from a fresh start. Box about an hour a mission. Recordings in
+private/campaign_saves/yr/<mission>/p77.
+
+| Mission | Result | Notes |
+| --- | --- | --- |
+| Soviet 2 | won at tick 9,858; a rerun (ra2_campaign.py --game yr) wins at the same tick | The translated recording to 7,031 (three V3s and ten tanks at 93,123; one V3 more was lost to the pillboxes at 106-113,36 on the way), then P70's s2c.py as s2d.py: the tanks first at the two Mirage tanks by 114-116,168 (they killed the V3s at 110-112,163), the V3s at 107,159 firing from the first step (FIREBY=1), two at the Chronosphere and one at Einstein's lab: the Chronosphere gone before its transfer (9,354), the lab by 9,644, won at 9,858 |
+| Allied 1 | won at tick 34,100; a rerun wins at the same tick | The translated recording to 32,892: Tanya is alive at Alcatraz's shore (60,64; P68's Tanya died to the hydrofoils on landing, and none are left). The Dominator (YAPPPT, Confederation) takes neither her attack nor her force fire. She C4s the Confederation's nuclear reactor (NANRCT 57,74) and dies in its blast, which takes the Dominator to 301/1000; her death (Tanya_Death, local 4) sends the six carriers, and P68's a1p10.py orders them at it |
+| Allied 5 | won at tick 131,434; a rerun wins at the same tick | P68's a5a.py (to 16,000), a5b.py (to 33,365) and a5war.py from a fresh start: BadGuy2 not razed (25 objects left), the army and the battle lab lost by 36,609. P70's a5p.py with the battle lab, a power plant and a war factory in its plan (62 prism tanks) and a5e.py at both enemy houses: both gone by 125,235, then BadGuy1's last unit, an ostrich (CAOS, a vehicle), hunted down for It's Over Part 1/2 |
+| Soviet 3 | not re-recorded (box) | The translated recording to 24,682 (Boris at 53,56, four tanks at 46-50,42-48). Eight tries with P70's s3e.py and s3m.py (s3run*.py: Grizzlies bought and gathered at 48,45 to 9 or 13 first; the tanks screening at 57,27; the initiates within 11 of 52,30 cleared first; the tanks sent at the Dominator with Boris's order): the gattlings at 56,29 and 59,24 fall with 13 tanks, but Boris dies each time on his way to 52,30 (0/200 at 52,31, initiates at 59-61,28-29), before he paints YAPPET. Next: find what kills him there (a trace of his damage), or paint from further west |
+| Soviet 6 | not re-recorded (box) | The translated recording loses the base by 20,000 (with SHADOW=1 by 50,457). P73's s6a.py from a fresh start razes the Americans by 22,300 (12 APOCs, 25 cosmonauts, power 309/385), then s6e.py (ARMY 14, then 24): the army is lost at the Alliance base both times, the 70,000 credits spent by about 43,000. Next: P73's try 3 state (24 APOCs and 21 cosmonauts by 48,700 with 2,500 credits) before s6e.py, more reactors (power stayed low) |
+| Soviet 7 | not re-recorded (box) | The translated recording loses the starting infantry by 4,000 and the game at 14,433. P73's s7b.py from a fresh start (20 APOCs by 42,592), then P75's s7q.py (ARMYN=30 WANT=32): the base holds, but APOCs stay at 17-20 to 87,000 (lost buildings rebuilt from the income), so the army never reaches 30 and the beacon is not taken. Next: the economy (a third refinery and miners first, as P75's try 2) |
+| Allied 4 | not re-recorded (box) | The translated recording loses Tanya by 10,000 and the base by 22,000. P76's chain from a fresh start (a4o.py LAND=160,104, a4p.py, a4r.py ...): the oil field free at 4,232 but one derrick taken (P76 five by 12,577); the Nighthawk is shot down at 159,104 at 10,167 with Tanya aboard, so a4r.py (Tanya's flight) stops. Next: the derricks' engineers and the Nighthawk's flight path in a4p.py |
+
+No crash, trap or assertion in any P77 run. Calibration used: no.
