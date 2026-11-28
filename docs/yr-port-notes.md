@@ -2695,7 +2695,7 @@ yr-native-factory-exits pass (10 of 10); tools/check_tree.py is clean. Calibrati
 ## Lane P81 (2026-11-28): the vendor pin moved to ra2-decomp cb43f59e; three drafts retired
 
 `vendor/ra2-decomp` is gibbo101/ra2-decomp `cb43f59e092f9460365ecab2e6b414df7c1c26b4` (28 commits after ac45ee9e), copied
-by `tools/update_yr_vendor.sh` from redalert2-decomp ce18e2bd9d (its yr/ra2-decomp archived unchanged from the local
+by `tools/update_yr_vendor.sh` from redalert2-decomp 716c230e88 (its yr/ra2-decomp archived unchanged from the local
 reference clone; branch p81-yr-pin there). vendor/tibsun unchanged; licences unchanged; THIRD_PARTY.md and yr/README.md
 in redalert2-decomp record the pin. Upstream now has 19,329 of 19,353 functions.
 

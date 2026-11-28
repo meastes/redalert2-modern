@@ -2,7 +2,7 @@
 # tools/update_yr_vendor.sh. Never edit these files: port changes go in yr/fixups.json and yr/glue.
 # tools/check_tree.py checks this list.
 upstream cb43f59e092f9460365ecab2e6b414df7c1c26b4
-redalert2-decomp ce18e2bd9d6697ef128fb41c2e979aee9b815507
+redalert2-decomp 716c230e88b0f09bf14b75a4505e76336faf1f56
 sha256 fd7645bad8b7d14054e755269aa574d6c2c5e0fe5461a8f189e49e1e8de2982d COPYING.md
 sha256 78de4b6d2436e6d8526685cf2f8f9785e91eb1af2954aebdaf36c3f55f7fab0e LICENSE
 sha256 d0bd2cf2f5e752fe04102e0fc53d6219bbb37fb260c9596175356ee0eb1a4356 README.md
