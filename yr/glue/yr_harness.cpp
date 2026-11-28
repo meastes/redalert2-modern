@@ -75,9 +75,11 @@
 //   bridge          logs `harness-bridge <0|1>`: the first hut's bridge needs repair (MapClass::Can_Repair_Bridge; lane N3);
 //   produce <FACTORY> <ID>  a unit of type ID for the player leaves the player's first building of type FACTORY as
 //                   finished production does (BuildingClass::Exit_Object; a war factory unloads it with
-//                   Do_MISSION_UNLOAD); logs `harness-produce <FACTORY> <ID> exit <result> &<addr>` (lane N3);
+//                   Do_MISSION_UNLOAD); logs `harness-produce <FACTORY> <ID> exit <result> &<addr>` (lane N3) and, when it
+//                   left, `harness-produce-missions <ID> m<current> q<queued>` (lane P74);
 //   produced        logs `harness-produced <ID> cell x,y factory x,y limbo <0|1> mission <m> factory-mission <m>` for
-//                   the last unit `produce` made (lane N3);
+//                   the last unit `produce` made (lane N3), then `harness-produced-missions <ID> m<current> q<queued>
+//                   links <n>` (lane P74);
 //   rendercounts    logs `harness-rendercounts laser <n> intent <n>`: the airstrike lasers and Psychic Sensor intent lines
 //                   Tactical::Render's foreground pass drew (lane P74);
 //   airstrike <ID>  logs `harness-airstrike <ID> target <TYPE|-> rtti <n>`: the player's first <ID>'s airstrike target (lane P74);
@@ -814,6 +816,9 @@ int Run_Order(int frame, char const * text)
 		produced = unit;
 		produced_from = factory;
 		fprintf(stderr, "harness-produce %s %s exit %d &%p\n", word[1], word[2], result, (void *)unit);
+		if (unit != NULL && result == 2) {	// lane P74: the missions Exit_Object left it (current, queued)
+			fprintf(stderr, "harness-produce-missions %s m%d q%d\n", word[2], (int)unit->CurrentMission, (int)unit->MissionQueue);
+		}
 		return(result ? 1 : -1);
 	}
 	if (!strcmp(word[0], "produced")) {
@@ -826,6 +831,11 @@ int Run_Order(int frame, char const * text)
 		Cell at = produced->Get_Cell(), home = produced_from->Get_Cell();
 		fprintf(stderr, "harness-produced %s cell %d,%d factory %d,%d limbo %d mission %d factory-mission %d\n", Type_Name(produced),
 			at.X, at.Y, home.X, home.Y, produced->IsInLimbo ? 1 : 0, (int)produced->Get_Mission(), (int)produced_from->Get_Mission());
+		// lane P74: its current and queued missions and radio links (Exit_Object's hospital and barracks steps)
+		int links = 0;
+		for (int k = 0; k < produced->RadioLinks.Length(); ++k) if (produced->RadioLinks[k] != NULL) ++links;
+		fprintf(stderr, "harness-produced-missions %s m%d q%d links %d\n", Type_Name(produced), (int)produced->CurrentMission,
+			(int)produced->MissionQueue, links);
 		return(1);
 	}
 	if (!strcmp(word[0], "rendercounts")) {

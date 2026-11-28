@@ -466,7 +466,8 @@ add_test(NAME yr-native-grinder COMMAND "${Python3_EXECUTABLE}" -B "${CMAKE_CURR
          --work "${CMAKE_CURRENT_BINARY_DIR}/yr-grinder")
 set_tests_properties(yr-native-grinder PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 400)
 # ctest yr-native-factory-exits (lane P61): the Cloning Vats copy a soldier leaving a barracks, and an Airforce Command puts
-# each new Harrier on a free pad (BuildingClass::Exit_Object, gamemd.exe 0x004449D9, 0x00443CD4; yr/tests/yr_factory_exits.py)
+# each new Harrier on a free pad (BuildingClass::Exit_Object, gamemd.exe 0x004449D9, 0x00443CD4; yr/tests/yr_factory_exits.py);
+# lane P74: a barracks' soldier is left at the door for the radio unload (0x00444CA3), a hospital's patient leaves
 add_test(NAME yr-native-factory-exits COMMAND "${Python3_EXECUTABLE}" -B "${CMAKE_CURRENT_SOURCE_DIR}/yr/tests/yr_factory_exits.py"
          --binary $<TARGET_FILE:yr-native> --data-dir "${RA2_NATIVE_YR_DATA_DIR}"
          --work "${CMAKE_CURRENT_BINARY_DIR}/yr-factory-exits")

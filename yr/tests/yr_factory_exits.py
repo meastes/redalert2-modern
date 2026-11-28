@@ -17,6 +17,11 @@ Through the menus into a skirmish (yr_standins.py's route), harness orders (glue
   frame 200   two more Initiates (the barracks' and the vat's clone);
   frame 210   a Harrier (ORCA) made at the Airforce Command, 211 where it is (`produced`); 220, 221 a second one.
 Both Harriers start on the Command's pads (within a few cells of it), not at the map edge.
+  frame 230   (lane P74) a GI (E1) leaves the barracks: gamemd.exe (0x00444CA3) sends a soldier with no NavCom nowhere
+              itself (TibSun's text gave every one MISSION_MOVE to the exit cell): it stays in its mission (not MOVE), is
+              left at the door in radio contact with the barracks (231), and the radio unload walks it out (400: moved
+              on, no link);
+  frame 410   (lane P74) a GI leaves a hospital (CAHOSP, its patients guard the area, 0x00444D2E) and is out by 600.
 
   yr_factory_exits.py --binary <yr-native> --data-dir <game folder> --work <dir>
 Skipped (77) without the installed game (gamemd.exe in --data-dir) and for the Windows build.
@@ -35,7 +40,9 @@ import game_process  # noqa: E402
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 standins = importlib.import_module('yr_standins')
 ORDERS = ('60 spawn NACLON 6 0; 61 spawn GAPILE 0 6; 62 spawn GAAIRC -6 0; 70 owner INIT; 75 produce GAPILE INIT; '
-          '200 owner INIT; 210 produce GAAIRC ORCA; 211 produced; 220 produce GAAIRC ORCA; 221 produced')
+          '200 owner INIT; 210 produce GAAIRC ORCA; 211 produced; 220 produce GAAIRC ORCA; 221 produced; '
+          '230 produce GAPILE E1; 231 produced; 232 orders E1; 400 produced; 410 spawn CAHOSP near GAPILE 0 6; 420 produce CAHOSP E1; 421 produced; 422 orders E1; '
+          '600 produced; 601 orders E1')
 BAD = re.compile(r'unrecovered|\btrap\b|signal \d+|SIG(SEGV|BUS|ILL|ABRT|FPE)|crash:', re.I)
 
 
@@ -98,6 +105,28 @@ def main():
         print('pads: frame %d Harrier at %d,%d, the Command at %d,%d' % (frame, x, y, fx, fy))
         if abs(x - fx) > 3 or abs(y - fy) > 3:
             failures.append('frame %d: the Harrier is at %d,%d, not on a pad of the Command at %d,%d' % (frame, x, y, fx, fy))
+
+    # lane P74: the barracks' soldier is left at the door for the radio unload (no MISSION_MOVE from Exit_Object)
+    m = re.search(r'^harness-produce-missions E1 m(-?\d+) q(-?\d+)$', text, re.M)
+    door = re.search(r'^harness-produced E1 cell (-?\d+),(-?\d+) .*\nharness-produced-missions E1 m-?\d+ q-?\d+ links (\d+)$',
+                     block(text, 231, 'produced'), re.M)
+    out = re.search(r'^harness-produced E1 cell (-?\d+),(-?\d+) factory -?\d+,-?\d+ limbo (\d) .*\n'
+                    r'harness-produced-missions E1 m-?\d+ q-?\d+ links (\d+)$', block(text, 400, 'produced'), re.M)
+    if not m:
+        failures.append('the GI did not leave the barracks')
+    elif int(m.group(1)) == 2 or int(m.group(2)) == 2:
+        failures.append('Exit_Object gave the barracks\' GI MISSION_MOVE (m%s q%s): TibSun\'s text, not gamemd.exe\'s' % m.groups())
+    if not door or int(door.group(3)) != 1:
+        failures.append('frame 231: the GI is not at the door in radio contact with the barracks (%s)' % (door.groups() if door else None))
+    if not out or out.group(3) != '0' or int(out.group(4)) != 0 or (door and out.groups()[:2] == door.groups()[:2]):
+        failures.append('frame 400: the GI was not walked out of the barracks (%s)' % (out.groups() if out else None))
+    else:
+        print('barracks: the GI at the door %s,%s, then out at %s,%s' % (door.group(1), door.group(2), out.group(1), out.group(2)))
+    if not re.search(r'^harness-produce CAHOSP E1 exit 2 ', text, re.M):
+        failures.append('the GI did not leave the hospital')
+    hosp = re.search(r'^harness-produced E1 cell (-?\d+),(-?\d+) factory -?\d+,-?\d+ limbo 0 ', block(text, 600, 'produced'), re.M)
+    if not hosp:
+        failures.append('frame 600: the hospital\'s GI is not on the map')
 
     bad = [line for line in text.splitlines() if BAD.search(line)]
     if bad:

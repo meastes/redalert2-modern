@@ -265,8 +265,9 @@ int BuildingClass::Exit_Object(TechnoClass * base, Cell preferred)	// NATIVE: YR
 						/*
 						 * When the computer produces a unit, it has the unit guard an
 						 * area around the spot it should head to.
+						 * YR (P74, gamemd.exe 0x004448FE): the human test is HouseClass::FUN_0050B730.
 						 */
-						if (!House->Is_Human_Player()) {
+						if (!House->FUN_0050B730()) {
 							base->QueueMission(MISSION_GUARD_AREA, false);
 
 							cell = House->Where_To_Go((FootClass *)base);
@@ -339,18 +340,28 @@ int BuildingClass::Exit_Object(TechnoClass * base, Cell preferred)	// NATIVE: YR
 					ScenarioInit++;
 					if (base->Unlimbo(exitcoord, dir)) {
 
-						if (((FootClass *)base)->NavCom != NULL) {
-							base->ArchiveTarget = ((FootClass *)base)->NavCom;
+						/*
+						**	YR (P74, gamemd.exe 0x00444CA3-0x00444D0B): only a soldier that already has a navigation
+						**	target (NavCom), and is neither a jump jet nor a teleporter, is sent to the exit cell here
+						**	(its NavCom kept as the archive target); every other one is left at the door for the radio
+						**	unload below. TibSun's text moved every one.
+						*/
+						FootClass * foot = (FootClass *)base;
+						TechnoTypeClass const * foottype = base->Techno_Type_Class();
+						if (foot->NavCom != NULL && !foottype->JumpJet && !foottype->Teleporter) {
+							base->Assign_Archive_Target(foot->NavCom);
+							base->QueueMission(MISSION_MOVE, false);
+							base->Assign_Destination(&Map[exitcell], true);
 						}
-
-						base->QueueMission(MISSION_MOVE, false);
-						base->Assign_Destination(&Map[exitcell]);
 
 						/*
 						 * When the computer produces infantry, it has the infantry guard
 						 * an area around the spot it should head to.
+						 * YR (P74, gamemd.exe 0x00444D11-0x00444D34): the human test is HouseClass::FUN_0050B730
+						 * (IsHuman or IsPlayerControl in a campaign), and a hospital's patients guard the area too,
+						 * whoever owns it.
 						 */
-						if (!House->Is_Human_Player()) {
+						if (!House->FUN_0050B730() || Class->IsHospital) {
 							base->QueueMission(MISSION_GUARD_AREA, false);
 
 							cell = House->Where_To_Go((FootClass *)base);
@@ -367,7 +378,7 @@ int BuildingClass::Exit_Object(TechnoClass * base, Cell preferred)	// NATIVE: YR
 						**	radio contact should always succeed.
 						*/
 						if (Transmit_Message(RADIO_HELLO, base) == RADIO_ROGER) {
-							Transmit_Message(RADIO_UNLOAD);
+							Transmit_Message(RADIO_UNLOAD, base);	// YR (P74, 0x00444DD9): to the soldier itself
 						}
 						ScenarioInit--;
 						return(2);

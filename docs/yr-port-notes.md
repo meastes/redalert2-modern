@@ -2597,3 +2597,27 @@ FUN_004DC340), 0x006D47FB-0x006D48F1 (the airstrike laser: Airstrike at TechnoCl
 DAT_00842900 = 7, 15.0 at 0x007ECE60, 0.37 at 0x007F43B0, Fire_Coord vtable +0xB0, FUN_00705860), 0x006D491A (FUN_0063B2F0),
 0x006D492B (Draw_Sparkles); Draw_Tiles 0x006D8078-0x006D80C9.
 
+**Exit_Object** (P61's open items; the lane's last commit, landed with the re-recorded wins). gamemd.exe addresses: the
+NavCom test 0x00444CA3 (`mov eax, [edi+0x5A4]; test eax, eax; je 0x00444D11`: FootClass+0x5A4 is NavCom, the offset matched
+FootClass::FUN_004DC340 reads after TarCom at 0x004DC372), the jump-jet test 0x00444CB7 (TechnoTypeClass+0xD94, JumpJet) and
+the teleporter test 0x00444CCB (+0xCD4, Teleporter), both through Techno_Type_Class (vtable +0x84); the archive target
+0x00444CE2 (TechnoClass::Assign_Archive_Target 0x0070C610), QueueMission(MISSION_MOVE) 0x00444CEF, Assign_Destination(cell,
+true) 0x00444D0B; the human test 0x00444D17 (HouseClass::FUN_0050B730) and the hospital test 0x00444D26
+(BuildingTypeClass+0x16C1); GUARD_AREA 0x00444D3C; Where_To_Go 0x00444D51; RADIO_HELLO 0x00444DC3 and RADIO_UNLOAD to the
+soldier 0x00444DD9; the vehicle path's human test 0x004448FE.
+* A soldier leaving a barracks, hospital, armory or cloning vat is sent to the exit cell (MISSION_MOVE, Assign_Destination)
+  only when it already has a NavCom and is neither a jump jet nor a teleporter; its NavCom becomes the archive target. Every
+  other one stays in its mission, at the door in radio contact, and the building's radio unload walks it out. TibSun's text
+  gave every soldier MISSION_MOVE to the exit cell. The radio RADIO_UNLOAD goes to the soldier itself.
+* GUARD_AREA and the Where_To_Go archive target for a soldier when the house is not human (HouseClass::FUN_0050B730: IsHuman,
+  or IsPlayerControl in a campaign) **or the building is a hospital** (a hospital's patients, whoever owns it). The vehicle
+  path's human test is FUN_0050B730 too (TibSun: Is_Human_Player).
+
+**Exit_Object checks.** ctest `yr-native-factory-exits` (extended): a GI made at a barracks leaves Exit_Object in its own
+mission (not MISSION_MOVE: the draft gave m2), is at the door in radio contact one frame later and has been walked out by
+frame 400; a GI made at a hospital (CAHOSP, placed beside the barracks) is on the map. New harness log lines
+`harness-produce-missions` and `harness-produced-missions` (the current and queued missions, the radio links). The suite
+passes with it. **It breaks the YR won replays** (owner's ruling: gamemd.exe's behaviour; a campaign lane re-records the
+wins on top of it): all01 lost at tick 468,891, all05 lost at tick 16,249, sov02, sov03 and sov06 do not end (no game over by the 2,400 s limit), sov07 lost at tick 28,513; all04 (added to yr_won_all by lane P76 after these runs) was not run. No crash or trap in any log.
+On main (4117ecb), and with only the Walk, Render and Draw_Tiles fixes, all six win.
+
