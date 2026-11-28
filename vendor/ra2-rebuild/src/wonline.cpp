@@ -132,7 +132,6 @@ bool g_ShowMOTD = true;
 int g_ServerType = -1;
 HRESULT g_OnConnectionResult;
 HRESULT g_LastIgnoredStatus; // RA2: 0x00B2AC00, TibSun's name: the chat's last net status while g_IgnoreNetStatus is set
-bool g_RememberLogin;
 int g_LobbyNumber;
 bool g_HasJoinedLobby = true;
 bool g_WDTSoundsInitialized;
@@ -3900,7 +3899,7 @@ class CChatEventSink : public CComObjectRoot, public IChatEvent
 			return(S_OK);
 		}
 		STDMETHOD(OnUserIP)(HRESULT, User *) { return(S_OK); }
-#ifdef RA2_NON_MATCHING // not exact: 2765 bytes differ by position, one call and 61 instruction lines (main-derived tree, the find results as the image's if / else if chain; the image calls keyHash 0x00767CD0 under the first lookup's expanded getPointer and ours expands it; ra2-decomp's matched twin, Yuri's Revenge 0x007A9970, expands it too, so its text does not settle the level; in scratch the row is the image's code when the lookup sits in an inline function with one more inline site after it, lane F58)
+#ifdef RA2_NON_MATCHING // not exact: 2765 bytes differ by position, 38 instruction lines in 11 hunks (stack offsets blind), ours 2,896 B of 2,867, no unbound references (lane O107 prep, 2026-11-28: the draft compiles with this guard open); before: 2765 bytes differ by position, one call and 61 instruction lines (main-derived tree, the find results as the image's if / else if chain; the image calls keyHash 0x00767CD0 under the first lookup's expanded getPointer and ours expands it; ra2-decomp's matched twin, Yuri's Revenge 0x007A9970, expands it too, so its text does not settle the level; in scratch the row is the image's code when the lookup sits in an inline function with one more inline site after it, lane F58)
 		STDMETHOD(OnFind)(HRESULT r, Channel * chan)
 		{
 			unsigned int status = 0;
@@ -5382,6 +5381,8 @@ static inline int Fetch_Server_List(void) // RA2: shows "fetching the server lis
 	}
 	return(Request_And_Wait_Server_List(sku));
 }
+
+bool g_RememberLogin;
 
 int __fastcall Login_Wonline(void) // RA2: 0x00742FD0, not in TibSun: logs in to Westwood Online: starts the chat services, fetches the server list, tries the stored login of the auto login persona, else opens the login dialog (the executable's debug text says "Creating login dlg") and connects to the server the persona's profile names; 1 when connected, 0 when not, negative when the server list could not be fetched; NOT matching (unplaced, 1904 bytes against the executable's 1857): the executable calls ArrayList::getPointer 0x00765E60 out of line in the three early expansions of Find_Server_Suffix / Connect_To_Selected_Server (the last two expansions are inline) which our build expands everywhere (about 16 bytes each; wrapper layers around the early calls make the expansions themselves vanish, so the inline budget is not what is wrong); it keeps the zero in ebp and the rc_ptr vtable in ebx where we use ebx; and it expands the derived control destructor (see SimpleWonlineDialogControl)
 {
@@ -12248,7 +12249,7 @@ bool __fastcall Find_Channel_By_Name(Wstring const & name, ArrayList<Channel> co
 }
 
 int __fastcall Run_Online_Menu(bool first_time); // RA2: the definition is not exact yet
-#ifdef RA2_NON_MATCHING // not exact: 2594 of 2687 bytes differ against the image-derived bound 00759370 (ra2-decomp's matched Yuri's Revenge buddy menu c19f107 whole, with RA2's globals, event values, UI calls, lobby number and string sites: 97 of 101 calls before the jump table in order, up from 94; position score 2594, was 2579 with main's text and its two single-caller helpers written out, 2391 with the helpers, held on variation_candidates.csv)
+#ifdef RA2_NON_MATCHING // not exact: 2594 bytes differ by position, 88 instruction lines in 37 hunks (stack offsets blind), ours 2,800 B of 2,687, no unbound references (lane O107 prep, 2026-11-28: the draft compiles with this guard open); before: 2594 of 2687 bytes differ against the image-derived bound 00759370 (ra2-decomp's matched Yuri's Revenge buddy menu c19f107 whole, with RA2's globals, event values, UI calls, lobby number and string sites: 97 of 101 calls before the jump table in order, up from 94; position score 2594, was 2579 with main's text and its two single-caller helpers written out, 2391 with the helpers, held on variation_candidates.csv)
 int __fastcall Run_Online_Menu(bool first_time) // RA2: 0x00759370, the buddy list screen run from the online menu: hosts a game, joins a buddy's lobby or game, or leaves; 1 when a game starts, 2 for a skirmish, 0 otherwise
 {
 	g_PlayingNetGame = false;

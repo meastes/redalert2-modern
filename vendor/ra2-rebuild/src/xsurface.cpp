@@ -478,7 +478,6 @@ bool XSurface::Draw_RGB_Multiplying_Line(Rect const & cliprect, Point2D const & 
 /// <param name="xcliprect">The clipping rectangle to plot within.</param>
 /// <param name="drawer_callback">The routine to call for each point along the line.</param>
 /// <returns>bool; Did any part of the line survive the clipping?</returns>
-#ifdef RA2_NON_MATCHING // not exact: 9 bytes differ against the image-derived bound 00773f00 (511 B; ours 511 B, 179 = 179 instructions): two adjacent instructions exchanged ahead of the sloped part (the image copies dy for abs before it stores pitch = 1; ours stores first). The straight parts are the archive's text; the sloped part follows main's draft (x and y read once ahead of the branch, the steep loop steps x itself, no k), which the image shows (start.X kept in one stack slot and incremented there); the archive's sloped text is 155 bytes off. The image's order (dy's copy, then the store of 1, then the branch) is what an if/else that stores pitch in both arms compiles to: the first arm's store goes ahead of the branch. Exact in scratch with `dy = abs(dy)` written in both arms beside the two stores and y read after them, a doubled statement no reference has (held: variation_candidates.csv); with one abs after the if/else the two stores become a setcc. About 900 orders and spellings of the plain statements (pitch, dy, abs, x, y, the doubled deltas; y read early or late) leave 9
 bool XSurface::Plot_Line(Rect const & xcliprect, Point2D & startpoint, Point2D & endpoint, void(*drawer_callback)(Point2D const &))
 {
 	//assert(xcliprect.Is_Valid());
@@ -528,63 +527,56 @@ bool XSurface::Plot_Line(Rect const & xcliprect, Point2D & startpoint, Point2D &
 		/*
 		 * Distances to x and y.
 		 */
+		int dx = end.X - start.X;
+		int dy = end.Y - start.Y;
+		int y = start.Y;
 		int x = start.X;
 		int pitch = 1;
-		int y = start.Y;
-		int dx = end.X - x;
-		int dy = end.Y - y;
 		/*
 		 * The line isn't straight so we need to do some maths.
 		 */
 		if (dy < 0) {
-			pitch = -1;
+			pitch = -pitch;
 		}
 
 		dy = abs(dy);
 		int dx2 = 2 * dx;
-		int dy2 = 2 * dy;
+		int span = dx;
+		dx = 2 * dy;
+		int dy2 = dx;
+		int x2 = end.X;
 
-		if (dx > dy) {
-
-			/*
-			 * The slope is not steep.
-			 */
-			int delta = dy2 - dx;
-			int x2 = end.X;
-			int y2 = y;
+		if (span > dy) {
 
 			/*
-			 * Plot low line.
+			 * The slope is not steep. Plot low line.
 			 */
+			dx -= span;
 			for (int i = x; i <= x2; i++) {
-				drawer_callback(Point2D(i, y2));
+				drawer_callback(Point2D(i, y));
 
-				if (delta > 0) {
-					delta -= dx2;
-					y2 += pitch;
+				if (dx > 0) {
+					dx -= dx2;
+					y += pitch;
 				}
 
-				delta += dy2;
+				dx += dy2;
 			}
 		} else {
 
 			/*
-			 * The slope is steep.
+			 * The slope is steep. Plot high line.
 			 */
-			int delta = dx2 - dy;
-
-			/*
-			 * Plot high line.
-			 */
+			dx = dx2 - dy;
 			for (int i = 0; i <= dy; i++) {
 				drawer_callback(Point2D(x, y));
 
-				if (delta > 0) {
+				if (dx > 0) {
 					x++;
-					delta -= dy2;
+					dx -= dy2;
 				}
 
-				delta += dx2;
+				dx += dx2;
 				y += pitch;
 			}
 		}
@@ -598,7 +590,6 @@ bool XSurface::Plot_Line(Rect const & xcliprect, Point2D & startpoint, Point2D &
 
 	return(true);
 }
-#endif
 
 
 
@@ -961,7 +952,7 @@ bool XSurface::Fill_Rect_Trans(Rect const & rect, RGBClass const & color, unsign
 /// <param name="cliprect">The clipping rectangle to draw within.</param>
 /// <param name="color">The raw color value to draw the ellipse with.</param>
 /// <returns>bool; Was the ellipse drawn?</returns>
-#ifdef RA2_NON_MATCHING // not exact: 1254 bytes differ by position against the image-derived bound 007746c0 (1478 body bytes, 10 padding; ours 1,478 B, the frame 0x38 as the image, 7 of 7 calls, 406 instruction lines with the slots in view) (lane F96, 2026-11-27, text unchanged: the image has two Point2D slots, the upper one (0x40) holds the right and left end pixels and, in the flat loop, the first clip test's row (stored and read back twice), the lower one (0x38) holds the top and bottom end pixels and afterwards y and the never-read radx; the end pixels' x are stored to their slots 0x24 and 0x20 ahead of the clip tests and the steep arcs start from those slots with no recomputation; one allocation fact carries the rest: cliprect.X sits in ebp from the entry through both end tests, so top stays in memory and decision takes ebp before Lock, where this text gives ebp to top. About 490 measured variants, none with either register: 384 over eight axes (the end pixels through pt, temporaries or a second named point, counters x or xleft and xright, recomputed or carried ends and squares, one or two decision variables, the first row through the second point, clip tests written out), 56 loop and update spellings (all the same bytes), goto and middle-entry loops, the step ahead of a while loop (no merge, 1,584 B); notes F96) (lane F87, 2026-11-26, structure over position as the owner ruled for walk: ra2-decomp's bank for the identical Yuri's Revenge twin 0x7BB350 taken whole (branch banked-forms 41d009df, banks/0x007BB350.cpp; flag reference-borne if it lands): four pixel pointers walked around the ellipse, the steep arcs on a decision variable of their own. It replaces the TibSun renderer text, which was 1,229 by position at 1,456 B with the frame 0x44 and 601 lines (kept in private/dossiers/fable/f87_tools/xsurface_draw_ellipse_tibsun_draft.cpp). The bank records the twin at 39.6% with eight loop-head decision probes as its gauge; was 1229; the TibSun ellipse renderer, with all seven virtual calls in retail order
+#ifdef RA2_NON_MATCHING // not exact: 1254 bytes differ by position, 396 instruction lines in 70 hunks (stack offsets blind), ours 1,478 B of 1,478, no unbound references (lane O107 prep, 2026-11-28: the draft compiles with this guard open); before: 1254 bytes differ by position against the image-derived bound 007746c0 (1478 body bytes, 10 padding; ours 1,478 B, the frame 0x38 as the image, 7 of 7 calls, 406 instruction lines with the slots in view) (lane F96, 2026-11-27, text unchanged: the image has two Point2D slots, the upper one (0x40) holds the right and left end pixels and, in the flat loop, the first clip test's row (stored and read back twice), the lower one (0x38) holds the top and bottom end pixels and afterwards y and the never-read radx; the end pixels' x are stored to their slots 0x24 and 0x20 ahead of the clip tests and the steep arcs start from those slots with no recomputation; one allocation fact carries the rest: cliprect.X sits in ebp from the entry through both end tests, so top stays in memory and decision takes ebp before Lock, where this text gives ebp to top. About 490 measured variants, none with either register: 384 over eight axes (the end pixels through pt, temporaries or a second named point, counters x or xleft and xright, recomputed or carried ends and squares, one or two decision variables, the first row through the second point, clip tests written out), 56 loop and update spellings (all the same bytes), goto and middle-entry loops, the step ahead of a while loop (no merge, 1,584 B); notes F96) (lane F87, 2026-11-26, structure over position as the owner ruled for walk: ra2-decomp's bank for the identical Yuri's Revenge twin 0x7BB350 taken whole (branch banked-forms 41d009df, banks/0x007BB350.cpp; flag reference-borne if it lands): four pixel pointers walked around the ellipse, the steep arcs on a decision variable of their own. It replaces the TibSun renderer text, which was 1,229 by position at 1,456 B with the frame 0x44 and 601 lines (kept in private/dossiers/fable/f87_tools/xsurface_draw_ellipse_tibsun_draft.cpp). The bank records the twin at 39.6% with eight loop-head decision probes as its gauge; was 1229; the TibSun ellipse renderer, with all seven virtual calls in retail order
 bool XSurface::Draw_Ellipse(Point2D point, int radx, int rady, Rect cliprect, int color)
 {
 	int pitch = Stride() >> 1;
